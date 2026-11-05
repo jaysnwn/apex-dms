@@ -10,8 +10,8 @@ Stack: **Next.js 15 (App Router) · TypeScript · Tailwind CSS 4 · Supabase (Po
 | Milestone | Scope | Status |
 | --- | --- | --- |
 | M0 Foundation | Schema v1, 5 roles, RLS, audit log, login, users, company settings | ✅ Built |
-| M1 Inventory and retailers | Products, stock ledger, reconciliation, retailers, duplicate detection | Next |
-| M2 Orders and invoices | New order, quotations, GST invoices, PDF, WhatsApp | — |
+| M1 Inventory and retailers | Products, stock ledger, reconciliation, retailers, duplicate detection, Excel import | ✅ Built |
+| M2 Orders and invoices | New order, quotations, GST invoices, PDF, WhatsApp | Next |
 | M3 Dispatch | Picking, full dispatch, delivery confirmation | — |
 | M4 Payments and accounts | Collections, FIFO, ageing, statements, classification | — |
 | M5 Field app and expenses | Routes, visits, offline PWA, expense approvals | — |
@@ -32,7 +32,7 @@ In the Supabase dashboard for this project:
 
 ### 2. Run the database migrations
 
-> **Already done for the `apex-dms` project (uiczjglzsnjxxqvxlheh)** — all six migrations were applied on
+> **Already done for the `apex-dms` project (uiczjglzsnjxxqvxlheh)** — all migrations up to 0007 were applied on
 > 2026-11-05 through the Supabase connector, so skip this step. The applied versions are timestamped by Supabase,
 > not by these file names; if you later switch to `supabase db push`, run `supabase migration list` first and use
 > `supabase migration repair` so files that are already applied are not run again.
@@ -53,6 +53,7 @@ Or paste each file in `supabase/migrations/` **in order** into the Supabase SQL 
 4. `20261105000004_views.sql` — stock and receivables views
 5. `20261105000005_storage.sql` — storage buckets and policies
 6. `20261105000006_hardening.sql` — fixes from the Supabase security / performance advisor
+7. `20261105000007_m1_inventory_retailers.sql` — stock guard, transfers, stock counts, valuation, retailer checks
 
 Supabase's advisor will still list a few items on purpose: the `catalog` and stock views run with owner rights
 so salesmen and warehouse staff can see stock without seeing purchase costs (each view filters to active users

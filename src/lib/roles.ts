@@ -24,6 +24,7 @@ export type ModuleKey =
   | "routes"
   | "expenses"
   | "reports"
+  | "import"
   | "users"
   | "audit"
   | "settings";
@@ -44,12 +45,12 @@ const ALL: AppRole[] = [...ROLES];
 export const MODULES: ModuleDef[] = [
   { key: "dashboard", label: "Dashboard", href: "/dashboard", milestone: "M0", ready: true, roles: ALL, group: "main",
     description: "Today at a glance." },
-  { key: "products", label: "Products", href: "/coming/products", milestone: "M1", ready: false, roles: ALL, group: "main",
+  { key: "products", label: "Products", href: "/products", milestone: "M1", ready: true, roles: ALL, group: "main",
     description: "Catalogue with photos, prices, GST, barcode search." },
-  { key: "stock", label: "Stock", href: "/coming/stock", milestone: "M1", ready: false,
+  { key: "stock", label: "Stock", href: "/stock", milestone: "M1", ready: true,
     roles: ["super_admin", "manager", "billing", "warehouse"], group: "main",
     description: "Stock in/out, transfers, adjustments, damage, reconciliation, valuation." },
-  { key: "retailers", label: "Retailers", href: "/coming/retailers", milestone: "M1", ready: false, roles: ALL, group: "main",
+  { key: "retailers", label: "Retailers", href: "/retailers", milestone: "M1", ready: true, roles: ALL, group: "main",
     description: "Retailer profiles, duplicate detection, credit terms." },
   { key: "sales", label: "Sales", href: "/coming/sales", milestone: "M2", ready: false,
     roles: ["super_admin", "manager", "billing", "salesman"], group: "main",
@@ -67,6 +68,8 @@ export const MODULES: ModuleDef[] = [
     description: "Expense claims with receipts and approvals." },
   { key: "reports", label: "Reports", href: "/coming/reports", milestone: "M6", ready: false, roles: ALL, group: "main",
     description: "Sales, collections, stock, ageing and profit reports." },
+  { key: "import", label: "Import", href: "/import", milestone: "M1", ready: true, roles: ["super_admin", "manager"], group: "admin",
+    description: "Bulk-load products, opening stock and retailers from Excel." },
   { key: "users", label: "Users", href: "/admin/users", milestone: "M0", ready: true, roles: ["super_admin"], group: "admin",
     description: "Create users, assign roles, reset passwords." },
   { key: "audit", label: "Audit log", href: "/admin/audit", milestone: "M0", ready: true,

@@ -85,8 +85,8 @@ begin
   exception when insufficient_privilege then null;
   end;
   begin
-    insert into public.stock_movements (product_id, warehouse_id, movement_type, qty)
-    values ('30000000-0000-0000-0000-000000000001', v_wh, 'damage', 3);
+    insert into public.stock_movements (product_id, warehouse_id, movement_type, qty, reason)
+    values ('30000000-0000-0000-0000-000000000001', v_wh, 'damage', 3, 'broken');
     raise exception 'damage with positive qty accepted';
   exception when check_violation then null;
   end;

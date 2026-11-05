@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   BarChart3, Boxes, CircleUser, LayoutDashboard, LogOut, Menu, Package, Receipt, Route,
-  ScrollText, Settings, ShoppingCart, Store, Truck, Users, Wallet, X, type LucideIcon,
+  ScrollText, Settings, ShoppingCart, Store, Truck, Upload, Users, Wallet, X, type LucideIcon,
 } from "lucide-react";
 import type { ModuleDef, ModuleKey } from "@/lib/roles";
 import { cn } from "@/components/ui";
@@ -21,6 +21,7 @@ const ICONS: Record<ModuleKey, LucideIcon> = {
   routes: Route,
   expenses: Receipt,
   reports: BarChart3,
+  import: Upload,
   users: Users,
   audit: ScrollText,
   settings: Settings,
