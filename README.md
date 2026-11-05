@@ -32,7 +32,12 @@ In the Supabase dashboard for this project:
 
 ### 2. Run the database migrations
 
-Either with the Supabase CLI (recommended):
+> **Already done for the `apex-dms` project (uiczjglzsnjxxqvxlheh)** — all six migrations were applied on
+> 2026-11-05 through the Supabase connector, so skip this step. The applied versions are timestamped by Supabase,
+> not by these file names; if you later switch to `supabase db push`, run `supabase migration list` first and use
+> `supabase migration repair` so files that are already applied are not run again.
+
+For a new project, either use the Supabase CLI:
 
 ```bash
 npx supabase login
@@ -47,6 +52,11 @@ Or paste each file in `supabase/migrations/` **in order** into the Supabase SQL 
 3. `20261105000003_audit.sql` — audit-log triggers
 4. `20261105000004_views.sql` — stock and receivables views
 5. `20261105000005_storage.sql` — storage buckets and policies
+6. `20261105000006_hardening.sql` — fixes from the Supabase security / performance advisor
+
+Supabase's advisor will still list a few items on purpose: the `catalog` and stock views run with owner rights
+so salesmen and warehouse staff can see stock without seeing purchase costs (each view filters to active users
+itself), and the role helper functions must be callable by signed-in users because RLS policies use them.
 
 ### 3. Environment variables
 
