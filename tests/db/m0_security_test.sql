@@ -178,11 +178,11 @@ begin
 end $$;
 
 insert into public.orders (id, order_no, retailer_id, credit_days, status)
-values ('40000000-0000-0000-0000-000000000001', 'APX/ORD/26-27/00001', '20000000-0000-0000-0000-000000000001', 15, 'invoiced');
+values ('40000000-0000-0000-0000-000000000001', 'TEST/ORD/1', '20000000-0000-0000-0000-000000000001', 15, 'invoiced');
 insert into public.invoices (id, invoice_no, fy, order_id, retailer_id, invoice_date, credit_days, due_date,
   place_of_supply, is_igst, retailer_snapshot, subtotal, discount_total, taxable_total, cgst_total, sgst_total,
   igst_total, round_off, grand_total)
-values ('50000000-0000-0000-0000-000000000001', 'APX/INV/26-27/00001', '26-27', '40000000-0000-0000-0000-000000000001',
+values ('50000000-0000-0000-0000-000000000001', 'TEST/INV/1', '26-27', '40000000-0000-0000-0000-000000000001',
   '20000000-0000-0000-0000-000000000001', '2026-11-05', 15, '2026-11-20', '27', false, '{}', 1000, 0, 1000, 90, 90, 0, 0, 1180);
 
 do $$ begin

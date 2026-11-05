@@ -151,3 +151,13 @@ export async function saveRoute(_prev: FormResult, formData: FormData): Promise<
   revalidatePath("/retailers/routes");
   return { ok: id ? "Route saved." : `${v.name} added.`, resetForm: !id };
 }
+
+// Recalculate Star / Average / Needs Attention / High Credit Risk for every retailer.
+export async function runClassification() {
+  await requireRole("super_admin", "manager");
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("classify_retailers");
+  if (error) return { error: error.message };
+  revalidatePath("/retailers");
+  return { ok: true, changed: data as number };
+}

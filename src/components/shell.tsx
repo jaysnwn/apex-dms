@@ -10,6 +10,24 @@ import {
 import type { ModuleDef, ModuleKey } from "@/lib/roles";
 import { cn } from "@/components/ui";
 
+// Each module keeps one colour everywhere, so people find it at a glance.
+const COLORS: Record<ModuleKey, string> = {
+  dashboard: "text-sky-400",
+  products: "text-indigo-300",
+  stock: "text-teal-300",
+  retailers: "text-violet-300",
+  sales: "text-accent-500",
+  dispatch: "text-cyan-300",
+  payments: "text-emerald-400",
+  routes: "text-lime-300",
+  expenses: "text-rose-300",
+  reports: "text-amber-300",
+  import: "text-slate-300",
+  users: "text-slate-300",
+  audit: "text-slate-300",
+  settings: "text-slate-300",
+};
+
 const ICONS: Record<ModuleKey, LucideIcon> = {
   dashboard: LayoutDashboard,
   products: Package,
@@ -135,10 +153,10 @@ function NavGroup({ items, pathname }: { items: ModuleDef[]; pathname: string })
               href={m.href}
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition",
-                active ? "bg-white/10 font-medium text-white" : "text-slate-300 hover:bg-white/5 hover:text-white"
+                active ? "bg-white/10 font-medium text-white shadow-[inset_3px_0_0_0_#f28c18]" : "text-slate-300 hover:bg-white/5 hover:text-white"
               )}
             >
-              <Icon className={cn("size-[18px] shrink-0", active && "text-accent-500")} />
+              <Icon className={cn("size-[18px] shrink-0", COLORS[m.key])} />
               <span className="flex-1">{m.label}</span>
               {!m.ready && <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-slate-500">{m.milestone}</span>}
             </Link>

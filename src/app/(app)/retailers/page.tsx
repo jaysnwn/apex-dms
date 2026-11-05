@@ -3,10 +3,12 @@ import type { Metadata } from "next";
 import { Plus, Route as RouteIcon, Upload } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { inr, RETAILER_CLASS_LABELS, RETAILER_STATUS_LABELS, safeSearch } from "@/lib/format";
+import { inr, RETAILER_STATUS_LABELS, safeSearch } from "@/lib/format";
 import { Badge, Button, Card, PageHeader, Select } from "@/components/ui";
 import { LinkButton } from "@/components/chip";
 import { SearchBar } from "@/components/search-bar";
+import { RETAILER_CLASS } from "@/lib/status";
+import { ClassifyButton } from "./[id]/classify-button";
 
 export const metadata: Metadata = { title: "Retailers" };
 
@@ -53,6 +55,7 @@ export default async function RetailersPage({
           <>
             {(role === "super_admin" || role === "manager") && (
               <>
+                <ClassifyButton />
                 <LinkButton href="/retailers/routes"><RouteIcon className="size-4" /> <span className="hidden sm:inline">Routes</span></LinkButton>
                 <LinkButton href="/import?tab=retailers"><Upload className="size-4" /> <span className="hidden sm:inline">Import</span></LinkButton>
               </>
@@ -126,7 +129,7 @@ export default async function RetailersPage({
                     <td className="px-4 py-2.5">
                       <div className="flex flex-wrap gap-1">
                         <Badge tone={STATUS_TONE[r.status as keyof typeof STATUS_TONE]}>{RETAILER_STATUS_LABELS[r.status]}</Badge>
-                        {r.classification && <Badge tone="blue">{RETAILER_CLASS_LABELS[r.classification]}</Badge>}
+                        {r.classification && <Badge tone={RETAILER_CLASS[r.classification].tone}>{RETAILER_CLASS[r.classification].label}</Badge>}
                       </div>
                     </td>
                   </tr>

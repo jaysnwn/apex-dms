@@ -11,12 +11,12 @@ Stack: **Next.js 15 (App Router) · TypeScript · Tailwind CSS 4 · Supabase (Po
 | --- | --- | --- |
 | M0 Foundation | Schema v1, 5 roles, RLS, audit log, login, users, company settings | ✅ Built |
 | M1 Inventory and retailers | Products, stock ledger, reconciliation, retailers, duplicate detection, Excel import | ✅ Built |
-| M2 Orders and invoices | New order, quotations, GST invoices, PDF, WhatsApp | Next |
-| M3 Dispatch | Picking, full dispatch, delivery confirmation | — |
-| M4 Payments and accounts | Collections, FIFO, ageing, statements, classification | — |
-| M5 Field app and expenses | Routes, visits, offline PWA, expense approvals | — |
-| M6 Dashboards and reports | KPIs, 12 reports, Excel export | — |
-| M7 UAT and go-live | Migration, training, cut-over | — |
+| M2 Orders and invoices | New order, quotations, GST invoices, PDF, WhatsApp | ✅ Built |
+| M3 Dispatch | Picking list, full dispatch, delivery confirmation | ✅ Built |
+| M4 Payments and accounts | Collections, FIFO, ageing, statements, promises, credit notes, classification | ✅ Built |
+| M5 Field app and expenses | Route plans, targets, visits, offline field app, expense approvals, reimbursement | ✅ Built |
+| M6 Dashboards and reports | Role dashboards, 12 reports, Excel export | ✅ Built |
+| M7 UAT and go-live | Your corrections, data migration, training, cut-over | Next |
 
 ## First-time setup
 
@@ -32,7 +32,7 @@ In the Supabase dashboard for this project:
 
 ### 2. Run the database migrations
 
-> **Already done for the `apex-dms` project (uiczjglzsnjxxqvxlheh)** — all migrations up to 0007 were applied on
+> **Already done for the `apex-dms` project (uiczjglzsnjxxqvxlheh)** — all migrations up to 0008 were applied on
 > 2026-11-05 through the Supabase connector, so skip this step. The applied versions are timestamped by Supabase,
 > not by these file names; if you later switch to `supabase db push`, run `supabase migration list` first and use
 > `supabase migration repair` so files that are already applied are not run again.
@@ -54,6 +54,8 @@ Or paste each file in `supabase/migrations/` **in order** into the Supabase SQL 
 5. `20261105000005_storage.sql` — storage buckets and policies
 6. `20261105000006_hardening.sql` — fixes from the Supabase security / performance advisor
 7. `20261105000007_m1_inventory_retailers.sql` — stock guard, transfers, stock counts, valuation, retailer checks
+8. `20261105000008_sales_payments_field.sql` — quotations, invoice confirmation (stock + credit checks), dispatch,
+   payments with FIFO, credit notes, ledger, sales register, classification, route plans, reimbursements
 
 Supabase's advisor will still list a few items on purpose: the `catalog` and stock views run with owner rights
 so salesmen and warehouse staff can see stock without seeing purchase costs (each view filters to active users
@@ -71,7 +73,7 @@ Fill in from **Project Settings → API Keys**:
 | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Project URL | already filled |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon / publishable key | safe in the browser |
-| `SUPABASE_SERVICE_ROLE_KEY` | service_role / secret key | **server only — never commit** |
+| `SUPABASE_SERVICE_ROLE_KEY` | service_role / secret key | **server only — never commit**. Needed for creating users and WhatsApp document links |
 
 Add the same three variables in **Vercel → Project → Settings → Environment Variables**.
 
@@ -106,8 +108,22 @@ Sign in, open **Users**, and create logins for the Manager, Office/Billing, Ware
 - **Issued invoices are frozen.** Only cancellation fields can change; corrections are credit notes.
 - **Due date = invoice date + credit days**, checked by the database and never changed by payments.
 - **Gapless numbering** per document type per financial year: `APX/INV/26-27/00001`.
-- **No partial dispatch.** One dispatch per invoice; confirming an invoice will be blocked if stock is short (M2).
+- **No partial dispatch.** One dispatch per invoice; confirming an invoice is blocked, with the short products listed, if stock is not available.
 - **Audit log** on every financial, inventory and access table: old value, new value, user, time.
+
+## Business rules chosen as defaults (tell us what to change)
+
+| Rule | Default |
+| --- | --- |
+| Credit limit | `0` means no limit. Above the limit, only a Manager can override when confirming |
+| Salesman discount | at most 5% per line (Company settings → `salesman_max_discount`) |
+| Invoice cancellation | Billing: same day only. Manager: any day, if not dispatched and no payments allocated |
+| Retailer on hold | can get quotations, cannot be invoiced; blocked/inactive cannot get orders |
+| Cheques | count against the balance as "pending" until marked cleared; a bounce re-opens the invoices |
+| Payment allocation | FIFO by due date unless invoices are picked by hand |
+| Classification | High credit risk: >45 days overdue, a bounce in 90 days, or over limit. Needs attention: >15 days overdue, no order in 60 days, or <60% paid on time. Star: 4+ invoices in 90 days, nothing overdue, ≥90% on time. Otherwise Average |
+| Gross profit | invoice taxable value minus weighted average purchase cost at invoice time; credit notes not deducted |
+| Field app | caches today's route and catalogue; orders, payments and visits made offline are sent when back online |
 
 ## Tests
 
@@ -124,9 +140,15 @@ supabase/migrations/   SQL migrations (source of truth for the database)
 tests/db/              database tests + Supabase stubs
 scripts/               one-off admin scripts
 src/app/login          sign-in
-src/app/(app)/         signed-in area (dashboard, admin/users, admin/audit, admin/settings, account)
+src/app/(app)/         signed-in area: dashboard, products, stock, retailers, import, sales, dispatch,
+                       payments, routes (+ routes/today field app), expenses, reports, admin, account
+src/app/api/pdf/       PDF downloads (invoice, credit note, receipt, statement, picking list)
+src/pdf/               PDF layouts and embedded font
 src/lib/supabase/      browser, server, admin (service role) and middleware clients
 src/lib/roles.ts       roles and module/menu map
 src/lib/auth.ts        getSession / requireRole
+src/lib/gst.ts         GST line maths, amount in words
+src/lib/reports.ts     the 12 report definitions
+src/lib/status.ts      status labels and colours
 src/components/        shell and UI primitives
 ```
