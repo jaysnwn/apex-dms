@@ -30,7 +30,12 @@ export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + "/"));
 
-  if (!user && !isPublic) {
+  // Server actions (POST with a Next-Action header) must not be redirected here:
+  // the browser would get an HTML page instead of an action result. The action
+  // itself calls requireRole(), which redirects to /login in a way Next.js handles.
+  const isServerAction = request.method === "POST" && request.headers.has("next-action");
+
+  if (!user && !isPublic && !isServerAction) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = path && path !== "/" ? `?next=${encodeURIComponent(path)}` : "";

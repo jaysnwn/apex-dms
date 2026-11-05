@@ -60,32 +60,43 @@ const updateSchema = z.object({
 });
 
 export async function updateUser(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireRole("super_admin");
+  const { profile: me } = await requireRole("super_admin");
 
   const parsed = updateSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const { id, full_name, phone, role, is_active } = parsed.data;
   const active = is_active === "true";
+  const isSelf = id === me.id;
+
+  if (isSelf && !active) return { error: "You cannot disable your own account." };
+
+  const supabase = await createClient();
+  const { data: before } = await supabase.from("profiles").select("role, is_active").eq("id", id).single();
+  if (!before) return { error: "User not found." };
 
   // Profile change runs as the signed-in admin, so RLS, the audit trigger and the
   // "last Super Administrator" guard all apply.
-  const supabase = await createClient();
   const { error } = await supabase
     .from("profiles")
     .update({ full_name, phone: phone || null, role, is_active: active })
     .eq("id", id);
   if (error) return { error: error.message };
 
-  // Block / unblock sign-in at the auth level too.
-  const admin = createAdminClient();
-  const { error: banError } = await admin.auth.admin.updateUserById(id, {
-    ban_duration: active ? "none" : "876000h",
-    app_metadata: { role },
-  });
-  if (banError) return { error: `Saved, but sign-in status could not be updated: ${banError.message}` };
+  // Touch the auth record only when something it holds actually changed.
+  // Supabase signs the user out everywhere whenever ban status is changed, so
+  // never send ban_duration unless the account is really being enabled/disabled.
+  const authUpdate: { ban_duration?: string; app_metadata?: { role: AppRole } } = {};
+  if (before.is_active !== active) authUpdate.ban_duration = active ? "none" : "876000h";
+  if (before.role !== role) authUpdate.app_metadata = { role };
+
+  if (Object.keys(authUpdate).length > 0) {
+    const admin = createAdminClient();
+    const { error: authError } = await admin.auth.admin.updateUserById(id, authUpdate);
+    if (authError) return { error: `Saved, but sign-in status could not be updated: ${authError.message}` };
+  }
 
   revalidatePath("/admin/users");
-  return { ok: "Saved." };
+  return { ok: !active && before.is_active ? "Saved. The user has been signed out and cannot sign in." : "Saved." };
 }
 
 const passwordSchema = z.object({
