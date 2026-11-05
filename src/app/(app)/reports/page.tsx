@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { BarChart3, Boxes, IndianRupee, Users } from "lucide-react";
+import { BarChart3, Boxes, IndianRupee, PackagePlus, Users } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { REPORTS } from "@/lib/reports";
 import { Card, PageHeader, cn } from "@/components/ui";
@@ -11,6 +11,7 @@ const GROUPS = [
   { key: "Sales", icon: BarChart3, tone: "bg-sky-50 text-sky-600" },
   { key: "Money", icon: IndianRupee, tone: "bg-emerald-50 text-emerald-600" },
   { key: "Stock", icon: Boxes, tone: "bg-teal-50 text-teal-600" },
+  { key: "Purchases", icon: PackagePlus, tone: "bg-fuchsia-50 text-fuchsia-600" },
   { key: "Team", icon: Users, tone: "bg-violet-50 text-violet-600" },
 ] as const;
 

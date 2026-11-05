@@ -182,3 +182,95 @@ export function PickingPdf({ data }: { data: PickingPdfData }) {
     </Document>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Purchase order (to the supplier) / purchase record once received
+// ---------------------------------------------------------------------------
+export type PurchasePdfData = {
+  company: Company;
+  purchase: {
+    purchase_no: string; status: string; order_date: string; expected_date: string | null; supplier_bill_no: string | null; supplier_bill_date: string | null;
+    credit_days: number; is_igst: boolean; subtotal: number; discount_total: number; taxable_total: number; cgst_total: number; sgst_total: number;
+    igst_total: number; other_charges: number; round_off: number; grand_total: number; notes: string | null;
+  };
+  supplier: { name: string; gstin: string | null; address: string | null; city: string | null; mobile: string | null };
+  warehouse: { name: string; address: string | null };
+  lines: { product_name: string; sku: string; hsn_code: string | null; unit_code: string; qty: number; unit_cost: number; cost_mode: string; discount_pct: number; taxable_value: number; gst_rate: number; line_total: number }[];
+};
+
+export function PurchasePdf({ data }: { data: PurchasePdfData }) {
+  const p = data.purchase;
+  const received = p.status === "received";
+  const cols: Col[] = [
+    { label: "#", w: 0.35 }, { label: "Product", w: 3 }, { label: "HSN", w: 0.9 }, { label: "Qty", w: 0.8, right: true },
+    { label: "Rate", w: 1, right: true }, { label: "Disc.", w: 0.6, right: true }, { label: "Taxable", w: 1.1, right: true },
+    { label: "GST", w: 0.55, right: true }, { label: "Amount", w: 1.15, right: true },
+  ];
+  const tot: [string, string][] = [
+    ["Taxable value", money(p.taxable_total)],
+    ...(p.is_igst ? [["IGST", money(p.igst_total)] as [string, string]] : [["CGST", money(p.cgst_total)] as [string, string], ["SGST", money(p.sgst_total)] as [string, string]]),
+    ...(Number(p.other_charges) > 0 ? [["Other charges", money(p.other_charges)] as [string, string]] : []),
+    ...(Number(p.round_off) !== 0 ? [["Round off", money(p.round_off)] as [string, string]] : []),
+  ];
+  return (
+    <Document title={p.purchase_no}>
+      <Page size="A4" style={s.page}>
+        <CompanyHeader company={data.company} title={received ? "PURCHASE RECORD" : "PURCHASE ORDER"} subtitle={`${p.purchase_no} · ${d(p.order_date)}`} />
+        <View style={[s.row, { gap: 10, marginBottom: 10 }]}>
+          <View style={[s.box, { flex: 1 }]}>
+            <Text style={s.h2}>Supplier</Text>
+            <Text style={s.bold}>{data.supplier.name}</Text>
+            {data.supplier.address && <Text>{data.supplier.address}</Text>}
+            {data.supplier.city && <Text>{data.supplier.city}</Text>}
+            {data.supplier.gstin && <Text>GSTIN: {data.supplier.gstin}</Text>}
+            {data.supplier.mobile && <Text>Mobile: {data.supplier.mobile}</Text>}
+          </View>
+          <View style={[s.box, { flex: 1 }]}>
+            <Text style={s.h2}>Deliver to</Text>
+            <Text style={s.bold}>{data.company.legal_name}</Text>
+            <Text>{data.warehouse.name}</Text>
+            {data.warehouse.address && <Text>{data.warehouse.address}</Text>}
+          </View>
+          <View style={[s.box, { flex: 0.9 }]}>
+            <Text style={s.h2}>Terms</Text>
+            <Text>Payment: {Number(p.credit_days) === 0 ? "on delivery" : `${p.credit_days} days from bill`}</Text>
+            {p.expected_date && <Text>Deliver by: {d(p.expected_date)}</Text>}
+            {received && <Text>Supplier bill: {p.supplier_bill_no} · {d(p.supplier_bill_date)}</Text>}
+            <Text>{p.is_igst ? "IGST (inter-state)" : "CGST + SGST"}</Text>
+          </View>
+        </View>
+        <TableHead cols={cols} />
+        {data.lines.map((l, i) => (
+          <TableRow key={i} cols={cols} shade={i % 2 === 1} cells={[
+            i + 1, `${l.product_name}\n${l.sku}`, l.hsn_code ?? "", `${num(l.qty)} ${l.unit_code}`,
+            `${money(l.unit_cost)}${l.cost_mode === "inclusive" ? "*" : ""}`, Number(l.discount_pct) ? `${Number(l.discount_pct)}%` : "", money(l.taxable_value),
+            `${Number(l.gst_rate)}%`, money(l.line_total),
+          ]} />
+        ))}
+        <View style={[s.row, { justifyContent: "space-between", marginTop: 10 }]}>
+          <View style={{ maxWidth: "55%" }}>
+            <Text style={s.muted}>Total quantity: {num(data.lines.reduce((t, l) => t + Number(l.qty), 0))}</Text>
+            {data.lines.some((l) => l.cost_mode === "inclusive") && <Text style={[s.muted, s.small]}>* rate includes GST</Text>}
+            <Text style={{ marginTop: 6 }}>{amountInWords(Number(p.grand_total))}</Text>
+            {p.notes && <Text style={[s.muted, { marginTop: 6 }]}>Notes: {p.notes}</Text>}
+          </View>
+          <View style={{ width: 200 }}>
+            {tot.map(([k, v]) => (
+              <View key={k} style={[s.row, { justifyContent: "space-between", paddingVertical: 1.5 }]}><Text style={{ color: MUTED }}>{k}</Text><Text>{v}</Text></View>
+            ))}
+            <View style={[s.row, { justifyContent: "space-between", borderTopWidth: 1, borderTopColor: ACCENT, marginTop: 3, paddingTop: 3 }]}>
+              <Text style={s.bold}>Total</Text><Text style={[s.bold, { fontSize: 11 }]}>{money(p.grand_total)}</Text>
+            </View>
+          </View>
+        </View>
+        {!received && (
+          <View style={[s.row, { justifyContent: "space-between", marginTop: 36 }]}>
+            <Text style={s.muted}>Please mention {p.purchase_no} on your invoice.</Text>
+            <Text>Authorised signatory: ____________________</Text>
+          </View>
+        )}
+        <Footer />
+      </Page>
+    </Document>
+  );
+}

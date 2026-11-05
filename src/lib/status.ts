@@ -16,6 +16,17 @@ export const ORDER_STATUS: S = {
   cancelled: { label: "Cancelled", tone: "slate" },
 };
 
+export const PURCHASE_STATUS: S = {
+  ordered: { label: "Ordered · not received", tone: "amber" },
+  received: { label: "Received", tone: "green" },
+  cancelled: { label: "Cancelled", tone: "slate" },
+};
+
+export const SUPPLIER_PAYMENT_STATUS: S = {
+  paid: { label: "Paid", tone: "green" },
+  cancelled: { label: "Cancelled", tone: "slate" },
+};
+
 export const DUE_STATUS: S = {
   paid: { label: "Paid", tone: "green" },
   not_yet_due: { label: "Not yet due", tone: "blue" },

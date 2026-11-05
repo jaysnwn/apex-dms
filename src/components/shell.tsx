@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import {
-  BarChart3, Boxes, LayoutDashboard, LogOut, Menu, Package, Receipt, Route,
+  BarChart3, Boxes, LayoutDashboard, LogOut, Menu, Package, PackagePlus, Receipt, Route,
   ScrollText, Settings, ShoppingCart, Store, Truck, Upload, Users, Wallet, X, type LucideIcon,
 } from "lucide-react";
 import type { ModuleDef, ModuleKey } from "@/lib/roles";
@@ -16,6 +16,7 @@ const COLORS: Record<ModuleKey, { icon: string; tile: string }> = {
   dashboard: { icon: "text-sky-300", tile: "bg-sky-400/15" },
   products: { icon: "text-indigo-300", tile: "bg-indigo-400/15" },
   stock: { icon: "text-teal-300", tile: "bg-teal-400/15" },
+  purchases: { icon: "text-fuchsia-300", tile: "bg-fuchsia-400/15" },
   retailers: { icon: "text-violet-300", tile: "bg-violet-400/15" },
   sales: { icon: "text-orange-300", tile: "bg-orange-400/15" },
   dispatch: { icon: "text-cyan-300", tile: "bg-cyan-400/15" },
@@ -33,6 +34,7 @@ const ICONS: Record<ModuleKey, LucideIcon> = {
   dashboard: LayoutDashboard,
   products: Package,
   stock: Boxes,
+  purchases: PackagePlus,
   retailers: Store,
   sales: ShoppingCart,
   dispatch: Truck,

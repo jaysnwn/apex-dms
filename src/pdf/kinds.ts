@@ -1,1 +1,1 @@
-export type PdfKind = "invoice" | "credit-note" | "receipt" | "statement" | "picking";
+export type PdfKind = "invoice" | "credit-note" | "receipt" | "statement" | "picking" | "purchase-order";

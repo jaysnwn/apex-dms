@@ -11,7 +11,7 @@ export type ReportDef = {
   key: string;
   title: string;
   description: string;
-  group: "Sales" | "Money" | "Stock" | "Team";
+  group: "Sales" | "Money" | "Stock" | "Purchases" | "Team";
   roles: string[];
   filters: ("brand" | "salesman" | "route")[];
   run: (sb: SupabaseClient, f: ReportFilters) => Promise<ReportResult>;
@@ -91,6 +91,96 @@ function salesBy(dim: "brand" | "product" | "retailer" | "salesman") {
     return { columns, rows: g, totals: { ...sum(g, ["qty", "taxable", "tax", "total"]), share: 100 } };
   };
 }
+
+type PurchaseRow = {
+  line_id: string; purchase_id: string; purchase_no: string; supplier_bill_no: string; supplier_bill_date: string; supplier_id: string;
+  supplier_name: string; product_id: string; product_name: string; sku: string; brand_id: string; brand_name: string;
+  qty: number; taxable_value: number; tax: number; line_total: number;
+};
+
+async function purchases(sb: SupabaseClient, f: ReportFilters) {
+  return fetchAll<PurchaseRow>(() => {
+    let q = sb.from("purchase_register").select("*").gte("supplier_bill_date", f.from).lte("supplier_bill_date", f.to).order("supplier_bill_date");
+    if (f.brand) q = q.eq("brand_id", f.brand);
+    return q;
+  });
+}
+
+const PURCHASE_REPORTS: ReportDef[] = [
+  {
+    key: "purchase-register", title: "Purchase register", description: "Every supplier bill with taxable value and input GST.", group: "Purchases", roles: OFFICE, filters: [],
+    run: async (sb, f) => {
+      const [rows, heads] = await Promise.all([
+        purchases(sb, f),
+        fetchAll<{ id: string; other_charges: number; round_off: number; grand_total: number; cgst_total: number; sgst_total: number; igst_total: number; due_date: string }>(() =>
+          sb.from("purchases").select("id, other_charges, round_off, grand_total, cgst_total, sgst_total, igst_total, due_date").eq("status", "received").gte("supplier_bill_date", f.from).lte("supplier_bill_date", f.to)),
+      ]);
+      const hMap = new Map(heads.map((h) => [h.id, h]));
+      const g = group(rows, (r) => r.purchase_id, (r) => {
+        const h = hMap.get(r.purchase_id);
+        return {
+          date: r.supplier_bill_date, bill: r.supplier_bill_no, purchase: r.purchase_no, supplier: r.supplier_name, qty: 0, taxable: 0,
+          cgst: n(h?.cgst_total), sgst: n(h?.sgst_total), igst: n(h?.igst_total), other: n(h?.other_charges) + n(h?.round_off), total: n(h?.grand_total), due: h?.due_date ?? null,
+        };
+      }, (a, r) => { a.qty = n(a.qty) + n(r.qty); a.taxable = n(a.taxable) + n(r.taxable_value); });
+      return {
+        columns: [
+          { key: "date", label: "Bill date", type: "date" }, { key: "bill", label: "Supplier bill" }, { key: "purchase", label: "Our ref." }, { key: "supplier", label: "Supplier" },
+          { key: "qty", label: "Qty", type: "num" }, { key: "taxable", label: "Taxable value", type: "money" }, { key: "cgst", label: "CGST", type: "money" },
+          { key: "sgst", label: "SGST", type: "money" }, { key: "igst", label: "IGST", type: "money" }, { key: "other", label: "Other / round off", type: "money" },
+          { key: "total", label: "Bill total", type: "money" }, { key: "due", label: "Due", type: "date" },
+        ],
+        rows: g,
+        totals: sum(g, ["qty", "taxable", "cgst", "sgst", "igst", "other", "total"]),
+      };
+    },
+  },
+  {
+    key: "product-purchases", title: "Product-wise purchases", description: "Quantity and value bought per product and supplier.", group: "Purchases", roles: OFFICE, filters: ["brand"],
+    run: async (sb, f) => {
+      const rows = await purchases(sb, f);
+      const g = group(rows, (r) => `${r.product_id}|${r.supplier_id}`, (r) => ({ name: r.product_name, sku: r.sku, brand: r.brand_name, supplier: r.supplier_name, qty: 0, taxable: 0, avg: 0, total: 0 }),
+        (a, r) => { a.qty = n(a.qty) + n(r.qty); a.taxable = n(a.taxable) + n(r.taxable_value); a.total = n(a.total) + n(r.line_total); })
+        .map((r): Record<string, string | number | null> => ({ ...r, avg: n(r.qty) ? n(r.taxable) / n(r.qty) : 0 }))
+        .sort((x, y) => n(y.total) - n(x.total));
+      return {
+        columns: [
+          { key: "name", label: "Product" }, { key: "sku", label: "Model / SKU" }, { key: "brand", label: "Brand" }, { key: "supplier", label: "Supplier" },
+          { key: "qty", label: "Qty bought", type: "num" }, { key: "avg", label: "Avg. net cost", type: "money" }, { key: "taxable", label: "Taxable value", type: "money" }, { key: "total", label: "Incl. GST", type: "money" },
+        ],
+        rows: g,
+        totals: sum(g, ["qty", "taxable", "total"]),
+      };
+    },
+  },
+  {
+    key: "supplier-payables", title: "Supplier payables ageing", description: "What we owe each supplier, by days past due (as of today).", group: "Purchases", roles: OFFICE, filters: [],
+    run: async (sb) => {
+      const [bal, sup] = await Promise.all([
+        fetchAll<{ supplier_id: string; due_date: string; balance: number; days_overdue: number }>(() => sb.from("purchase_balances").select("supplier_id, due_date, balance, days_overdue").gt("balance", 0)),
+        sb.from("suppliers").select("id, name"),
+      ]);
+      const names = new Map((sup.data ?? []).map((s) => [s.id as string, s.name as string]));
+      const today = new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);
+      const g = group(bal, (b) => b.supplier_id, (b) => ({ name: names.get(b.supplier_id) ?? "—", bills: 0, not_due: 0, b0: 0, b16: 0, b31: 0, b45: 0, total: 0 }), (a, b) => {
+        const v = n(b.balance); const d = n(b.days_overdue);
+        a.bills = n(a.bills) + 1; a.total = n(a.total) + v;
+        const k = b.due_date >= today ? "not_due" : d <= 15 ? "b0" : d <= 30 ? "b16" : d <= 45 ? "b31" : "b45";
+        a[k] = n(a[k]) + v;
+      }).sort((x, y) => n(y.total) - n(x.total));
+      return {
+        columns: [
+          { key: "name", label: "Supplier" }, { key: "bills", label: "Bills", type: "int" }, { key: "not_due", label: "Not yet due", type: "money" },
+          { key: "b0", label: "0–15", type: "money" }, { key: "b16", label: "16–30", type: "money" }, { key: "b31", label: "31–45", type: "money" },
+          { key: "b45", label: "45+", type: "money" }, { key: "total", label: "Total payable", type: "money" },
+        ],
+        rows: g,
+        totals: sum(g, ["bills", "not_due", "b0", "b16", "b31", "b45", "total"]),
+        note: "Date filters do not apply: this is the position today.",
+      };
+    },
+  },
+];
 
 export const REPORTS: ReportDef[] = [
   { key: "brand-sales", title: "Brand-wise sales", description: "Sales by brand with share of total.", group: "Sales", roles: [...OFFICE, "warehouse"], filters: ["salesman", "route"], run: salesBy("brand") },
@@ -344,6 +434,7 @@ export const REPORTS: ReportDef[] = [
       };
     },
   },
+  ...PURCHASE_REPORTS,
 ];
 
 export function reportByKey(key: string) {

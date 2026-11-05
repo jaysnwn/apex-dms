@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import {
-  AlertTriangle, Boxes, CalendarCheck, ClipboardList, Clock, IndianRupee, Package, Receipt, Route as RouteIcon,
+  AlertTriangle, Boxes, CalendarCheck, ClipboardList, Clock, IndianRupee, Package, PackagePlus, Receipt, Route as RouteIcon,
   ShoppingCart, Store, TrendingUp, Truck, Users, Wallet,
 } from "lucide-react";
 import { requireRole } from "@/lib/auth";
@@ -37,7 +37,7 @@ async function OfficeDash({ showProfit }: { showProfit: boolean }) {
   const monthStart = today.slice(0, 8) + "01";
   const since = [monthStart, addDays(today, -29)].sort()[0];
 
-  const [invs, sales, pays, balances, valuation, stock, counts, pendingDispatch, cheques, promises, expenses, salesmen, visits, costs] = await Promise.all([
+  const [invs, sales, pays, balances, valuation, stock, counts, pendingDispatch, cheques, promises, expenses, salesmen, visits, costs, payables, toReceive] = await Promise.all([
     fetchAll<{ invoice_date: string; grand_total: number; orders: { salesman_id: string | null } | null }>(() => supabase.from("invoices").select("invoice_date, grand_total, orders(salesman_id)").eq("status", "issued").gte("invoice_date", since)),
     fetchAll<{ line_id: string; brand_name: string; retailer_id: string; shop_name: string; taxable_value: number; line_total: number }>(() => supabase.from("sales_register").select("line_id, brand_name, retailer_id, shop_name, taxable_value, line_total").gte("invoice_date", monthStart)),
     fetchAll<{ amount: number; collected_by: string | null; payment_date: string }>(() => supabase.from("payments").select("amount, collected_by, payment_date").in("status", ["received", "cheque_pending"]).gte("payment_date", monthStart)),
@@ -52,7 +52,11 @@ async function OfficeDash({ showProfit }: { showProfit: boolean }) {
     supabase.from("profiles").select("id, full_name").eq("role", "salesman").eq("is_active", true),
     supabase.from("visits").select("salesman_id, status").gte("planned_date", monthStart).lte("planned_date", today),
     showProfit ? fetchAll<{ line_id: string; cost: number }>(() => supabase.from("sales_costs").select("line_id, cost")) : Promise.resolve([]),
+    fetchAll<{ balance: number; due_date: string }>(() => supabase.from("purchase_balances").select("balance, due_date").gt("balance", 0)),
+    supabase.from("purchases").select("id", { count: "exact", head: true }).eq("status", "ordered"),
   ]);
+  const payable = payables.reduce((t, b) => t + Number(b.balance), 0);
+  const payableOverdue = payables.filter((b) => b.due_date < today).reduce((t, b) => t + Number(b.balance), 0);
 
   const sumN = <T,>(rows: T[], f: (r: T) => number) => rows.reduce((t, r) => t + f(r), 0);
   const todaySales = sumN(invs.filter((i) => i.invoice_date === today), (i) => Number(i.grand_total));
@@ -101,6 +105,8 @@ async function OfficeDash({ showProfit }: { showProfit: boolean }) {
         <StatCard label="Inventory value" value={inr(invValue, { decimals: false })} icon={Boxes} tone="teal" hint={`${qty(invUnits)} units`} href="/reports/stock-valuation" />
         <StatCard label="Pending dispatch" value={String(pendingDispatch.count ?? 0)} icon={Truck} tone={(pendingDispatch.count ?? 0) > 0 ? "amber" : "slate"} href="/dispatch" />
         <StatCard label="Low-stock items" value={String(stock.length)} icon={Package} tone={stock.length > 0 ? "red" : "slate"} alert={stock.length > 0} href="/stock?low=1" />
+        <StatCard label="Payable to suppliers" value={inr(payable, { decimals: false })} icon={PackagePlus} tone={payableOverdue > 0 ? "red" : "violet"} alert={payableOverdue > 0} hint={payableOverdue > 0 ? `${inr(payableOverdue, { decimals: false })} overdue` : "nothing overdue"} href="/purchases/payables" />
+        <StatCard label="Purchase orders to receive" value={String(toReceive.count ?? 0)} icon={ClipboardList} tone={(toReceive.count ?? 0) > 0 ? "amber" : "slate"} href="/purchases/orders" />
         <StatCard label="Active retailers" value={String(counts.count ?? 0)} icon={Store} tone="violet" href="/retailers" />
         <StatCard label="Active salesmen" value={String((salesmen.data ?? []).length)} icon={Users} tone="blue" href="/routes" />
         <StatCard label="Expenses this month" value={inr(monthExpenses, { decimals: false })} icon={Receipt} tone="amber" href="/expenses?tab=all" />
@@ -171,20 +177,23 @@ async function OfficeDash({ showProfit }: { showProfit: boolean }) {
 async function WarehouseDash() {
   const supabase = await createClient();
   const today = todayIST();
-  const [pending, transit, low, counts, moves] = await Promise.all([
+  const [pending, transit, low, counts, moves, inbound] = await Promise.all([
     supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "invoiced"),
     supabase.from("dispatches").select("id", { count: "exact", head: true }).eq("status", "dispatched"),
     supabase.from("product_stock").select("product_id, available, min_stock_qty").eq("is_low", true).limit(12),
     supabase.from("stock_counts").select("id", { count: "exact", head: true }).in("status", ["draft", "submitted"]),
     supabase.from("stock_movements").select("id", { count: "exact", head: true }).gte("created_at", `${today}T00:00:00+05:30`),
+    supabase.from("purchase_receipts").select("purchase_id").eq("status", "ordered"),
   ]);
+  const inboundCount = new Set((inbound.data ?? []).map((r) => r.purchase_id as string)).size;
   const ids = (low.data ?? []).map((l) => l.product_id);
   const { data: names } = ids.length ? await supabase.from("catalog").select("id, name, sku").in("id", ids) : { data: [] };
   const n = new Map((names ?? []).map((p) => [p.id as string, p]));
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <StatCard label="Waiting to dispatch" value={String(pending.count ?? 0)} icon={Truck} tone={(pending.count ?? 0) > 0 ? "amber" : "slate"} href="/dispatch" />
+        <StatCard label="Goods to receive" value={String(inboundCount)} icon={PackagePlus} tone={inboundCount > 0 ? "amber" : "slate"} href="/purchases/receive" />
         <StatCard label="On the way" value={String(transit.count ?? 0)} icon={Truck} tone="teal" href="/dispatch?tab=transit" />
         <StatCard label="Low-stock items" value={String((low.data ?? []).length)} icon={Package} tone="red" alert={(low.data ?? []).length > 0} href="/stock?low=1" />
         <StatCard label="Open stock counts" value={String(counts.count ?? 0)} icon={ClipboardList} tone="violet" href="/stock/counts" hint={`${moves.count ?? 0} stock entries today`} />

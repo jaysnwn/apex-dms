@@ -16,6 +16,7 @@ Stack: **Next.js 15 (App Router) · TypeScript · Tailwind CSS 4 · Supabase (Po
 | M4 Payments and accounts | Collections, FIFO, ageing, statements, promises, credit notes, classification | ✅ Built |
 | M5 Field app and expenses | Route plans, targets, visits, offline field app, expense approvals, reimbursement | ✅ Built |
 | M6 Dashboards and reports | Role dashboards, 12 reports, Excel export | ✅ Built |
+| Purchases | Suppliers, purchase orders, goods receipt into stock, supplier bills, payments, payables | ✅ Built |
 | M7 UAT and go-live | Your corrections, data migration, training, cut-over | Next |
 
 ## First-time setup
@@ -32,7 +33,7 @@ In the Supabase dashboard for this project:
 
 ### 2. Run the database migrations
 
-> **Already done for the `apex-dms` project (uiczjglzsnjxxqvxlheh)** — all migrations up to 0008 were applied on
+> **Already done for the `apex-dms` project (uiczjglzsnjxxqvxlheh)** — all migrations up to 0009 were applied on
 > 2026-11-05 through the Supabase connector, so skip this step. The applied versions are timestamped by Supabase,
 > not by these file names; if you later switch to `supabase db push`, run `supabase migration list` first and use
 > `supabase migration repair` so files that are already applied are not run again.
@@ -56,6 +57,8 @@ Or paste each file in `supabase/migrations/` **in order** into the Supabase SQL 
 7. `20261105000007_m1_inventory_retailers.sql` — stock guard, transfers, stock counts, valuation, retailer checks
 8. `20261105000008_sales_payments_field.sql` — quotations, invoice confirmation (stock + credit checks), dispatch,
    payments with FIFO, credit notes, ledger, sales register, classification, route plans, reimbursements
+9. `20261105000009_purchases.sql` — suppliers (CONQRETE, BLUEI seeded), purchase orders, receiving into stock,
+   supplier payments (FIFO, advances), payables views
 
 Supabase's advisor will still list a few items on purpose: the `catalog` and stock views run with owner rights
 so salesmen and warehouse staff can see stock without seeing purchase costs (each view filters to active users
@@ -123,6 +126,7 @@ Sign in, open **Users**, and create logins for the Manager, Office/Billing, Ware
 | Payment allocation | FIFO by due date unless invoices are picked by hand |
 | Classification | High credit risk: >45 days overdue, a bounce in 90 days, or over limit. Needs attention: >15 days overdue, no order in 60 days, or <60% paid on time. Star: 4+ invoices in 90 days, nothing overdue, ≥90% on time. Otherwise Average |
 | Gross profit | invoice taxable value minus weighted average purchase cost at invoice time; credit notes not deducted |
+| Purchases | A PO is editable until received. Receiving needs the supplier's bill no. + date and adds all its stock at the net cost (after discount, before GST); it also updates the product's purchase cost unless unticked. Due date = bill date + supplier credit days. The same bill number can't be entered twice for one supplier. Only a Manager can cancel a received purchase (stock comes back out; no payments applied). Warehouse staff can receive but never see costs |
 | Field app | caches today's route and catalogue; orders, payments and visits made offline are sent when back online |
 
 ## Tests

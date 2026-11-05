@@ -4,7 +4,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { createClient } from "@/lib/supabase/server";
 import { registerFonts, type Company } from "./base";
 import { InvoicePdf, type InvoicePdfData } from "./invoice";
-import { PickingPdf, ReceiptPdf, StatementPdf } from "./documents";
+import { PickingPdf, PurchasePdf, ReceiptPdf, StatementPdf, type PurchasePdfData } from "./documents";
 
 import type { PdfKind } from "./kinds";
 export type { PdfKind };
@@ -195,6 +195,36 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
       />
     );
     return { buffer, filename: `Picking_list_${new Date().toISOString().slice(0, 10)}.pdf`, shareText: "Picking list" };
+  }
+
+  if (kind === "purchase-order") {
+    const { data: p } = await supabase.from("purchases").select("*, suppliers(name, gstin, address, city, mobile), warehouses(name, address)").eq("id", id).maybeSingle();
+    if (!p) return null;
+    const { data: lines } = await supabase
+      .from("purchase_lines")
+      .select("qty, unit_cost, cost_mode, discount_pct, taxable_value, gst_rate, line_total, products(name, sku, hsn_code, unit_code)")
+      .eq("purchase_id", id)
+      .order("line_no");
+    const sup = p.suppliers as unknown as PurchasePdfData["supplier"];
+    const data: PurchasePdfData = {
+      company: co,
+      purchase: p as PurchasePdfData["purchase"],
+      supplier: sup,
+      warehouse: p.warehouses as unknown as PurchasePdfData["warehouse"],
+      lines: (lines ?? []).map((l) => {
+        const pr = l.products as unknown as { name: string; sku: string; hsn_code: string | null; unit_code: string };
+        return { ...l, product_name: pr.name, sku: pr.sku, hsn_code: pr.hsn_code, unit_code: pr.unit_code } as PurchasePdfData["lines"][number];
+      }),
+    };
+    const buffer = await renderToBuffer(<PurchasePdf data={data} />);
+    return {
+      buffer,
+      filename: `${safe(p.purchase_no)}.pdf`,
+      phone: sup.mobile ?? undefined,
+      shareText: p.status === "received"
+        ? `${sup.name}: our purchase record ${p.purchase_no} for your bill ${p.supplier_bill_no}. — ${co.legal_name}`
+        : `Dear ${sup.name}, please find our purchase order ${p.purchase_no}${p.expected_date ? `, required by ${new Date(p.expected_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}` : ""}. — ${co.legal_name}`,
+    };
   }
 
   return null;

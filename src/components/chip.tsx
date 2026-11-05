@@ -21,17 +21,20 @@ export function LinkButton({
   href,
   children,
   variant = "secondary",
+  className,
 }: {
   href: string;
   children: React.ReactNode;
   variant?: "primary" | "secondary";
+  className?: string;
 }) {
   return (
     <Link
       href={href}
       className={cn(
         "inline-flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium whitespace-nowrap",
-        variant === "primary" ? "bg-ink-900 px-4 text-white hover:bg-ink-800" : "border border-slate-300 bg-white hover:bg-slate-50"
+        variant === "primary" ? "bg-ink-900 px-4 text-white hover:bg-ink-800" : "border border-slate-300 bg-white hover:bg-slate-50",
+        className
       )}
     >
       {children}
