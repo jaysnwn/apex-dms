@@ -30,3 +30,12 @@ body {
 .tabular {
   font-variant-numeric: tabular-nums;
 }
+
+/* Scrollable without a visible scrollbar (sidebar menu) */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
