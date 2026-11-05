@@ -1,8 +1,10 @@
 import clsx from "clsx";
+import { twMerge } from "tailwind-merge";
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 
+// Later classes win over earlier ones (e.g. "w-full" + "w-36" -> "w-36").
 export function cn(...args: Parameters<typeof clsx>) {
-  return clsx(...args);
+  return twMerge(clsx(...args));
 }
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {

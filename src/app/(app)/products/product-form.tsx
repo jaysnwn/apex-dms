@@ -162,8 +162,8 @@ function PriceField({ name, label, value, mode }: { name: string; label: string;
     <div>
       <Label htmlFor={name}>{label} (₹)</Label>
       <div className="flex gap-2">
-        <Input id={name} name={name} type="number" min={0} step="0.01" defaultValue={value ?? 0} required className="tabular" />
-        <Select name={`${name}_mode`} defaultValue={mode} aria-label={`${label} GST`} className="w-36 shrink-0">
+        <Input id={name} name={name} type="number" min={0} step="0.01" defaultValue={value ?? 0} required className="tabular min-w-0 flex-1" />
+        <Select name={`${name}_mode`} defaultValue={mode} aria-label={`${label} GST`} className="w-32 shrink-0">
           <option value="exclusive">+ GST</option>
           <option value="inclusive">incl. GST</option>
         </Select>
