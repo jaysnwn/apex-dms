@@ -9,6 +9,7 @@ import { inr } from "@/lib/format";
 import { Avatar } from "./ui";
 import { onOutboxChange, readOutbox, writeOutbox, type OutboxItem } from "./outbox";
 import { submitQuotation } from "./actions";
+import { setupServiceWorker } from "@/lib/sw";
 
 const TABS = [
   { href: "/m", label: "Home", icon: Home },
@@ -54,7 +55,7 @@ export function MobileShell({ name, roleLabel, children }: { name: string; roleL
     window.addEventListener("online", on);
     window.addEventListener("offline", off);
     const stop = onOutboxChange(() => setOutbox(readOutbox()));
-    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+    setupServiceWorker();
     sync();
     return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); stop(); };
   }, [sync]);

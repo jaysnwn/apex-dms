@@ -11,6 +11,7 @@ import { date, inr } from "@/lib/format";
 import { VISIT_STATUS } from "@/lib/status";
 import { fieldToday, saveVisit, type FieldDay, type FieldVisit, type VisitUpdate } from "../actions";
 import { recordPayment } from "../../payments/actions";
+import { setupServiceWorker } from "@/lib/sw";
 
 // ---------------------------------------------------------------------------
 // Offline support: today's route is cached on the phone; visit updates and
@@ -74,7 +75,7 @@ export function FieldApp({ initial, mobile = false }: { initial: FieldDay | null
     const off = () => setOnline(false);
     window.addEventListener("online", on);
     window.addEventListener("offline", off);
-    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+    setupServiceWorker();
     return () => {
       window.removeEventListener("online", on);
       window.removeEventListener("offline", off);
