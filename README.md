@@ -39,8 +39,8 @@ In the Supabase dashboard for this project:
 
 ### 2. Run the database migrations
 
-> **Already done for the `apex-dms` project (uiczjglzsnjxxqvxlheh)** — all migrations up to 0015 were applied on
-> 2026-11-05 through the Supabase connector, so skip this step (0016 still has to be applied — see below). The applied versions are timestamped by Supabase,
+> **Already done for the `apex-dms` project (uiczjglzsnjxxqvxlheh)** — all migrations up to 0016 were applied
+> (0016 on 2026-11-08) through the Supabase connector, so skip this step. The applied versions are timestamped by Supabase,
 > not by these file names; if you later switch to `supabase db push`, run `supabase migration list` first and use
 > `supabase migration repair` so files that are already applied are not run again.
 
