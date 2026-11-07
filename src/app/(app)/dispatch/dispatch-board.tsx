@@ -18,6 +18,8 @@ export type PendingInvoice = {
   shop_name: string;
   city: string | null;
   mobile: string;
+  brand_id: string;
+  brand_name: string;
   items: { product_name: string; qty: number; unit_code: string; shortIn: Record<string, boolean> }[];
 };
 export type DispatchedRow = {
@@ -45,12 +47,14 @@ export function DispatchBoard({
   tab: "pending" | "transit" | "history";
   pending: PendingInvoice[];
   dispatched: DispatchedRow[];
-  warehouses: { id: string; name: string }[];
+  warehouses: { id: string; name: string; brand_id: string }[];
   canDispatch: boolean;
 }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [warehouse, setWarehouse] = useState(warehouses[0]?.id ?? "");
   const [dispatching, setDispatching] = useState<PendingInvoice | null>(null);
+  // Goods leave a warehouse of the invoice's own brand: the picked one if it matches, else that brand's first.
+  const whFor = (inv: PendingInvoice) => warehouses.find((w) => w.id === warehouse && w.brand_id === inv.brand_id) ?? warehouses.find((w) => w.brand_id === inv.brand_id);
   const [delivering, setDelivering] = useState<DispatchedRow | null>(null);
 
   if (tab === "pending") {
@@ -84,7 +88,8 @@ export function DispatchBoard({
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
             {pending.map((p) => {
-              const shortHere = p.items.some((i) => i.shortIn[warehouse]);
+              const wh = whFor(p);
+              const shortHere = !wh || p.items.some((i) => i.shortIn[wh.id]);
               const waitDays = Math.floor((Date.now() - new Date(p.invoice_date).getTime()) / 864e5);
               return (
                 <Card key={p.id} className={cn("p-4", selected.includes(p.id) && "border-accent-500 ring-2 ring-accent-500/20")}>
@@ -96,17 +101,19 @@ export function DispatchBoard({
                         <Badge tone={waitDays >= 2 ? "red" : waitDays >= 1 ? "amber" : "blue"}>{waitDays === 0 ? "Invoiced today" : `Waiting ${waitDays}d`}</Badge>
                       </div>
                       <div className="text-sm text-slate-500">
+                        <span className="mr-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-700">{p.brand_name}</span>
                         <Link href={`/sales/invoices/${p.id}`} className="font-mono hover:underline">{p.invoice_no}</Link> · {p.city ?? ""} · {inr(p.grand_total, { decimals: false })}
+                        {wh && wh.id !== warehouse && <span className="block text-xs text-slate-400">from {wh.name}</span>}
                       </div>
                       <ul className="mt-2 space-y-0.5 text-sm">
                         {p.items.map((i, k) => (
-                          <li key={k} className={cn("flex justify-between", i.shortIn[warehouse] && "text-red-700")}>
+                          <li key={k} className={cn("flex justify-between", wh && i.shortIn[wh.id] && "text-red-700")}>
                             <span className="truncate">{i.product_name}</span>
                             <span className="tabular shrink-0 font-medium">{qty(i.qty)} {i.unit_code.toLowerCase()}</span>
                           </li>
                         ))}
                       </ul>
-                      {shortHere && <p className="mt-2 text-xs font-medium text-red-700">Not enough stock in this warehouse for the red items. Transfer stock or choose another warehouse.</p>}
+                      {shortHere && <p className="mt-2 text-xs font-medium text-red-700">{wh ? "Not enough stock in this warehouse for the red items. Transfer stock or choose another warehouse." : `No active ${p.brand_name} warehouse.`}</p>}
                       {canDispatch && (
                         <Button size="sm" className="mt-3 bg-teal-600 hover:bg-teal-700" disabled={shortHere} onClick={() => setDispatching(p)}>
                           <Truck className="size-4" /> Dispatch full order
@@ -119,7 +126,7 @@ export function DispatchBoard({
             })}
           </div>
         )}
-        {dispatching && <DispatchDialog invoice={dispatching} warehouseId={warehouse} warehouseName={warehouses.find((w) => w.id === warehouse)?.name ?? ""} onClose={() => setDispatching(null)} />}
+        {dispatching && whFor(dispatching) && <DispatchDialog invoice={dispatching} warehouseId={whFor(dispatching)!.id} warehouseName={whFor(dispatching)!.name} onClose={() => setDispatching(null)} />}
       </>
     );
   }

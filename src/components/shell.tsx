@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import type { ModuleDef, ModuleKey } from "@/lib/roles";
 import { cn } from "@/components/ui";
+import { BrandSwitcher, type SwitcherBrand } from "@/components/brand-switcher";
 
 // Each module keeps one colour everywhere, so people find it at a glance.
 // icon = icon colour, tile = soft background behind the icon.
@@ -52,6 +53,9 @@ type Props = {
   modules: ModuleDef[];
   userName: string;
   roleLabel: string;
+  brands: SwitcherBrand[];
+  currentBrandId: string | null;
+  canSeeAllBrands: boolean;
   children: ReactNode;
 };
 
@@ -67,7 +71,7 @@ function isActive(href: string, pathname: string) {
   return pathname === base || pathname.startsWith(base + "/");
 }
 
-export function Shell({ modules, userName, roleLabel, children }: Props) {
+export function Shell({ modules, userName, roleLabel, brands, currentBrandId, canSeeAllBrands, children }: Props) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -89,6 +93,14 @@ export function Shell({ modules, userName, roleLabel, children }: Props) {
           <div className="text-[11px] font-medium tracking-wider text-gray-300/80">APEX TRADING CO.</div>
         </div>
       </div>
+
+      {/* Brand switcher: every inventory screen follows it */}
+      {brands.length > 0 && (
+        <div className="shrink-0 border-b border-white/10 px-3 py-3">
+          <div className="mb-1.5 px-1 text-[10px] font-semibold tracking-[0.14em] text-gray-400 uppercase">Brand</div>
+          <BrandSwitcher brands={brands} currentId={currentBrandId} canSeeAll={canSeeAllBrands} dark />
+        </div>
+      )}
 
       {/* Menu — scrolls only if the screen is very short, without a visible scrollbar */}
       <div className="no-scrollbar flex-1 overflow-y-auto px-3 py-3">
@@ -160,6 +172,7 @@ export function Shell({ modules, userName, roleLabel, children }: Props) {
             <Menu className="size-5" />
           </button>
           <span className="text-sm font-semibold tracking-wide">APEX DMS</span>
+          {brands.length > 1 && <div className="ml-auto w-52"><BrandSwitcher brands={brands} currentId={currentBrandId} canSeeAll={canSeeAllBrands} /></div>}
         </header>
         <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
       </div>

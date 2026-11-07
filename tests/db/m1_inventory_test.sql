@@ -4,17 +4,18 @@
 -- =============================================================================
 \set ON_ERROR_STOP 1
 
-insert into public.warehouses (id, name) values ('60000000-0000-0000-0000-000000000002', 'Nashik Godown');
+insert into public.warehouses (id, name, brand_id)
+select '60000000-0000-0000-0000-000000000002', 'Nashik Godown', id from public.brands where name = 'CONQRETE';
 insert into public.products (id, name, brand_id, sku, purchase_cost, purchase_cost_mode, retailer_price, mrp, gst_rate)
 select '30000000-0000-0000-0000-000000000002', 'Type-C Cable 1m', id, 'BL-TC1M', 118, 'inclusive', 149, 299, 18
-  from public.brands where name = 'BLUEI';
+  from public.brands where name = 'CONQRETE';
 
 -- ---------- Warehouse staff ----------
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000004', false);
 set role authenticated;
 do $$
 declare
-  v_main uuid := (select id from public.warehouses where name = 'Main Warehouse');
+  v_main uuid := (select id from public.warehouses where name = 'CONQRETE Warehouse');
   v_nsk  uuid := '60000000-0000-0000-0000-000000000002';
   v_cost numeric;
   v_count uuid;
@@ -82,13 +83,13 @@ reset role;
 
 -- a movement after the count started (sold/damaged 1) must be respected on approval
 insert into public.stock_movements (product_id, warehouse_id, movement_type, qty, reason)
-select '30000000-0000-0000-0000-000000000002', id, 'damage', -1, 'late damage' from public.warehouses where name = 'Main Warehouse';
+select '30000000-0000-0000-0000-000000000002', id, 'damage', -1, 'late damage' from public.warehouses where name = 'CONQRETE Warehouse';
 
 -- ---------- Manager approves ----------
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', false);
 set role authenticated;
 do $$
-declare v_main uuid := (select id from public.warehouses where name = 'Main Warehouse');
+declare v_main uuid := (select id from public.warehouses where name = 'CONQRETE Warehouse');
         v_count uuid := (select id from public.stock_counts where status = 'submitted' limit 1);
 begin
   assert public.approve_stock_count(v_count) >= 1, 'count should post at least one reconciliation';

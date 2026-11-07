@@ -108,12 +108,44 @@ async function purchases(sb: SupabaseClient, f: ReportFilters) {
 
 const PURCHASE_REPORTS: ReportDef[] = [
   {
-    key: "purchase-register", title: "Purchase register", description: "Every supplier bill with taxable value and input GST.", group: "Purchases", roles: OFFICE, filters: [],
+    key: "reorder-list", title: "Reorder list (today)", description: "Low-stock products to order now: stock, sales speed, days left and suggested quantity.", group: "Purchases", roles: OFFICE, filters: ["brand"],
+    run: async (sb, f) => {
+      const { data: ids } = await sb.rpc("my_brand_ids");
+      const brands = f.brand ? [f.brand] : ((ids as string[] | null) ?? []);
+      const { data: names } = await sb.from("brands").select("id, name").in("id", brands);
+      const bName = new Map((names ?? []).map((b) => [b.id as string, b.name as string]));
+      const rows: Record<string, string | number | null>[] = [];
+      for (const b of brands) {
+        const { data } = await sb.rpc("reorder_suggestions", { p_brand: b });
+        for (const r of (data ?? []) as Record<string, unknown>[]) {
+          rows.push({
+            brand: bName.get(b) ?? "", name: String(r.name), sku: String(r.sku), urgency: r.urgency === "out" ? "Out of stock" : r.urgency === "urgent" ? "Runs out before delivery" : "Below minimum",
+            available: n(r.available), on_order: n(r.on_order), sold_30d: n(r.sold_30d), days_left: r.days_left == null ? null : n(r.days_left),
+            min: n(r.min_stock_qty), suggested: n(r.suggested_qty), supplier: (r.supplier_name as string) ?? "—",
+          });
+        }
+      }
+      return {
+        columns: [
+          { key: "brand", label: "Brand" }, { key: "name", label: "Product" }, { key: "sku", label: "SKU" }, { key: "urgency", label: "Why" },
+          { key: "available", label: "Available", type: "num" }, { key: "on_order", label: "On order", type: "num" }, { key: "sold_30d", label: "Sold 30 days", type: "num" },
+          { key: "days_left", label: "Days left", type: "num" }, { key: "min", label: "Minimum", type: "num" }, { key: "suggested", label: "Order qty", type: "num" }, { key: "supplier", label: "Supplier" },
+        ],
+        rows,
+        totals: sum(rows, ["suggested"]),
+        note: "As of today; the date range does not apply. Goods take the supplier's lead time (8 days by default) to arrive; the suggestion covers that plus 30 days of sales. Create the purchase orders from Purchases → Reorder.",
+      };
+    },
+  },
+  {
+    key: "purchase-register", title: "Purchase register", description: "Every supplier bill with taxable value and input GST.", group: "Purchases", roles: OFFICE, filters: ["brand"],
     run: async (sb, f) => {
       const [rows, heads] = await Promise.all([
         purchases(sb, f),
         fetchAll<{ id: string; other_charges: number; round_off: number; grand_total: number; cgst_total: number; sgst_total: number; igst_total: number; due_date: string }>(() =>
-          sb.from("purchases").select("id, other_charges, round_off, grand_total, cgst_total, sgst_total, igst_total, due_date").eq("status", "received").gte("supplier_bill_date", f.from).lte("supplier_bill_date", f.to)),
+          f.brand
+            ? sb.from("purchases").select("id, other_charges, round_off, grand_total, cgst_total, sgst_total, igst_total, due_date").eq("status", "received").eq("brand_id", f.brand).gte("supplier_bill_date", f.from).lte("supplier_bill_date", f.to)
+            : sb.from("purchases").select("id, other_charges, round_off, grand_total, cgst_total, sgst_total, igst_total, due_date").eq("status", "received").gte("supplier_bill_date", f.from).lte("supplier_bill_date", f.to)),
       ]);
       const hMap = new Map(heads.map((h) => [h.id, h]));
       const g = group(rows, (r) => r.purchase_id, (r) => {
@@ -154,10 +186,12 @@ const PURCHASE_REPORTS: ReportDef[] = [
     },
   },
   {
-    key: "supplier-payables", title: "Supplier payables ageing", description: "What we owe each supplier, by days past due (as of today).", group: "Purchases", roles: OFFICE, filters: [],
-    run: async (sb) => {
+    key: "supplier-payables", title: "Supplier payables ageing", description: "What we owe each supplier, by days past due (as of today).", group: "Purchases", roles: OFFICE, filters: ["brand"],
+    run: async (sb, f) => {
       const [bal, sup] = await Promise.all([
-        fetchAll<{ supplier_id: string; due_date: string; balance: number; days_overdue: number }>(() => sb.from("purchase_balances").select("supplier_id, due_date, balance, days_overdue").gt("balance", 0)),
+        fetchAll<{ supplier_id: string; due_date: string; balance: number; days_overdue: number }>(() => f.brand
+          ? sb.from("purchase_balances").select("supplier_id, due_date, balance, days_overdue").gt("balance", 0).eq("brand_id", f.brand)
+          : sb.from("purchase_balances").select("supplier_id, due_date, balance, days_overdue").gt("balance", 0)),
         sb.from("suppliers").select("id, name"),
       ]);
       const names = new Map((sup.data ?? []).map((s) => [s.id as string, s.name as string]));

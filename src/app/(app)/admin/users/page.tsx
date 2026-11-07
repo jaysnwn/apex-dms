@@ -16,6 +16,13 @@ export default async function UsersPage() {
     .order("is_active", { ascending: false })
     .order("full_name");
   const users = (data ?? []) as Profile[];
+  const [{ data: brands }, { data: access }] = await Promise.all([
+    supabase.from("brands").select("id, name").eq("is_active", true).order("name"),
+    supabase.from("profile_brands").select("user_id, brand_id"),
+  ]);
+  const brandList = brands ?? [];
+  const accessOf = (id: string) => (access ?? []).filter((a) => a.user_id === id).map((a) => a.brand_id as string);
+  const brandName = new Map(brandList.map((b) => [b.id as string, b.name as string]));
 
   const counts = ROLES.map((r) => ({ role: r, n: users.filter((u) => u.role === r && u.is_active).length }));
 
@@ -36,7 +43,7 @@ export default async function UsersPage() {
 
       <Card className="mb-8 p-5">
         <h2 className="mb-4 font-semibold text-slate-900">Add a user</h2>
-        <CreateUserForm />
+        <CreateUserForm brands={brandList} />
       </Card>
 
       <h2 className="mb-3 text-sm font-semibold text-slate-900">All users ({users.length})</h2>
@@ -53,13 +60,14 @@ export default async function UsersPage() {
                 </div>
                 <div className="truncate text-sm text-slate-500">{u.email}</div>
               </div>
-              <div className="hidden sm:block">
+              <div className="hidden gap-1 sm:flex">
                 <Badge tone="blue">{ROLE_LABELS[u.role]}</Badge>
+                <Badge>{u.role === "super_admin" ? "All brands" : accessOf(u.id).map((b) => brandName.get(b)).filter(Boolean).join(" + ") || "No brand"}</Badge>
               </div>
               {u.is_active ? <Badge tone="green">Active</Badge> : <Badge tone="red">Disabled</Badge>}
             </summary>
             <div className="border-t border-slate-100 p-4">
-              <EditUserForm user={u} isSelf={u.id === me.id} />
+              <EditUserForm user={u} isSelf={u.id === me.id} brands={brandList} brandIds={accessOf(u.id)} />
             </div>
           </details>
         ))}

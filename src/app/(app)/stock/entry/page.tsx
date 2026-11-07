@@ -1,18 +1,50 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { EntryForms } from "./entry-forms";
+import { getBrandContext } from "@/lib/brand";
+import { todayIST } from "@/lib/gst";
+import { Card } from "@/components/ui";
+import { BrandStrip } from "@/components/brand-badge";
+import { BrandSwitcher } from "@/components/brand-switcher";
+import { EntryForms, ENTRY_TYPES, type EntryType } from "./entry-forms";
 
 export const metadata: Metadata = { title: "Stock entry" };
-
-const TYPES = ["stock_in", "transfer", "adjustment", "damage", "opening"] as const;
 
 export default async function StockEntryPage({ searchParams }: { searchParams: Promise<{ type?: string }> }) {
   const { profile } = await requireRole("super_admin", "manager", "warehouse");
   const { type } = await searchParams;
-  const supabase = await createClient();
-  const { data: warehouses } = await supabase.from("warehouses").select("id, name").eq("is_active", true).order("name");
-  const initial = (TYPES as readonly string[]).includes(type ?? "") ? (type as (typeof TYPES)[number]) : "stock_in";
+  const ctx = await getBrandContext();
 
-  return <EntryForms warehouses={warehouses ?? []} initialType={initial} canSetCost={profile.role !== "warehouse"} />;
+  // Stock is always entered for one brand: ask which one when "All brands" is on.
+  if (!ctx.current) {
+    return (
+      <Card className="max-w-xl p-6">
+        <h2 className="font-semibold">Which brand is this stock for?</h2>
+        <p className="mb-4 text-sm text-slate-500">CONQRETE and BLUEI stock are kept completely separate. Pick the brand first.</p>
+        <BrandSwitcher brands={ctx.brands} currentId={null} canSeeAll={false} />
+      </Card>
+    );
+  }
+
+  const supabase = await createClient();
+  const { data: warehouses } = await supabase.from("warehouses").select("id, name").eq("is_active", true).eq("brand_id", ctx.current.id).order("name");
+  const isMgr = profile.role === "super_admin" || profile.role === "manager";
+  const allowed = ENTRY_TYPES.filter((t) => isMgr || t.key !== "adjustment").map((t) => t.key);
+  const initial = (allowed as string[]).includes(type ?? "") ? (type as EntryType) : "stock_in";
+
+  return (
+    <>
+      <BrandStrip name={ctx.current.name} code={ctx.current.code} />
+      <EntryForms
+        key={ctx.current.id}
+        brandId={ctx.current.id}
+        brandName={ctx.current.name}
+        warehouses={warehouses ?? []}
+        initialType={initial}
+        allowed={allowed}
+        canSetCost={profile.role !== "warehouse"}
+        today={todayIST()}
+      />
+    </>
+  );
 }

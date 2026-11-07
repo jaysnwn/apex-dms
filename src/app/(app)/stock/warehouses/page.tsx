@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { ActionForm } from "@/components/action-form";
 import { Badge, Card, Input, Label, Select } from "@/components/ui";
 import { addLocation, saveWarehouse } from "../actions";
+import { brandScope, getBrandContext } from "@/lib/brand";
+import { BrandBadge } from "@/components/brand-badge";
 
 export const metadata: Metadata = { title: "Warehouses" };
 
@@ -11,8 +13,11 @@ export default async function WarehousesPage() {
   const { profile } = await requireRole("super_admin", "manager", "billing", "warehouse");
   const canEdit = profile.role === "super_admin" || profile.role === "manager";
   const supabase = await createClient();
+  const ctx = await getBrandContext();
+  const scope = await brandScope();
+  const brandOf = new Map(ctx.brands.map((b) => [b.id, b]));
   const [{ data: warehouses }, { data: locations }] = await Promise.all([
-    supabase.from("warehouses").select("id, name, address, is_active").order("name"),
+    supabase.from("warehouses").select("id, name, address, is_active, brand_id").in("brand_id", scope).order("name"),
     supabase.from("warehouse_locations").select("id, warehouse_id, code, description").order("code"),
   ]);
 
@@ -25,7 +30,7 @@ export default async function WarehousesPage() {
             <Card key={w.id} className="p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="font-semibold">{w.name}</h2>
+                  <h2 className="flex items-center gap-2 font-semibold">{w.name} <BrandBadge name={brandOf.get(w.brand_id)?.name ?? ""} code={brandOf.get(w.brand_id)?.code} /></h2>
                   {w.address && <p className="text-sm text-slate-500">{w.address}</p>}
                 </div>
                 {w.is_active ? <Badge tone="green">Active</Badge> : <Badge>Inactive</Badge>}
@@ -76,9 +81,16 @@ export default async function WarehousesPage() {
 
       {canEdit && (
         <Card className="h-fit p-5">
-          <h2 className="mb-3 font-semibold">Add a warehouse</h2>
+          <h2 className="mb-1 font-semibold">Add a warehouse</h2>
+          <p className="mb-3 text-xs text-slate-500">A warehouse belongs to one brand. Stock of another brand can never be put in it.</p>
           <ActionForm action={saveWarehouse} submitLabel="Add warehouse">
             <div className="space-y-3">
+              <div>
+                <Label htmlFor="wh-brand">Brand</Label>
+                <Select id="wh-brand" name="brand_id" defaultValue={ctx.current?.id ?? ctx.brands[0]?.id}>
+                  {ctx.brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </Select>
+              </div>
               <div>
                 <Label htmlFor="wh-name">Name</Label>
                 <Input id="wh-name" name="name" required />

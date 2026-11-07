@@ -6,8 +6,10 @@ import { dateTime } from "@/lib/format";
 import { ActionForm } from "@/components/action-form";
 import { Badge, Card, Input, Label, Select } from "@/components/ui";
 import { startCount } from "../actions";
+import { brandScope, getBrandContext } from "@/lib/brand";
+import { BrandStrip } from "@/components/brand-badge";
 
-export const metadata: Metadata = { title: "Stock counts" };
+export const metadata: Metadata = { title: "Stock verification" };
 
 const TONE = { draft: "amber", submitted: "blue", approved: "green", cancelled: "slate" } as const;
 const LABEL = { draft: "Counting", submitted: "Waiting for approval", approved: "Approved", cancelled: "Cancelled" } as const;
@@ -15,22 +17,26 @@ const LABEL = { draft: "Counting", submitted: "Waiting for approval", approved: 
 export default async function CountsPage() {
   const { profile } = await requireRole("super_admin", "manager", "billing", "warehouse");
   const supabase = await createClient();
+  const ctx = await getBrandContext();
+  const scope = await brandScope();
   const canStart = profile.role !== "billing";
 
   const [{ data: counts }, { data: warehouses }, { data: people }] = await Promise.all([
-    supabase.from("stock_counts").select("id, warehouse_id, status, notes, counted_by, approved_by, created_at, approved_at").order("created_at", { ascending: false }).limit(50),
-    supabase.from("warehouses").select("id, name").eq("is_active", true).order("name"),
+    supabase.from("stock_counts").select("id, warehouse_id, status, notes, counted_by, approved_by, created_at, approved_at").in("brand_id", scope).order("created_at", { ascending: false }).limit(50),
+    supabase.from("warehouses").select("id, name").eq("is_active", true).in("brand_id", scope).order("name"),
     supabase.from("profiles").select("id, full_name"),
   ]);
   const wMap = new Map((warehouses ?? []).map((w) => [w.id as string, w.name as string]));
   const uMap = new Map((people ?? []).map((u) => [u.id as string, u.full_name as string]));
 
   return (
+    <>
+    <BrandStrip name={ctx.current?.name} code={ctx.current?.code} all={ctx.isAll} />
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
       <Card className="overflow-hidden">
         <div className="border-b border-slate-100 p-4">
-          <h2 className="font-semibold">Physical stock counts</h2>
-          <p className="text-sm text-slate-500">Warehouse counts the shelves; a Manager approves and the system posts the differences.</p>
+          <h2 className="font-semibold">Physical stock verification</h2>
+          <p className="text-sm text-slate-500">Warehouse counts the shelves (on screen, or on the printed Excel sheet from Stock reports); a Manager approves and the system posts the differences. Each count covers one brand&apos;s warehouse only.</p>
         </div>
         {(counts ?? []).length === 0 ? (
           <p className="p-8 text-center text-sm text-slate-500">No counts yet.</p>
@@ -74,5 +80,6 @@ export default async function CountsPage() {
         </Card>
       )}
     </div>
+    </>
   );
 }

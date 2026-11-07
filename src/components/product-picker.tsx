@@ -15,7 +15,9 @@ export function ProductPicker({
   initial,
   onChange,
   required = true,
+  brandId,
 }: {
+  brandId?: string | null;
   name?: string;
   initial?: PickedProduct | null;
   onChange?: (p: PickedProduct | null) => void;
@@ -26,6 +28,16 @@ export function ProductPicker({
   const [results, setResults] = useState<PickedProduct[]>([]);
   const [open, setOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const hidden = useRef<HTMLInputElement>(null);
+
+  // Clear the choice when the surrounding form is reset after a save.
+  useEffect(() => {
+    const form = hidden.current?.form;
+    if (!form) return;
+    const clear = () => { setPicked(null); onChange?.(null); };
+    form.addEventListener("reset", clear);
+    return () => form.removeEventListener("reset", clear);
+  }, [onChange]);
 
   useEffect(() => {
     const term = safeSearch(q);
@@ -36,17 +48,19 @@ export function ProductPicker({
     clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
       const supabase = createClient();
-      const { data } = await supabase
+      let query = supabase
         .from("catalog")
         .select("id, name, sku, brand_name, unit_code")
         .eq("is_active", true)
         .or(`name.ilike.%${term}%,sku.ilike.%${term}%,barcode.eq.${term}`)
         .order("name")
         .limit(12);
+      if (brandId) query = query.eq("brand_id", brandId);
+      const { data } = await query;
       setResults((data ?? []) as PickedProduct[]);
       setOpen(true);
     }, 200);
-  }, [q]);
+  }, [q, brandId]);
 
   function choose(p: PickedProduct | null) {
     setPicked(p);
@@ -57,7 +71,7 @@ export function ProductPicker({
 
   return (
     <div className="relative">
-      <input type="hidden" name={name} value={picked?.id ?? ""} required={required} />
+      <input ref={hidden} type="hidden" name={name} value={picked?.id ?? ""} required={required} />
       {picked ? (
         <div className="flex h-10 items-center justify-between rounded-lg border border-slate-300 bg-slate-50 px-3 text-sm">
           <span className="truncate">

@@ -1,5 +1,6 @@
 "use server";
 
+import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
@@ -24,26 +25,53 @@ export type QuoteInput = {
   lines: { product_id: string; qty: number; discount_pct: number }[];
 };
 
-// Save a quotation (never an invoice). Safe to resend: the same clientUuid
-// returns the same order instead of creating a second one.
-export async function submitQuotation(q: QuoteInput): Promise<{ ok?: boolean; orderId?: string; orderNo?: string; total?: number; error?: string }> {
+// Same retry key → same order. Each brand of a split order gets its own key, derived
+// from the phone's key, so a resend never creates a second copy of any part.
+function brandKey(clientUuid: string, brandId: string, first: boolean) {
+  if (first) return clientUuid;
+  const h = createHash("sha256").update(`${clientUuid}:${brandId}`).digest("hex");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`;
+}
+
+export type SentQuote = { orderId: string; orderNo: string; total: number; brand: string };
+
+// Save a quotation (never an invoice). One invoice is for one brand, so a cart
+// with CONQRETE and BLUEI items becomes one quotation per brand automatically.
+// Safe to resend: the same clientUuid returns the same order(s).
+export async function submitQuotation(q: QuoteInput): Promise<{ ok?: boolean; orderId?: string; orderNo?: string; total?: number; orders?: SentQuote[]; error?: string }> {
   await requireRole(...FIELD);
   if (!q.retailerId) return { error: "Choose the outlet." };
   if (!q.lines.length) return { error: "Add at least one product." };
   const supabase = await createClient();
-  const { data: id, error } = await supabase.rpc("save_quotation", {
-    p_order_id: null,
-    p_retailer_id: q.retailerId,
-    p_credit_days: q.creditDays,
-    p_notes: q.notes || null,
-    p_lines: q.lines,
-    p_client_uuid: q.clientUuid,
-  });
-  if (error) return { error: dbError(error) };
-  const { data: o } = await supabase.from("orders").select("order_no, grand_total").eq("id", id as string).single();
+  const { data: prods } = await supabase.from("catalog").select("id, brand_id, brand_name").in("id", q.lines.map((l) => l.product_id));
+  const brandOf = new Map((prods ?? []).map((p) => [p.id as string, { id: p.brand_id as string, name: p.brand_name as string }]));
+  const groups = new Map<string, { name: string; lines: QuoteInput["lines"] }>();
+  for (const l of q.lines) {
+    const b = brandOf.get(l.product_id);
+    if (!b) return { error: "A product in the order is no longer available. Refresh the catalogue." };
+    const g = groups.get(b.id) ?? { name: b.name, lines: [] };
+    g.lines.push(l);
+    groups.set(b.id, g);
+  }
+  const orders: SentQuote[] = [];
+  const keys = [...groups.keys()].sort();
+  for (const [i, brandId] of keys.entries()) {
+    const g = groups.get(brandId)!;
+    const { data: id, error } = await supabase.rpc("save_quotation", {
+      p_order_id: null,
+      p_retailer_id: q.retailerId,
+      p_credit_days: q.creditDays,
+      p_notes: q.notes || null,
+      p_lines: g.lines,
+      p_client_uuid: brandKey(q.clientUuid, brandId, i === 0),
+    });
+    if (error) return { error: orders.length ? `${orders.map((o) => o.brand).join(", ")} saved; ${g.name} failed: ${dbError(error)}` : dbError(error), orders };
+    const { data: o } = await supabase.from("orders").select("order_no, grand_total").eq("id", id as string).single();
+    orders.push({ orderId: id as string, orderNo: o?.order_no ?? "", total: Number(o?.grand_total ?? 0), brand: g.name });
+  }
   revalidatePath("/m");
   revalidatePath("/sales");
-  return { ok: true, orderId: id as string, orderNo: o?.order_no, total: Number(o?.grand_total ?? 0) };
+  return { ok: true, orderId: orders[0].orderId, orderNo: orders[0].orderNo, total: orders.reduce((t, o) => t + o.total, 0), orders };
 }
 
 // ---------------------------------------------------------------------------

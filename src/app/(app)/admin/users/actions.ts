@@ -30,8 +30,11 @@ export async function createUser(_prev: ActionState, formData: FormData): Promis
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const { full_name, email, phone, role, password } = parsed.data;
 
+  const brandIds = formData.getAll("brand_ids").map(String).filter(Boolean);
+  if (role !== "super_admin" && brandIds.length === 0) return { error: "Tick at least one brand this user works with." };
+
   const admin = createAdminClient();
-  const { error } = await admin.auth.admin.createUser({
+  const { data: created, error } = await admin.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
@@ -42,6 +45,11 @@ export async function createUser(_prev: ActionState, formData: FormData): Promis
   if (error) {
     return { error: error.message.includes("already") ? "A user with this email already exists." : error.message };
   }
+
+  // Brand access (CONQRETE / BLUEI / both). Runs as the signed-in Super Admin.
+  const supabase = await createClient();
+  const { error: bErr } = await supabase.rpc("set_user_brands", { p_user: created.user.id, p_brands: brandIds });
+  if (bErr) return { error: `User created, but brand access could not be saved: ${bErr.message}` };
 
   revalidatePath("/admin/users");
   return { ok: `${full_name} can now sign in as ${email}.` };
@@ -81,6 +89,11 @@ export async function updateUser(_prev: ActionState, formData: FormData): Promis
     .update({ full_name, phone: phone || null, role, is_active: active })
     .eq("id", id);
   if (error) return { error: error.message };
+
+  const brandIds = formData.getAll("brand_ids").map(String).filter(Boolean);
+  if (role !== "super_admin" && brandIds.length === 0) return { error: "Tick at least one brand this user works with." };
+  const { error: bErr } = await supabase.rpc("set_user_brands", { p_user: id, p_brands: brandIds });
+  if (bErr) return { error: `Saved, but brand access could not be changed: ${bErr.message}` };
 
   // Touch the auth record only when something it holds actually changed.
   // Supabase signs the user out everywhere whenever ban status is changed, so

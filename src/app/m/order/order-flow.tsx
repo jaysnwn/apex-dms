@@ -17,7 +17,7 @@ import { Sheet, Stepper } from "../ui";
 
 type Catalogue = { items: CatalogueItem[]; maxDiscount: number; loadedAt: string };
 type Cart = Record<string, { qty: number; discount: number }>;
-type DoneResult = { orderId?: string; orderNo?: string; total: number; offline: boolean; shop: string; mobile: string; lines: string[] };
+type DoneResult = { orderId?: string; orderNo?: string; total: number; offline: boolean; shop: string; mobile: string; lines: string[]; orders?: { orderId: string; orderNo: string; total: number; brand: string }[] };
 
 const CAT_KEY = "apex-m-catalogue";
 const OUT_KEY = "apex-m-outlets";
@@ -320,7 +320,7 @@ function Review({ outlet, lines, calc, totals, maxDiscount, setQty, setDiscount,
       const res = await submitQuotation(data);
       setBusy(false);
       if (res.error) return setError(res.error);
-      onSent({ orderId: res.orderId, orderNo: res.orderNo, total: res.total ?? totals.grand, offline: false, shop: outlet.shop_name, mobile: outlet.mobile, lines: summary });
+      onSent({ orderId: res.orderId, orderNo: res.orderNo, total: res.total ?? totals.grand, offline: false, shop: outlet.shop_name, mobile: outlet.mobile, lines: summary, orders: res.orders });
     } catch {
       // Network dropped while sending: keep it on the phone, it will be sent later.
       addToOutbox({ id: uuid.current, kind: "order", data, shop: outlet.shop_name, total: totals.grand, at: new Date().toISOString() });
@@ -410,7 +410,17 @@ function Done({ result, onNew, onHome }: { result: DoneResult; onNew: () => void
         {result.offline ? "No internet right now. It will be sent to the office automatically when you are back online. You can send the PDF quotation from My orders later." : "The office will check stock and credit and make the invoice. Now send the quotation to the shop:"}
       </p>
       <div className="mx-auto mt-6 grid max-w-sm gap-3">
-        {result.orderId && result.orderNo ? (
+        {result.orders && result.orders.length > 1 ? (
+          <>
+            <p className="rounded-xl bg-sky-50 px-3 py-2 text-sm text-sky-900">One quotation per brand ({result.orders.map((o) => o.brand).join(" + ")}), because each brand is billed separately.</p>
+            {result.orders.map((o) => (
+              <div key={o.orderId} className="rounded-2xl bg-white p-3 text-left ring-1 ring-slate-200">
+                <div className="mb-2 flex items-center justify-between text-sm"><b>{o.brand}</b><span className="font-mono text-xs text-slate-500">{o.orderNo}</span><span className="tabular font-semibold">{inr(o.total, { decimals: false })}</span></div>
+                <ShareQuote orderId={o.orderId} orderNo={o.orderNo} mobile={result.mobile} fallbackText={text} />
+              </div>
+            ))}
+          </>
+        ) : result.orderId && result.orderNo ? (
           <ShareQuote orderId={result.orderId} orderNo={result.orderNo} mobile={result.mobile} fallbackText={text} />
         ) : (
           <a href={`https://wa.me/91${result.mobile}?text=${encodeURIComponent(text)}`} target="_blank" rel="noopener" className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-[#25D366] text-lg font-bold text-white">

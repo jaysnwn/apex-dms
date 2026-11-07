@@ -1,19 +1,21 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { getBrandContext } from "@/lib/brand";
 import type { BuilderLine } from "./order-builder";
 import type { PickerRetailer } from "./actions";
 
 export async function builderOptions() {
   const supabase = await createClient();
-  const [{ data: co }, { data: brands }] = await Promise.all([
+  const [{ data: co }, ctx] = await Promise.all([
     supabase.from("company_settings").select("state_code, salesman_max_discount").eq("id", 1).single(),
-    supabase.from("brands").select("id, name").eq("is_active", true).order("name"),
+    getBrandContext(),
   ]);
   return {
     companyState: (co?.state_code as string) ?? "27",
     maxSalesmanDiscount: Number(co?.salesman_max_discount ?? 5),
-    brands: brands ?? [],
+    brands: ctx.brands.map((b) => ({ id: b.id, name: b.name })),
+    defaultBrandId: ctx.current?.id,
   };
 }
 

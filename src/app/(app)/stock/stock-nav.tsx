@@ -5,10 +5,11 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/components/ui";
 
 const TABS = [
-  { href: "/stock", label: "Overview", exact: true },
+  { href: "/stock", label: "Dashboard", exact: true },
   { href: "/stock/entry", label: "Stock entry", write: true },
-  { href: "/stock/movements", label: "Movements" },
-  { href: "/stock/counts", label: "Stock counts" },
+  { href: "/stock/movements", label: "Movement history" },
+  { href: "/stock/counts", label: "Stock verification" },
+  { href: "/stock/reports", label: "Stock reports" },
   { href: "/stock/warehouses", label: "Warehouses" },
 ];
 

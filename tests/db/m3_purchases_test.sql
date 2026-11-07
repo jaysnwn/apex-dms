@@ -30,7 +30,7 @@ set role authenticated;
 do $$
 declare v_po uuid; v_wh uuid; v_before numeric; p record; v_pay uuid; v_po2 uuid; v_ig uuid;
 begin
-  select id into v_wh from public.warehouses where name = 'Main Warehouse';
+  select id into v_wh from public.warehouses where name = 'CONQRETE Warehouse';
   v_before := (select coalesce(sum(qty), 0) from public.stock_movements where product_id = '30000000-0000-0000-0000-000000000001' and warehouse_id = v_wh);
 
   -- advance paid before the bill exists
@@ -124,7 +124,7 @@ set role authenticated;
 do $$
 declare v_stock numeric; v_wh uuid;
 begin
-  select id into v_wh from public.warehouses where name = 'Main Warehouse';
+  select id into v_wh from public.warehouses where name = 'CONQRETE Warehouse';
   begin perform public.cancel_purchase((select v from pids where k = 'po1'), 'wrong'); raise exception 'cancelled a paid bill';
   exception when raise_exception then if sqlerrm not like '%Payments are applied%' then raise; end if; end;
   -- the IGST order was never received: simple cancel
@@ -149,7 +149,7 @@ begin
   assert (select count(*) from public.suppliers) >= 3, 'warehouse sees suppliers';
   assert (select count(*) from public.purchase_receipts) >= 1, 'warehouse sees what to receive';
   begin
-    perform public.save_purchase(null, (select id from public.suppliers where name = 'BLUEI'), (select id from public.warehouses limit 1),
+    perform public.save_purchase(null, (select id from public.suppliers where name = 'BLUEI'), (select id from public.warehouses where name = 'CONQRETE Warehouse'),
       null, null, 30, 0, null, '[{"product_id":"30000000-0000-0000-0000-000000000002","qty":1,"unit_cost":1}]'::jsonb);
     raise exception 'warehouse created a purchase';
   exception when insufficient_privilege then null; end;
@@ -161,7 +161,7 @@ select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000003
 set role authenticated;
 do $$ begin
   insert into pids values ('po3', public.save_purchase(null, (select id from public.suppliers where name = 'BLUEI'),
-    (select id from public.warehouses where name = 'Main Warehouse'), null, null, 30, 0, null,
+    (select id from public.warehouses where name = 'CONQRETE Warehouse'), null, null, 30, 0, null,
     '[{"product_id":"30000000-0000-0000-0000-000000000002","qty":5,"unit_cost":100}]'::jsonb));
 end $$;
 reset role;

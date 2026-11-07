@@ -5,7 +5,7 @@ import { Pencil } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { signProductImages } from "@/lib/images";
-import { dateTime, inr, MOVEMENT_LABELS, qty } from "@/lib/format";
+import { dateTime, inr, qty, txnLabel } from "@/lib/format";
 import { Badge, Card, PageHeader, cn } from "@/components/ui";
 import { LinkButton } from "@/components/chip";
 import { PhotoManager } from "./photo-manager";
@@ -37,7 +37,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     seesMovements
       ? supabase
           .from("stock_movements")
-          .select("id, movement_type, qty, reason, created_at, warehouse_id, created_by")
+          .select("id, movement_type, reference_type, qty, reason, created_at, warehouse_id, created_by")
           .eq("product_id", id)
           .order("created_at", { ascending: false })
           .limit(15)
@@ -62,6 +62,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     ["Unit", p.unit_code],
     ["GST rate", `${p.gst_rate}%`],
     ["Retailer price", `${inr(p.retailer_price)} ${p.retailer_price_mode === "inclusive" ? "incl. GST" : "+ GST"}`],
+    ["Distributor price", Number(p.distributor_price) > 0 ? `${inr(p.distributor_price)} ${p.distributor_price_mode === "inclusive" ? "incl. GST" : "+ GST"}` : "—"],
     ["MRP", `${inr(p.mrp)} ${p.mrp_mode === "inclusive" ? "incl. GST" : "+ GST"}`],
     ...(seesCost && cost.data
       ? ([["Avg. purchase cost", `${inr(cost.data.avg_cost)} excl. GST`]] as [string, React.ReactNode][])
@@ -150,7 +151,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                       {(movements.data ?? []).map((m) => (
                         <tr key={m.id}>
                           <td className="py-2 pl-5 whitespace-nowrap text-slate-500">{dateTime(m.created_at)}</td>
-                          <td className="py-2 pl-4">{MOVEMENT_LABELS[m.movement_type] ?? m.movement_type}</td>
+                          <td className="py-2 pl-4">{txnLabel(m.movement_type, m.reference_type)}</td>
                           <td className="py-2 pl-4 text-slate-500">{whMap.get(m.warehouse_id)}</td>
                           <td className="hidden py-2 pl-4 text-slate-500 sm:table-cell">{m.reason ?? ""}</td>
                           <td className="hidden py-2 pl-4 text-slate-500 md:table-cell">{m.created_by ? nameMap.get(m.created_by) : ""}</td>

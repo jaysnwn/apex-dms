@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { getBrandContext } from "@/lib/brand";
 import { Badge, Button, Card, PageHeader, Select } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Audit log" };
@@ -14,6 +15,7 @@ const TABLES = [
   "routes", "retailers", "orders", "order_lines", "invoices", "invoice_lines",
   "credit_notes", "credit_note_lines", "dispatches", "payments", "payment_allocations",
   "payment_promises", "route_plans", "visits", "targets", "expenses", "reimbursements",
+  "suppliers", "purchases", "purchase_lines", "purchase_returns", "supplier_payments", "profile_brands",
 ];
 
 type AuditRow = {
@@ -25,6 +27,7 @@ type AuditRow = {
   new_data: Record<string, unknown> | null;
   changed_by: string | null;
   changed_at: string;
+  brand_id: string | null;
 };
 
 const IGNORED_KEYS = new Set(["updated_at", "created_at"]);
@@ -45,21 +48,25 @@ function fmt(v: unknown) {
 export default async function AuditPage({
   searchParams,
 }: {
-  searchParams: Promise<{ table?: string; action?: string; user?: string; page?: string }>;
+  searchParams: Promise<{ table?: string; action?: string; user?: string; page?: string; brand?: string }>;
 }) {
   await requireRole("super_admin", "manager");
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page) || 1);
   const supabase = await createClient();
+  const ctx = await getBrandContext();
+  const brandName = new Map(ctx.brands.map((b) => [b.id, b.name]));
 
   let query = supabase
     .from("audit_log")
-    .select("id, table_name, record_id, action, old_data, new_data, changed_by, changed_at", { count: "exact" })
+    .select("id, table_name, record_id, action, old_data, new_data, changed_by, changed_at, brand_id", { count: "exact" })
     .order("changed_at", { ascending: false })
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
   if (sp.table && TABLES.includes(sp.table)) query = query.eq("table_name", sp.table);
   if (sp.action && ["INSERT", "UPDATE", "DELETE"].includes(sp.action)) query = query.eq("action", sp.action);
   if (sp.user) query = query.eq("changed_by", sp.user);
+  if (sp.brand === "none") query = query.is("brand_id", null);
+  else if (sp.brand && brandName.has(sp.brand)) query = query.eq("brand_id", sp.brand);
 
   const [{ data, count }, { data: people }] = await Promise.all([
     query,
@@ -74,6 +81,7 @@ export default async function AuditPage({
     if (sp.table) params.set("table", sp.table);
     if (sp.action) params.set("action", sp.action);
     if (sp.user) params.set("user", sp.user);
+    if (sp.brand) params.set("brand", sp.brand);
     params.set("page", String(p));
     return `?${params}`;
   };
@@ -83,7 +91,12 @@ export default async function AuditPage({
       <PageHeader title="Audit log" description="Every change to stock, money, retailers and users, with who made it and when." />
 
       <Card className="mb-4 p-4">
-        <form className="grid gap-3 sm:grid-cols-4">
+        <form className="grid gap-3 sm:grid-cols-5">
+          <Select name="brand" defaultValue={sp.brand ?? ""} aria-label="Brand">
+            <option value="">All brands</option>
+            {ctx.brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            <option value="none">Not brand-specific</option>
+          </Select>
           <Select name="table" defaultValue={sp.table ?? ""} aria-label="Table">
             <option value="">All records</option>
             {TABLES.map((t) => (
@@ -125,6 +138,7 @@ export default async function AuditPage({
                     </Badge>
                     <span className="font-medium text-slate-900">{r.table_name.replaceAll("_", " ")}</span>
                     <span className="font-mono text-xs text-slate-400">{r.record_id?.slice(0, 8)}</span>
+                    {r.brand_id && brandName.has(r.brand_id) && <Badge>{brandName.get(r.brand_id)}</Badge>}
                     <span className="ml-auto text-slate-500">
                       {r.changed_by ? names.get(r.changed_by) ?? "Unknown user" : "System"} ·{" "}
                       <time dateTime={r.changed_at} className="tabular">

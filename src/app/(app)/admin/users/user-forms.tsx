@@ -5,7 +5,26 @@ import { createUser, resetPassword, updateUser, type ActionState } from "./actio
 import { ROLE_LABELS, ROLES, type AppRole } from "@/lib/roles";
 import { Alert, Button, Input, Label, Select } from "@/components/ui";
 
-export function CreateUserForm() {
+type BrandOpt = { id: string; name: string };
+
+// Brand access: a user ticked for CONQRETE only never sees BLUEI inventory.
+function BrandBoxes({ brands, selected, idPrefix }: { brands: BrandOpt[]; selected: string[]; idPrefix: string }) {
+  return (
+    <div className="sm:col-span-2">
+      <div className="mb-1.5 text-sm font-medium text-slate-700">Brand access <span className="font-normal text-slate-500">(Super Admin always has every brand)</span></div>
+      <div className="flex flex-wrap gap-3">
+        {brands.map((b) => (
+          <label key={b.id} htmlFor={`${idPrefix}-${b.id}`} className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium has-[:checked]:border-ink-900 has-[:checked]:bg-slate-50">
+            <input id={`${idPrefix}-${b.id}`} type="checkbox" name="brand_ids" value={b.id} defaultChecked={selected.includes(b.id)} className="size-4" />
+            {b.name}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function CreateUserForm({ brands }: { brands: BrandOpt[] }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(createUser, {});
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -41,6 +60,7 @@ export function CreateUserForm() {
         <Label htmlFor="new-password" hint="min. 8 characters">Temporary password</Label>
         <Input id="new-password" name="password" type="text" required minLength={8} autoComplete="new-password" />
       </div>
+      <BrandBoxes brands={brands} selected={brands.map((b) => b.id)} idPrefix="new-brand" />
       <div className="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:items-center">
         <Button type="submit" disabled={pending}>{pending ? "Creating…" : "Create user"}</Button>
         {state.error && <Alert>{state.error}</Alert>}
@@ -59,7 +79,7 @@ type UserRow = {
   is_active: boolean;
 };
 
-export function EditUserForm({ user, isSelf }: { user: UserRow; isSelf: boolean }) {
+export function EditUserForm({ user, isSelf, brands, brandIds }: { user: UserRow; isSelf: boolean; brands: BrandOpt[]; brandIds: string[] }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(updateUser, {});
   const [pwState, pwAction, pwPending] = useActionState<ActionState, FormData>(resetPassword, {});
   const [showPw, setShowPw] = useState(false);
@@ -94,6 +114,7 @@ export function EditUserForm({ user, isSelf }: { user: UserRow; isSelf: boolean 
           </Select>
           {isSelf && <input type="hidden" name="is_active" value="true" />}
         </div>
+        <div className="sm:col-span-4"><BrandBoxes brands={brands} selected={brandIds} idPrefix={`brand-${user.id}`} /></div>
         <div className="flex flex-wrap items-center gap-3 sm:col-span-4">
           <Button type="submit" size="sm" disabled={pending}>{pending ? "Saving…" : "Save changes"}</Button>
           <Button type="button" size="sm" variant="secondary" onClick={() => setShowPw((v) => !v)}>

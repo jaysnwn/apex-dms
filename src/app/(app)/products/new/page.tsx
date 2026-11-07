@@ -11,7 +11,7 @@ export default async function NewProductPage() {
   const options = await productFormOptions();
   return (
     <>
-      <PageHeader title="Add product" description="You can add photos after saving." />
+      <PageHeader title="Add product" description="Essentials first; you can edit everything later." />
       <div className="max-w-3xl">
         <ProductForm {...options} />
       </div>

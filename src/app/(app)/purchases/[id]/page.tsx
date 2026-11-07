@@ -12,6 +12,7 @@ import { Alert, Badge, Card, cn } from "@/components/ui";
 import { LinkButton } from "@/components/chip";
 import { DocButtons } from "@/components/doc-buttons";
 import { CancelPurchaseButton, ReceiveButton } from "../purchase-actions";
+import { ReturnButton } from "./return-button";
 import { billStatus } from "../data";
 
 export const metadata: Metadata = { title: "Purchase" };
@@ -23,12 +24,16 @@ export default async function PurchasePage({ params, searchParams }: { params: P
   const supabase = await createClient();
   const { data: p } = await supabase.from("purchases").select("*, suppliers(id, name, code, gstin, state_code, city, mobile), warehouses(name)").eq("id", id).maybeSingle();
   if (!p) notFound();
-  const [{ data: lines }, { data: allocs }, { data: bal }, { data: people }] = await Promise.all([
+  const [{ data: lines }, { data: allocs }, { data: bal }, { data: people }, { data: returns }] = await Promise.all([
     supabase.from("purchase_lines").select("*, products(name, sku, unit_code, hsn_code)").eq("purchase_id", id).order("line_no"),
     supabase.from("supplier_payment_allocations").select("amount, is_auto, supplier_payments(id, payment_no, payment_date, method, reference_no, status)").eq("purchase_id", id),
     supabase.from("purchase_balances").select("balance, days_overdue").eq("purchase_id", id).maybeSingle(),
     supabase.from("profiles").select("id, full_name"),
+    supabase.from("purchase_returns").select("id, return_no, return_date, reason, grand_total, purchase_return_lines(purchase_line_id, qty)").eq("purchase_id", id).order("created_at"),
   ]);
+  const returnedQty = new Map<string, number>();
+  for (const r of returns ?? []) for (const l of (r.purchase_return_lines as { purchase_line_id: string; qty: number }[]) ?? []) returnedQty.set(l.purchase_line_id, (returnedQty.get(l.purchase_line_id) ?? 0) + Number(l.qty));
+  const returnedTotal = (returns ?? []).reduce((t, r) => t + Number(r.grand_total), 0);
   const s = p.suppliers as unknown as { id: string; name: string; code: string; gstin: string | null; state_code: string | null; city: string | null; mobile: string | null };
   const uMap = new Map((people ?? []).map((u) => [u.id as string, u.full_name as string]));
   const st = PURCHASE_STATUS[p.status];
@@ -76,7 +81,13 @@ export default async function PurchasePage({ params, searchParams }: { params: P
           {received && balance > 0 && (
             <LinkButton href={`/purchases/payments/new?supplier=${s.id}&bill=${p.id}`} className="bg-emerald-600 text-white hover:bg-emerald-700"><Wallet className="size-4" /> Pay this bill</LinkButton>
           )}
-          {(p.status === "ordered" || (received && isMgr)) && <CancelPurchaseButton purchaseId={p.id} received={received} />}
+          {received && (
+            <ReturnButton purchaseId={p.id} lines={(lines ?? []).map((l) => {
+              const pr = l.products as unknown as { name: string; sku: string; unit_code: string };
+              return { id: l.id, name: pr.name, sku: pr.sku, unit: pr.unit_code, bought: Number(l.qty), returned: returnedQty.get(l.id) ?? 0, lineTotal: Number(l.line_total) };
+            })} />
+          )}
+          {(p.status === "ordered" || (received && isMgr && !(returns ?? []).length)) && <CancelPurchaseButton purchaseId={p.id} received={received} />}
         </div>
       </div>
 
@@ -118,6 +129,7 @@ export default async function PurchasePage({ params, searchParams }: { params: P
             <div className={cn("px-5 py-4 text-white", received ? "bg-gradient-to-br from-emerald-700 to-emerald-900" : "bg-gradient-to-br from-fuchsia-700 to-fuchsia-900")}>
               <div className="text-sm opacity-80">{received ? "Bill total" : "Order total"}</div>
               <div className="tabular text-2xl font-semibold">{inr(p.grand_total)}</div>
+              {returnedTotal > 0 && <div className="text-sm opacity-90">Returned − {inr(returnedTotal)}</div>}
               {received && <div className="text-sm opacity-90">Balance to pay {inr(balance)}</div>}
             </div>
             <dl className="tabular space-y-1.5 p-5 text-sm">
@@ -129,6 +141,20 @@ export default async function PurchasePage({ params, searchParams }: { params: P
               {Number(p.round_off) !== 0 && <R k="Round off" v={inr(p.round_off)} />}
             </dl>
           </Card>
+
+          {(returns ?? []).length > 0 && (
+            <Card className="p-5">
+              <h3 className="mb-2 font-semibold">Returned to supplier</h3>
+              <ul className="divide-y divide-slate-100 text-sm">
+                {(returns ?? []).map((r) => (
+                  <li key={r.id} className="flex justify-between gap-3 py-2">
+                    <span><span className="font-mono text-xs font-medium">{r.return_no}</span><span className="block text-xs text-slate-500">{date(r.return_date)} · {r.reason}</span></span>
+                    <span className="tabular font-semibold text-rose-700">− {inr(r.grand_total)}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
 
           {received && (
             <Card className="p-5">

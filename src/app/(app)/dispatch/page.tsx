@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { brandScope } from "@/lib/brand";
 import { Chip } from "@/components/chip";
 import { PageHeader } from "@/components/ui";
 import { DispatchBoard, type DispatchedRow, type PendingInvoice } from "./dispatch-board";
@@ -12,7 +13,12 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
   const sp = await searchParams;
   const tab = sp.tab === "transit" || sp.tab === "history" ? sp.tab : "pending";
   const supabase = await createClient();
-  const { data: warehouses } = await supabase.from("warehouses").select("id, name").eq("is_active", true).order("name");
+  const scope = await brandScope();
+  const [{ data: warehouses }, { data: brandRows }] = await Promise.all([
+    supabase.from("warehouses").select("id, name, brand_id").eq("is_active", true).in("brand_id", scope).order("name"),
+    supabase.from("brands").select("id, name"),
+  ]);
+  const brandName = new Map((brandRows ?? []).map((b) => [b.id as string, b.name as string]));
 
   let pending: PendingInvoice[] = [];
   let dispatched: DispatchedRow[] = [];
@@ -20,8 +26,9 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
   if (tab === "pending") {
     const { data: invs } = await supabase
       .from("invoices")
-      .select("id, invoice_no, invoice_date, grand_total, retailer_snapshot, orders!inner(status)")
+      .select("id, invoice_no, invoice_date, grand_total, retailer_snapshot, brand_id, orders!inner(status)")
       .eq("status", "issued")
+      .in("brand_id", scope)
       .eq("orders.status", "invoiced")
       .order("invoice_date");
     const ids = (invs ?? []).map((i) => i.id);
@@ -40,6 +47,8 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
         shop_name: snap.shop_name,
         city: snap.billing_city,
         mobile: snap.mobile,
+        brand_id: i.brand_id,
+        brand_name: brandName.get(i.brand_id) ?? "",
         items: (lines ?? [])
           .filter((l) => l.invoice_id === i.id)
           .map((l) => ({
@@ -53,7 +62,8 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
   } else {
     const { data: ds } = await supabase
       .from("dispatches")
-      .select("id, dispatch_no, invoice_id, vehicle_no, dispatched_at, delivered_at, status, delivery_remarks, warehouse_id, invoices(invoice_no, retailer_snapshot)")
+      .select("id, dispatch_no, invoice_id, vehicle_no, dispatched_at, delivered_at, status, delivery_remarks, warehouse_id, invoices!inner(invoice_no, retailer_snapshot, brand_id)")
+      .in("invoices.brand_id", scope)
       .eq("status", tab === "transit" ? "dispatched" : "delivered")
       .order(tab === "transit" ? "dispatched_at" : "delivered_at", { ascending: false })
       .limit(200);

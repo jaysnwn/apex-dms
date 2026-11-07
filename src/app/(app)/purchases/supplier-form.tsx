@@ -8,10 +8,10 @@ import { saveSupplier } from "./actions";
 export type SupplierRow = {
   id?: string; name?: string; gstin?: string | null; state_code?: string | null; contact_name?: string | null; mobile?: string | null;
   email?: string | null; address?: string | null; city?: string | null; pincode?: string | null; credit_days?: number;
-  bank_details?: string | null; notes?: string | null; is_active?: boolean;
+  bank_details?: string | null; notes?: string | null; is_active?: boolean; brand_id?: string | null; lead_days?: number;
 };
 
-export function SupplierForm({ supplier }: { supplier?: SupplierRow }) {
+export function SupplierForm({ supplier, brands = [] }: { supplier?: SupplierRow; brands?: { id: string; name: string }[] }) {
   const s = supplier ?? {};
   return (
     <ActionForm action={saveSupplier} submitLabel={s.id ? "Save changes" : "Create supplier"}>
@@ -30,6 +30,14 @@ export function SupplierForm({ supplier }: { supplier?: SupplierRow }) {
         <div><Label htmlFor="mobile">Mobile</Label><Input id="mobile" name="mobile" defaultValue={s.mobile ?? ""} inputMode="tel" maxLength={14} /></div>
         <div><Label htmlFor="email">Email</Label><Input id="email" name="email" type="email" defaultValue={s.email ?? ""} /></div>
         <div><Label htmlFor="credit">Credit period (days)</Label><Input id="credit" name="credit_days" type="number" min={0} max={365} defaultValue={s.credit_days ?? 30} /></div>
+        <div>
+          <Label htmlFor="brand" hint="used for the reorder list">Supplies brand</Label>
+          <select id="brand" name="brand_id" defaultValue={s.brand_id ?? ""} className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm">
+            <option value="">Any / several</option>
+            {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
+        </div>
+        <div><Label htmlFor="lead" hint="days from order to arrival">Delivery time</Label><Input id="lead" name="lead_days" type="number" min={0} max={180} defaultValue={s.lead_days ?? 8} /></div>
         <div className="sm:col-span-2"><Label htmlFor="address">Address</Label><Input id="address" name="address" defaultValue={s.address ?? ""} /></div>
         <div><Label htmlFor="city">City</Label><Input id="city" name="city" defaultValue={s.city ?? ""} /></div>
         <div><Label htmlFor="pin">PIN code</Label><Input id="pin" name="pincode" defaultValue={s.pincode ?? ""} maxLength={6} /></div>

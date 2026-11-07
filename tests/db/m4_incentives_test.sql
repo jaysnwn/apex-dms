@@ -13,7 +13,7 @@ grant all on ids, m to authenticated;
 
 -- Fixtures (as owner): stock, a second route for salesman 2, four shops for salesman 1.
 insert into public.stock_movements (product_id, warehouse_id, movement_type, qty, unit_cost, reason)
-select '30000000-0000-0000-0000-000000000001', id, 'stock_in', 500, 900, 'incentive test' from public.warehouses where name = 'Main Warehouse';
+select '30000000-0000-0000-0000-000000000001', id, 'stock_in', 500, 900, 'incentive test' from public.warehouses where name = 'CONQRETE Warehouse';
 insert into public.routes (id, name, default_salesman_id) values
   ('10000000-0000-0000-0000-000000000009', 'Other Route', '00000000-0000-0000-0000-000000000006');
 insert into public.retailers (id, shop_name, mobile, route_id) values

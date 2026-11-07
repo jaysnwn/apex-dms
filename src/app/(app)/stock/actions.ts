@@ -11,15 +11,20 @@ import type { FormResult } from "@/components/action-form";
 const qtySchema = z.coerce.number({ message: "Enter a quantity" }).positive("Quantity must be more than zero");
 
 const entrySchema = z.object({
-  type: z.enum(["stock_in", "opening", "adjustment", "damage"]),
+  type: z.enum(["stock_in", "stock_out", "opening", "damage"]),
   product_id: z.string().uuid("Choose a product"),
   warehouse_id: z.string().uuid("Choose a warehouse"),
   qty: qtySchema,
-  direction: z.enum(["add", "remove"]).optional(),
+  movement_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   unit_cost: z.coerce.number().min(0).optional(),
   reason: z.string().max(300).optional(),
+  reference_no: z.string().max(80).optional(),
+  bill_no: z.string().max(60).optional(),
+  notes: z.string().max(500).optional(),
+  client_uuid: z.string().uuid().optional(),
 });
 
+// Inward, outward, damage, opening. Every change is a new movement row: stock is never overwritten.
 export async function recordMovement(_prev: FormResult, formData: FormData): Promise<FormResult> {
   const { user, profile } = await requireRole("super_admin", "manager", "warehouse");
   const raw = formObject(formData);
@@ -28,28 +33,54 @@ export async function recordMovement(_prev: FormResult, formData: FormData): Pro
   if (!parsed.success) return { error: zodMessage(parsed.error) };
   const v = parsed.data;
 
-  let signed = v.qty;
-  if (v.type === "damage") signed = -v.qty;
-  if (v.type === "adjustment" && v.direction === "remove") signed = -v.qty;
-  if ((v.type === "adjustment" || v.type === "damage") && !v.reason) {
-    return { error: "Enter a reason for this entry." };
-  }
+  const signed = v.type === "damage" || v.type === "stock_out" ? -v.qty : v.qty;
+  if ((v.type === "damage" || v.type === "stock_out") && !v.reason) return { error: "Choose the reason for this entry." };
 
+  const ref = [v.reference_no, v.bill_no ? `Bill ${v.bill_no}` : null].filter(Boolean).join(" · ") || null;
   const supabase = await createClient();
   const { error } = await supabase.from("stock_movements").insert({
     product_id: v.product_id,
     warehouse_id: v.warehouse_id,
     movement_type: v.type,
     qty: signed,
+    movement_date: v.movement_date ?? undefined,
     // Only roles that see costs may set a cost; otherwise the database uses the product cost.
     unit_cost: profile.role !== "warehouse" && v.unit_cost !== undefined && signed > 0 ? v.unit_cost : null,
-    reason: v.reason ?? null,
+    reason: v.reason ?? (v.type === "stock_in" ? "Stock inward" : v.type === "opening" ? "Opening stock" : null),
+    reference_no: ref,
+    notes: v.notes ?? null,
+    client_uuid: v.client_uuid ?? null,
     created_by: user.id,
   });
-  if (error) return { error: dbError(error) };
+  // Same form submitted twice: the first one already counted.
+  if (error && !(error.code === "23505" && error.message.includes("client_uuid"))) return { error: dbError(error) };
 
   revalidatePath("/stock");
-  return { ok: "Stock updated.", resetForm: true };
+  const label = { stock_in: "Stock inward", stock_out: "Stock outward", opening: "Opening stock", damage: "Damaged stock" }[v.type];
+  return { ok: `${label} of ${v.qty} recorded.`, resetForm: true };
+}
+
+// Adjustment: Manager / Super Admin set the system stock to the physical count, with a reason.
+export async function adjustStock(input: { productId: string; warehouseId: string; physical: number; reason: string; notes?: string; clientUuid: string }) {
+  await requireRole("super_admin", "manager");
+  if (!Number.isFinite(input.physical) || input.physical < 0) return { error: "Physical stock must be zero or more." };
+  if (!input.reason.trim()) return { error: "Choose the reason for the adjustment." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("adjust_stock_to", {
+    p_product_id: input.productId, p_warehouse_id: input.warehouseId, p_physical: input.physical,
+    p_reason: input.reason, p_notes: input.notes || null, p_client_uuid: input.clientUuid,
+  });
+  if (error) return { error: dbError(error) };
+  revalidatePath("/stock");
+  return { diff: Number(data) };
+}
+
+// Current system stock of one product in one warehouse (for the adjustment screen).
+export async function systemStock(productId: string, warehouseId: string) {
+  await requireRole("super_admin", "manager", "warehouse");
+  const supabase = await createClient();
+  const { data } = await supabase.from("stock_on_hand").select("on_hand").eq("product_id", productId).eq("warehouse_id", warehouseId).maybeSingle();
+  return Number(data?.on_hand ?? 0);
 }
 
 const transferSchema = z.object({
@@ -135,6 +166,7 @@ export async function reviewCount(countId: string, decision: "approve" | "reopen
 
 const warehouseSchema = z.object({
   id: z.string().uuid().optional(),
+  brand_id: z.string().uuid().optional(),
   name: z.string().min(2, "Enter a warehouse name").max(80),
   address: z.string().max(300).optional(),
   is_active: z.enum(["true", "false"]).optional(),
@@ -147,7 +179,11 @@ export async function saveWarehouse(_prev: FormResult, formData: FormData): Prom
   const parsed = warehouseSchema.safeParse(raw);
   if (!parsed.success) return { error: zodMessage(parsed.error) };
   const { id, ...v } = parsed.data;
-  const row = { name: v.name, address: v.address ?? null, is_active: v.is_active !== "false" };
+  const row: Record<string, unknown> = { name: v.name, address: v.address ?? null, is_active: v.is_active !== "false" };
+  if (!id) {
+    if (!v.brand_id) return { error: "Choose the brand this warehouse belongs to." };
+    row.brand_id = v.brand_id;
+  }
   const supabase = await createClient();
   const { error } = id ? await supabase.from("warehouses").update(row).eq("id", id) : await supabase.from("warehouses").insert(row);
   if (error) return { error: dbError(error) };

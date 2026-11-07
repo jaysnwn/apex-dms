@@ -2,19 +2,22 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { listSuppliers } from "./actions";
+import { getBrandContext } from "@/lib/brand";
 
 export async function builderOptions() {
   const supabase = await createClient();
-  const [suppliers, { data: wh }, { data: brands }, { data: co }] = await Promise.all([
+  const ctx = await getBrandContext();
+  const ids = ctx.brands.map((b) => b.id);
+  const [suppliers, { data: wh }, { data: co }] = await Promise.all([
     listSuppliers(),
-    supabase.from("warehouses").select("id, name").eq("is_active", true).order("name"),
-    supabase.from("brands").select("id, name").eq("is_active", true).order("name"),
+    supabase.from("warehouses").select("id, name, brand_id").eq("is_active", true).in("brand_id", ids).order("name"),
     supabase.from("company_settings").select("state_code").eq("id", 1).maybeSingle(),
   ]);
   return {
     suppliers,
-    warehouses: (wh ?? []) as { id: string; name: string }[],
-    brands: (brands ?? []) as { id: string; name: string }[],
+    warehouses: (wh ?? []) as { id: string; name: string; brand_id: string }[],
+    brands: ctx.brands.map((b) => ({ id: b.id, name: b.name })),
+    defaultBrandId: ctx.current?.id ?? ctx.brands[0]?.id,
     companyState: (co?.state_code as string) || "27",
   };
 }

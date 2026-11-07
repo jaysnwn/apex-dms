@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Download, FileSpreadsheet } from "lucide-react";
 import { COLUMNS, parseCsv, rowsToRecords, type ImportKind } from "@/lib/import-columns";
 import { Alert, Badge, Button, Card, cn } from "@/components/ui";
-import { importProducts, importRetailers, type ImportResult } from "./actions";
+import { importRetailers, type ImportResult } from "./actions";
+import { ProductImporter } from "./product-importer";
 
 const INFO: Record<ImportKind, { title: string; help: string }> = {
   products: {
@@ -18,7 +19,9 @@ const INFO: Record<ImportKind, { title: string; help: string }> = {
   },
 };
 
-export function Importer({ initialTab }: { initialTab: ImportKind }) {
+type Brand = { id: string; name: string; code: string };
+
+export function Importer({ initialTab, brand, brands, canSeeAll }: { initialTab: ImportKind; brand: Brand | null; brands: Brand[]; canSeeAll: boolean }) {
   const [tab, setTab] = useState<ImportKind>(initialTab);
   const [records, setRecords] = useState<Record<string, string>[] | null>(null);
   const [fileName, setFileName] = useState("");
@@ -80,7 +83,7 @@ export function Importer({ initialTab }: { initialTab: ImportKind }) {
   function runImport() {
     if (!records) return;
     start(async () => {
-      const res = tab === "products" ? await importProducts(records) : await importRetailers(records);
+      const res = await importRetailers(records);
       setResult(res);
       if (!res.fatal) setRecords(null);
     });
@@ -103,6 +106,7 @@ export function Importer({ initialTab }: { initialTab: ImportKind }) {
         ))}
       </div>
 
+      {tab === "products" ? <ProductImporter brand={brand} brands={brands} canSeeAll={canSeeAll} /> : (<>
       <Card className="mb-6 p-5">
         <p className="mb-4 text-sm text-slate-600">{INFO[tab].help}</p>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -165,13 +169,14 @@ export function Importer({ initialTab }: { initialTab: ImportKind }) {
                   ))}
                 </ul>
               )}
-              <Link href={tab === "products" ? "/products" : "/retailers"} className="mt-4 inline-block text-sm font-medium text-accent-700 hover:underline">
-                Go to {tab}
+              <Link href="/retailers" className="mt-4 inline-block text-sm font-medium text-accent-700 hover:underline">
+                Go to retailers
               </Link>
             </>
           )}
         </Card>
       )}
+      </>)}
     </>
   );
 }

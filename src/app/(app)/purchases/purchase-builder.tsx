@@ -15,8 +15,9 @@ export type PurchaseBuilderLine = { product: PurchaseProduct; qty: number; cost:
 type Props = {
   companyState: string;
   suppliers: PickerSupplier[];
-  warehouses: { id: string; name: string }[];
+  warehouses: { id: string; name: string; brand_id: string }[];
   brands: { id: string; name: string }[];
+  defaultBrandId?: string;
   presetSupplierId?: string;
   initial?: {
     purchaseId: string;
@@ -34,10 +35,14 @@ type Props = {
 
 const CREDIT = [0, 15, 30, 45, 60];
 
-export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, initial, presetSupplierId }: Props) {
+export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, defaultBrandId, initial, presetSupplierId }: Props) {
   const router = useRouter();
   const [supplierId, setSupplierId] = useState(initial?.supplierId ?? presetSupplierId ?? (suppliers.length === 1 ? suppliers[0].id : ""));
-  const [warehouseId, setWarehouseId] = useState(initial?.warehouseId ?? warehouses[0]?.id ?? "");
+  const presetBrand = suppliers.find((s) => s.id === presetSupplierId)?.brand_id ?? defaultBrandId;
+  const [warehouseId, setWarehouseId] = useState(initial?.warehouseId ?? (warehouses.find((w) => w.brand_id === presetBrand) ?? warehouses[0])?.id ?? "");
+  // A purchase belongs to the brand of the warehouse the goods arrive at.
+  const brandId = warehouses.find((w) => w.id === warehouseId)?.brand_id;
+  const brandName = brands.find((b) => b.id === brandId)?.name ?? "";
   const [orderDate, setOrderDate] = useState(initial?.orderDate ?? todayIST());
   const [expectedDate, setExpectedDate] = useState(initial?.expectedDate ?? "");
   const supplier = suppliers.find((s) => s.id === supplierId) ?? null;
@@ -65,6 +70,21 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, i
     setSupplierId(id);
     const s = suppliers.find((x) => x.id === id);
     if (s && !initial) setCreditDays(s.credit_days);
+    // CONQRETE supplier → CONQRETE warehouse (while nothing is on the purchase yet)
+    if (s?.brand_id && !lines.length && s.brand_id !== brandId) {
+      const w = warehouses.find((x) => x.brand_id === s.brand_id);
+      if (w) setWarehouseId(w.id);
+    }
+    if (s && !initial && !expectedDate) setExpectedDate(addDays(orderDate, s.lead_days ?? 8));
+  }
+  function chooseWarehouse(id: string) {
+    const next = warehouses.find((w) => w.id === id);
+    if (lines.length && next && next.brand_id !== brandId) {
+      setError(`This purchase already has ${brandName} products. A ${brands.find((b) => b.id === next.brand_id)?.name} warehouse needs a separate purchase.`);
+      return;
+    }
+    setError(null);
+    setWarehouseId(id);
   }
 
   function add(p: PurchaseProduct, qty = 1) {
@@ -134,9 +154,10 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, i
             </div>
             <div>
               <Label htmlFor="wh">Goods arrive at</Label>
-              <Select id="wh" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
+              <Select id="wh" value={warehouseId} onChange={(e) => chooseWarehouse(e.target.value)}>
                 {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
               </Select>
+              {brandName && <p className="mt-1 text-xs text-slate-500">This is a <b>{brandName}</b> purchase: only {brandName} products can be added.</p>}
             </div>
             <div>
               <Label htmlFor="odate">Order date</Label>
@@ -151,7 +172,7 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, i
 
         <Card className="p-5">
           <StepTitle n={2} title="Products and purchase cost" />
-          <ProductSearch brands={brands} onAdd={add} />
+          <ProductSearch key={brandId} brandId={brandId} brandName={brandName} onAdd={add} />
           {lines.length === 0 ? (
             <div className="mt-4 rounded-lg border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
               Search by name, model or barcode — or pick a brand to list its products.
@@ -313,9 +334,9 @@ function Row({ k, v }: { k: string; v: string }) {
   );
 }
 
-function ProductSearch({ brands, onAdd }: { brands: { id: string; name: string }[]; onAdd: (p: PurchaseProduct, qty?: number) => void }) {
+function ProductSearch({ brandId, brandName, onAdd }: { brandId?: string; brandName: string; onAdd: (p: PurchaseProduct, qty?: number) => void }) {
   const [q, setQ] = useState("");
-  const [brand, setBrand] = useState<string | undefined>();
+  const [brand, setBrand] = useState<string | undefined>();   // set = list every product of the brand
   const [results, setResults] = useState<PurchaseProduct[]>([]);
   const [open, setOpen] = useState(false);
   const addRef = useRef(onAdd);
@@ -324,23 +345,23 @@ function ProductSearch({ brands, onAdd }: { brands: { id: string; name: string }
   useEffect(() => {
     if (!brand && q.trim().length < 2) { setResults([]); return; }
     const t = setTimeout(async () => {
-      const r = await searchPurchaseProducts(q, brand);
+      const r = await searchPurchaseProducts(q, brandId, !!brand);
       setResults(r);
       setOpen(true);
       if (!brand && r.length === 1 && /^[0-9]{8,14}$/.test(q.trim())) { addRef.current(r[0]); setQ(""); setOpen(false); }
     }, 200);
     return () => clearTimeout(t);
-  }, [q, brand]);
+  }, [q, brand, brandId]);
 
   return (
     <div className="relative">
       <div className="mb-2 flex flex-wrap gap-2">
         <button type="button" onClick={() => { setBrand(undefined); setOpen(false); }} className={cn("rounded-full border px-3 py-1 text-xs font-medium", !brand ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300")}>Search</button>
-        {brands.map((b) => (
-          <button key={b.id} type="button" onClick={() => setBrand(b.id)} className={cn("rounded-full border px-3 py-1 text-xs font-medium", brand === b.id ? "border-fuchsia-600 bg-fuchsia-600 text-white" : "border-slate-300")}>
-            All {b.name}
+        {brandId && (
+          <button type="button" onClick={() => setBrand(brandId)} className={cn("rounded-full border px-3 py-1 text-xs font-medium", brand ? "border-fuchsia-600 bg-fuchsia-600 text-white" : "border-slate-300")}>
+            All {brandName} products
           </button>
-        ))}
+        )}
       </div>
       <div className="flex gap-2">
         <div className="relative flex-1">

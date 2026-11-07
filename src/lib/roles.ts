@@ -48,7 +48,7 @@ export const MODULES: ModuleDef[] = [
     description: "Today at a glance." },
   { key: "products", label: "Products", href: "/products", milestone: "M1", ready: true, roles: ALL, group: "main",
     description: "Catalogue with photos, prices, GST, barcode search." },
-  { key: "stock", label: "Stock", href: "/stock", milestone: "M1", ready: true,
+  { key: "stock", label: "Inventory", href: "/stock", milestone: "M1", ready: true,
     roles: ["super_admin", "manager", "billing", "warehouse"], group: "main",
     description: "Stock in/out, transfers, adjustments, damage, reconciliation, valuation." },
   { key: "purchases", label: "Purchases", href: "/purchases", milestone: "M1", ready: true,

@@ -1,11 +1,15 @@
 "use client";
 
+import { useState } from "react";
+import { ImagePlus } from "lucide-react";
 import { ActionForm } from "@/components/action-form";
-import { Input, Label, Select, Textarea } from "@/components/ui";
-import { GST_RATES } from "@/lib/format";
+import { Input, Label, Select, Textarea, cn } from "@/components/ui";
+import { GST_RATES, inr } from "@/lib/format";
 import { saveProduct } from "./actions";
 
 type Option = { id: string; name: string };
+type BrandOption = Option & { brand_id: string };
+type Mode = "inclusive" | "exclusive";
 export type ProductRow = {
   id: string;
   name: string;
@@ -16,11 +20,13 @@ export type ProductRow = {
   hsn_code: string | null;
   unit_code: string;
   purchase_cost: number;
-  purchase_cost_mode: "inclusive" | "exclusive";
+  purchase_cost_mode: Mode;
+  distributor_price: number;
+  distributor_price_mode: Mode;
   retailer_price: number;
-  retailer_price_mode: "inclusive" | "exclusive";
+  retailer_price_mode: Mode;
   mrp: number;
-  mrp_mode: "inclusive" | "exclusive";
+  mrp_mode: Mode;
   gst_rate: number;
   min_stock_qty: number;
   default_warehouse_id: string | null;
@@ -29,49 +35,52 @@ export type ProductRow = {
   is_active: boolean;
 };
 
+// Common rates first; 3% and 40% stay available for the rare cases.
+const RATES = [0, 5, 12, 18, 28, ...GST_RATES.filter((r) => ![0, 5, 12, 18, 28].includes(r))];
+
 export function ProductForm({
-  product,
-  brands,
-  categories,
-  units,
-  warehouses,
+  product, brands, defaultBrandId, categories, units, warehouses,
 }: {
   product?: ProductRow;
   brands: Option[];
-  categories: Option[];
+  defaultBrandId: string;
+  categories: BrandOption[];
   units: { code: string; name: string }[];
-  warehouses: Option[];
+  warehouses: BrandOption[];
 }) {
   const isNew = !product;
+  const [brand, setBrand] = useState(product?.brand_id ?? defaultBrandId);
+  const [gst, setGst] = useState(Number(product?.gst_rate ?? 18));
+  const [photo, setPhoto] = useState<string | null>(null);
+  const cats = categories.filter((c) => c.brand_id === brand);
+  const whs = warehouses.filter((w) => w.brand_id === brand);
+  const brandName = brands.find((b) => b.id === brand)?.name ?? "";
 
   return (
     <ActionForm action={saveProduct} submitLabel={isNew ? "Create product" : "Save product"}>
       {product && <input type="hidden" name="id" value={product.id} />}
 
-      <Section title="Product">
+      <Section title="Basic information">
         <div className="sm:col-span-2">
           <Label htmlFor="name">Product name</Label>
-          <Input id="name" name="name" defaultValue={product?.name} required placeholder="e.g. 20000mAh Power Bank 22.5W" />
+          <Input id="name" name="name" defaultValue={product?.name} required placeholder="e.g. Havoc 65W GaN Charger" />
         </div>
         <div>
           <Label htmlFor="brand_id">Brand</Label>
-          <Select id="brand_id" name="brand_id" defaultValue={product?.brand_id ?? brands[0]?.id} required>
-            {brands.map((b) => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
+          <Select id="brand_id" name="brand_id" value={brand} onChange={(e) => setBrand(e.target.value)} required>
+            {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </Select>
+          {!isNew && <p className="mt-1 text-xs text-slate-500">Brand cannot change once the product has stock or orders.</p>}
         </div>
         <div>
-          <Label htmlFor="category_id">Category</Label>
-          <Select id="category_id" name="category_id" defaultValue={product?.category_id ?? ""}>
+          <Label htmlFor="category_id" hint={`${brandName} categories`}>Category</Label>
+          <Select key={brand} id="category_id" name="category_id" defaultValue={product?.brand_id === brand ? product?.category_id ?? "" : ""}>
             <option value="">—</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
+            {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </Select>
         </div>
         <div>
-          <Label htmlFor="sku">Model number / SKU</Label>
+          <Label htmlFor="sku" hint={`unique within ${brandName}`}>SKU / product code</Label>
           <Input id="sku" name="sku" defaultValue={product?.sku} required className="uppercase" />
         </div>
         <div>
@@ -85,60 +94,68 @@ export function ProductForm({
         <div>
           <Label htmlFor="unit_code">Unit</Label>
           <Select id="unit_code" name="unit_code" defaultValue={product?.unit_code ?? "PCS"}>
-            {units.map((u) => (
-              <option key={u.code} value={u.code}>{u.name} ({u.code})</option>
-            ))}
+            {units.map((u) => <option key={u.code} value={u.code}>{u.name} ({u.code})</option>)}
           </Select>
         </div>
+        {isNew && (
+          <div className="sm:col-span-2">
+            <Label htmlFor="photo" hint="optional · under 4 MB · more photos after saving">Product image</Label>
+            <label htmlFor="photo" className={cn("flex cursor-pointer items-center gap-4 rounded-xl border-2 border-dashed p-3 transition hover:border-slate-400", photo ? "border-emerald-300 bg-emerald-50/50" : "border-slate-300")}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {photo ? <img src={photo} alt="" className="size-16 rounded-lg object-cover" /> : <span className="grid size-16 place-items-center rounded-lg bg-slate-100"><ImagePlus className="size-6 text-slate-400" /></span>}
+              <span className="text-sm text-slate-600">{photo ? "Photo chosen — tap to change" : "Tap to choose a photo (JPG / PNG)"}</span>
+            </label>
+            <input id="photo" name="photo" type="file" accept="image/*" className="sr-only"
+              onChange={(e) => { const f = e.target.files?.[0]; setPhoto(f ? URL.createObjectURL(f) : null); }} />
+          </div>
+        )}
         <div className="sm:col-span-2">
           <Label htmlFor="description" hint="optional">Description</Label>
-          <Textarea id="description" name="description" rows={3} defaultValue={product?.description ?? ""} />
+          <Textarea id="description" name="description" rows={2} defaultValue={product?.description ?? ""} />
         </div>
       </Section>
 
-      <Section title="Prices and GST" note="For each price, choose whether it already includes GST.">
+      <Section title="Pricing and GST" note="Choose for each price whether it already includes GST — the other amount is worked out for you.">
         <div>
           <Label htmlFor="gst_rate">GST rate</Label>
-          <Select id="gst_rate" name="gst_rate" defaultValue={String(product?.gst_rate ?? 18)}>
-            {GST_RATES.map((r) => (
-              <option key={r} value={r}>{r}%</option>
-            ))}
+          <Select id="gst_rate" name="gst_rate" value={String(gst)} onChange={(e) => setGst(Number(e.target.value))}>
+            {RATES.map((r) => <option key={r} value={r}>{r}%</option>)}
           </Select>
         </div>
         <div className="hidden sm:block" />
-        <PriceField name="purchase_cost" label="Purchase cost" value={product?.purchase_cost} mode={product?.purchase_cost_mode ?? "exclusive"} />
-        <PriceField name="retailer_price" label="Retailer selling price" value={product?.retailer_price} mode={product?.retailer_price_mode ?? "exclusive"} />
-        <PriceField name="mrp" label="MRP" value={product?.mrp} mode={product?.mrp_mode ?? "inclusive"} />
+        <PriceField name="purchase_cost" label="Purchase price" value={product?.purchase_cost} mode={product?.purchase_cost_mode ?? "exclusive"} gst={gst} />
+        <PriceField name="distributor_price" label="Distributor price" value={product?.distributor_price} mode={product?.distributor_price_mode ?? "exclusive"} gst={gst} optional />
+        <PriceField name="retailer_price" label="Retailer price" value={product?.retailer_price} mode={product?.retailer_price_mode ?? "exclusive"} gst={gst} />
+        <PriceField name="mrp" label="MRP" value={product?.mrp} mode={product?.mrp_mode ?? "inclusive"} gst={gst} />
       </Section>
 
-      <Section title="Stock">
+      <Section title="Inventory">
         <div>
-          <Label htmlFor="default_warehouse_id">Warehouse</Label>
-          <Select id="default_warehouse_id" name="default_warehouse_id" defaultValue={product?.default_warehouse_id ?? warehouses[0]?.id}>
-            {warehouses.map((w) => (
-              <option key={w.id} value={w.id}>{w.name}</option>
-            ))}
+          <Label htmlFor="default_warehouse_id" hint={`${brandName} warehouses`}>Warehouse</Label>
+          <Select key={brand} id="default_warehouse_id" name="default_warehouse_id" defaultValue={product?.brand_id === brand ? product?.default_warehouse_id ?? whs[0]?.id : whs[0]?.id}>
+            {whs.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
           </Select>
         </div>
         <div>
-          <Label htmlFor="rack_code" hint="e.g. R2-S3">Rack / shelf</Label>
+          <Label htmlFor="rack_code" hint="optional, e.g. R2-S3">Rack / shelf</Label>
           <Input id="rack_code" name="rack_code" defaultValue={product?.rack_code ?? ""} className="uppercase" maxLength={30} />
         </div>
-        <div>
-          <Label htmlFor="min_stock_qty" hint="alert at or below">Minimum stock</Label>
-          <Input id="min_stock_qty" name="min_stock_qty" type="number" min={0} step="any" defaultValue={product?.min_stock_qty ?? 0} />
-        </div>
-        {isNew ? (
+        {isNew && (
           <div>
-            <Label htmlFor="opening_qty" hint="in the warehouse above">Opening stock</Label>
+            <Label htmlFor="opening_qty" hint="in the warehouse above">Opening stock quantity</Label>
             <Input id="opening_qty" name="opening_qty" type="number" min={0} step="any" defaultValue={0} />
           </div>
-        ) : (
+        )}
+        <div>
+          <Label htmlFor="min_stock_qty" hint="alert at or below">Minimum stock alert</Label>
+          <Input id="min_stock_qty" name="min_stock_qty" type="number" min={0} step="any" defaultValue={product?.min_stock_qty ?? 0} />
+        </div>
+        {!isNew && (
           <div>
             <Label htmlFor="is_active">Status</Label>
             <Select id="is_active" name="is_active" defaultValue={String(product.is_active)}>
               <option value="true">Active — can be sold</option>
-              <option value="false">Inactive — hidden from orders</option>
+              <option value="false">Archived — hidden from orders</option>
             </Select>
           </div>
         )}
@@ -157,17 +174,28 @@ function Section({ title, note, children }: { title: string; note?: string; chil
   );
 }
 
-function PriceField({ name, label, value, mode }: { name: string; label: string; value?: number; mode: string }) {
+// Price with its GST mode, and the converted amount underneath.
+function PriceField({ name, label, value, mode: initialMode, gst, optional }: { name: string; label: string; value?: number; mode: Mode; gst: number; optional?: boolean }) {
+  const [amount, setAmount] = useState(String(value ?? 0));
+  const [mode, setMode] = useState<Mode>(initialMode);
+  const n = Number(amount) || 0;
+  const excl = mode === "inclusive" ? n / (1 + gst / 100) : n;
+  const incl = mode === "inclusive" ? n : n * (1 + gst / 100);
   return (
     <div>
-      <Label htmlFor={name}>{label} (₹)</Label>
+      <Label htmlFor={name} hint={optional ? "optional" : undefined}>{label} (₹)</Label>
       <div className="flex gap-2">
-        <Input id={name} name={name} type="number" min={0} step="0.01" defaultValue={value ?? 0} required className="tabular min-w-0 flex-1" />
-        <Select name={`${name}_mode`} defaultValue={mode} aria-label={`${label} GST`} className="w-32 shrink-0">
+        <Input id={name} name={name} type="number" min={0} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required={!optional} className="tabular min-w-0 flex-1" />
+        <Select name={`${name}_mode`} value={mode} onChange={(e) => setMode(e.target.value as Mode)} aria-label={`${label} GST`} className="w-32 shrink-0">
           <option value="exclusive">+ GST</option>
           <option value="inclusive">incl. GST</option>
         </Select>
       </div>
+      {n > 0 && (
+        <p className="tabular mt-1 text-xs text-slate-500">
+          {inr(excl)} excl. GST · GST {inr(incl - excl)} · <b className="text-slate-700">{inr(incl)} incl. GST</b>
+        </p>
+      )}
     </div>
   );
 }

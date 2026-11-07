@@ -7,8 +7,9 @@ import type { ZodError } from "zod";
 export function dbError(error: PostgrestError | null | undefined): string | undefined {
   if (!error) return undefined;
   if (error.code === "23505") {
-    if (error.message.includes("products_sku")) return "Another product already uses this model number / SKU.";
-    if (error.message.includes("products_barcode")) return "Another product already uses this barcode.";
+    if (error.message.includes("products_sku") || error.message.includes("products_brand_sku")) return "Another product of this brand already uses this model number / SKU.";
+    if (error.message.includes("products_barcode") || error.message.includes("products_brand_barcode")) return "Another product of this brand already uses this barcode.";
+    if (error.message.includes("stock_movements_client_uuid")) return "This entry was already saved.";
     if (error.message.includes("retailers_mobile")) return "A retailer with this mobile number already exists.";
     if (error.message.includes("retailers_gstin")) return "A retailer with this GSTIN already exists.";
     if (error.message.includes("name_key")) return "That name is already in use.";

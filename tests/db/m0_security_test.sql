@@ -22,6 +22,11 @@ do $$ begin
   assert (select role from public.profiles where email = 'billing@apex.test') = 'billing', 'role from app_metadata';
 end $$;
 
+-- Brand access (0015): every active test user works with both brands.
+insert into public.profile_brands (user_id, brand_id)
+select p.id, b.id from public.profiles p cross join public.brands b where p.is_active
+on conflict do nothing;
+
 insert into public.routes (id, name, default_salesman_id) values
   ('10000000-0000-0000-0000-000000000001', 'Sangamner City', '00000000-0000-0000-0000-000000000005');
 insert into public.retailers (id, shop_name, mobile, route_id) values
@@ -69,7 +74,7 @@ reset role;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000004', false);
 set role authenticated;
 do $$
-declare v_wh uuid := (select id from public.warehouses limit 1);
+declare v_wh uuid := (select id from public.warehouses where name = 'CONQRETE Warehouse');
 begin
   begin
     insert into public.retailers (shop_name, mobile) values ('X', '9822000005');
@@ -166,6 +171,7 @@ end $$;
 reset role;
 
 -- ---------- Numbering & invoice immutability ----------
+select set_config('request.jwt.claim.sub', '', false);   -- back to the service role (no signed-in user)
 do $$
 declare a text; b text;
 begin
@@ -177,8 +183,9 @@ begin
   assert public.fy_label('2027-03-31') = '26-27', 'fy_label March';
 end $$;
 
-insert into public.orders (id, order_no, retailer_id, credit_days, status)
-values ('40000000-0000-0000-0000-000000000001', 'TEST/ORD/1', '20000000-0000-0000-0000-000000000001', 15, 'invoiced');
+insert into public.orders (id, order_no, retailer_id, credit_days, status, brand_id)
+select '40000000-0000-0000-0000-000000000001', 'TEST/ORD/1', '20000000-0000-0000-0000-000000000001', 15, 'invoiced', id
+  from public.brands where name = 'CONQRETE';
 insert into public.invoices (id, invoice_no, fy, order_id, retailer_id, invoice_date, credit_days, due_date,
   place_of_supply, is_igst, retailer_snapshot, subtotal, discount_total, taxable_total, cgst_total, sgst_total,
   igst_total, round_off, grand_total)
@@ -199,8 +206,9 @@ do $$ begin
     if sqlerrm not like '%cannot be edited%' then raise; end if;
   end;
   begin
-    insert into public.orders (id, order_no, retailer_id, credit_days) values
-      ('40000000-0000-0000-0000-000000000002', 'O2', '20000000-0000-0000-0000-000000000001', 15);
+    insert into public.orders (id, order_no, retailer_id, credit_days, brand_id)
+    select '40000000-0000-0000-0000-000000000002', 'O2', '20000000-0000-0000-0000-000000000001', 15, id
+      from public.brands where name = 'CONQRETE';
     insert into public.invoices (invoice_no, fy, order_id, retailer_id, invoice_date, credit_days, due_date,
       place_of_supply, is_igst, retailer_snapshot, subtotal, discount_total, taxable_total, cgst_total, sgst_total,
       igst_total, round_off, grand_total)

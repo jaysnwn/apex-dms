@@ -23,6 +23,7 @@ type Props = {
   companyState: string;
   maxSalesmanDiscount: number;
   brands: { id: string; name: string }[];
+  defaultBrandId?: string;
   presetRetailer?: PickerRetailer;
   initial?: {
     orderId: string;
@@ -36,7 +37,7 @@ type Props = {
 
 const CREDIT = [10, 15, 20, 30];
 
-export function OrderBuilder({ role, companyState, maxSalesmanDiscount, brands, initial, presetRetailer }: Props) {
+export function OrderBuilder({ role, companyState, maxSalesmanDiscount, brands, defaultBrandId, initial, presetRetailer }: Props) {
   const router = useRouter();
   const isOffice = role === "super_admin" || role === "manager" || role === "billing";
   const canOverride = role === "super_admin" || role === "manager";
@@ -70,7 +71,17 @@ export function OrderBuilder({ role, companyState, maxSalesmanDiscount, brands, 
     }
   }
 
+  // One invoice = one brand: the first product decides the order's brand.
+  const orderBrand = lines[0]?.product.brand_id;
+  const orderBrandName = lines[0]?.product.brand_name;
   function addProducts(items: { product: PickerProduct; qty: number }[]) {
+    const brandOf = orderBrand ?? items[0]?.product.brand_id;
+    const other = items.filter((it) => it.product.brand_id !== brandOf);
+    if (other.length) {
+      setError({ message: `This order is for ${orderBrandName ?? items[0].product.brand_name}. ${other[0].product.brand_name} products go on a separate order (one brand per invoice).` });
+      items = items.filter((it) => it.product.brand_id === brandOf);
+      if (!items.length) return;
+    }
     setLines((prev) => {
       const next = [...prev];
       for (const it of items) {
@@ -130,7 +141,10 @@ export function OrderBuilder({ role, companyState, maxSalesmanDiscount, brands, 
         {/* 2. Products */}
         <Card className="p-5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <StepTitle n={2} title="Products" />
+            <span className="flex items-center gap-2">
+              <StepTitle n={2} title="Products" />
+              {orderBrandName && <span className="-mt-3 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">{orderBrandName} order</span>}
+            </span>
             <Button variant="secondary" size="sm" onClick={() => setCatalogOpen(true)}>
               <LayoutGrid className="size-4" /> Open catalogue
             </Button>
@@ -279,7 +293,7 @@ export function OrderBuilder({ role, companyState, maxSalesmanDiscount, brands, 
         </Card>
       </div>
 
-      {catalogOpen && <CatalogueDialog brands={brands} onClose={() => setCatalogOpen(false)} onAdd={(items) => { addProducts(items); setCatalogOpen(false); }} />}
+      {catalogOpen && <CatalogueDialog brands={brands} initialBrand={orderBrand ?? defaultBrandId} lockBrand={!!orderBrand} onClose={() => setCatalogOpen(false)} onAdd={(items) => { addProducts(items); setCatalogOpen(false); }} />}
     </div>
   );
 }
@@ -472,8 +486,8 @@ function ProductSearch({ onAdd }: { onAdd: (p: PickerProduct) => void }) {
   );
 }
 
-function CatalogueDialog({ brands, onClose, onAdd }: { brands: { id: string; name: string }[]; onClose: () => void; onAdd: (items: { product: PickerProduct; qty: number }[]) => void }) {
-  const [brand, setBrand] = useState<string | undefined>();
+function CatalogueDialog({ brands, initialBrand, lockBrand, onClose, onAdd }: { brands: { id: string; name: string }[]; initialBrand?: string; lockBrand?: boolean; onClose: () => void; onAdd: (items: { product: PickerProduct; qty: number }[]) => void }) {
+  const [brand, setBrand] = useState<string | undefined>(initialBrand);
   const [q, setQ] = useState("");
   const [items, setItems] = useState<PickerProduct[] | null>(null);
   const [picked, setPicked] = useState<Record<string, number>>({});
@@ -492,8 +506,8 @@ function CatalogueDialog({ brands, onClose, onAdd }: { brands: { id: string; nam
         <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter by name or model" />
       </div>
       <div className="mb-4 flex flex-wrap gap-2">
-        <button onClick={() => setBrand(undefined)} className={cn("rounded-full border px-3 py-1 text-sm", !brand ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300")}>All brands</button>
-        {brands.map((b) => (
+        {!lockBrand && <button onClick={() => setBrand(undefined)} className={cn("rounded-full border px-3 py-1 text-sm", !brand ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300")}>All brands</button>}
+        {brands.filter((b) => !lockBrand || b.id === brand).map((b) => (
           <button key={b.id} onClick={() => setBrand(b.id)} className={cn("rounded-full border px-3 py-1 text-sm", brand === b.id ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300")}>{b.name}</button>
         ))}
       </div>

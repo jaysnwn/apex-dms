@@ -52,7 +52,37 @@ export const MOVEMENT_LABELS: Record<string, string> = {
   dispatch: "Dispatch",
   dispatch_reversal: "Dispatch reversed",
   credit_note_return: "Returned (credit note)",
+  stock_out: "Stock outward",
+  purchase_return: "Purchase return",
 };
+
+// What a stock movement means in business terms (purchase, sale, return ...).
+export const TXN_TYPES: Record<string, { label: string; types: string[] }> = {
+  purchase: { label: "Purchase", types: ["stock_in"] },
+  sale: { label: "Sale", types: ["dispatch", "dispatch_reversal"] },
+  sales_return: { label: "Sales return", types: ["credit_note_return"] },
+  purchase_return: { label: "Purchase return", types: ["purchase_return"] },
+  adjustment: { label: "Stock adjustment", types: ["adjustment", "reconciliation", "damage"] },
+  transfer: { label: "Stock transfer", types: ["transfer_in", "transfer_out"] },
+  manual: { label: "Inward / outward", types: ["stock_in", "stock_out", "opening"] },
+};
+export function txnLabel(type: string, refType?: string | null) {
+  switch (type) {
+    case "stock_in": return refType === "purchase" ? "Purchase" : "Stock inward";
+    case "dispatch": return "Sale";
+    case "dispatch_reversal": return "Sale cancelled";
+    case "credit_note_return": return "Sales return";
+    case "purchase_return": return "Purchase return";
+    case "adjustment": return refType === "purchase" ? "Purchase cancelled" : "Stock adjustment";
+    case "reconciliation": return "Stock verification";
+    case "damage": return "Damaged";
+    case "transfer_in": return "Transfer in";
+    case "transfer_out": return "Transfer out";
+    case "stock_out": return "Stock outward";
+    case "opening": return "Opening stock";
+    default: return MOVEMENT_LABELS[type] ?? type;
+  }
+}
 
 export const RETAILER_STATUS_LABELS: Record<string, string> = {
   active: "Active",

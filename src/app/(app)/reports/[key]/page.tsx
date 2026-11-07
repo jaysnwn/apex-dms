@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { getBrandContext } from "@/lib/brand";
 import { reportByKey, type Column } from "@/lib/reports";
 import { date, inr, qty } from "@/lib/format";
 import { todayIST } from "@/lib/gst";
@@ -45,12 +46,18 @@ export default async function ReportPage({ params, searchParams }: { params: Pro
   if (!def.roles.includes(profile.role)) redirect("/reports");
   const sp = await searchParams;
   const today = todayIST();
-  const f = { from: sp.from || today.slice(0, 8) + "01", to: sp.to || today, brand: sp.brand, salesman: profile.role === "salesman" ? undefined : sp.salesman, route: sp.route };
+  // Brand filter follows the brand switcher unless the user picks another in the report.
+  const ctx = await getBrandContext();
+  const wantAll = sp.brand === "" && ctx.canSeeAll;
+  const brand = def.filters.includes("brand")
+    ? (ctx.brands.some((b) => b.id === sp.brand) ? sp.brand : wantAll ? undefined : ctx.current?.id ?? (ctx.canSeeAll ? undefined : ctx.brands[0]?.id))
+    : undefined;
+  const f = { from: sp.from || today.slice(0, 8) + "01", to: sp.to || today, brand, salesman: profile.role === "salesman" ? undefined : sp.salesman, route: sp.route };
   const supabase = await createClient();
 
   const [result, brands, salesmen, routes] = await Promise.all([
     def.run(supabase, f),
-    def.filters.includes("brand") ? supabase.from("brands").select("id, name").order("name") : Promise.resolve({ data: [] }),
+    Promise.resolve({ data: def.filters.includes("brand") ? ctx.brands.map((b) => ({ id: b.id, name: b.name })) : [] }),
     def.filters.includes("salesman") && profile.role !== "salesman" ? supabase.from("profiles").select("id, full_name").eq("role", "salesman").order("full_name") : Promise.resolve({ data: [] }),
     def.filters.includes("route") ? supabase.from("routes").select("id, name").order("name") : Promise.resolve({ data: [] }),
   ]);
@@ -63,14 +70,14 @@ export default async function ReportPage({ params, searchParams }: { params: Pro
   return (
     <>
       <Link href="/reports" className="mb-2 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800"><ArrowLeft className="size-4" /> All reports</Link>
-      <PageHeader title={def.title} description={def.description} actions={<ExportButton title={`${def.title} ${f.from} to ${f.to}`} columns={result.columns} rows={result.rows} totals={result.totals} />} />
+      <PageHeader title={def.title} description={def.description} actions={<ExportButton title={`${f.brand ? `${ctx.brands.find((b) => b.id === f.brand)?.name} ` : ""}${def.title} ${f.from} to ${f.to}`} columns={result.columns} rows={result.rows} totals={result.totals} />} />
 
       <Card className="mb-4 p-4">
         <form className="flex flex-wrap items-end gap-2">
           <div><div className="mb-1 text-xs text-slate-500">From</div><Input type="date" name="from" defaultValue={f.from} /></div>
           <div><div className="mb-1 text-xs text-slate-500">To</div><Input type="date" name="to" defaultValue={f.to} /></div>
           {(brands.data ?? []).length > 0 && (
-            <Select name="brand" defaultValue={sp.brand ?? ""} className="w-40" aria-label="Brand"><option value="">All brands</option>{(brands.data ?? []).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</Select>
+            <Select name="brand" defaultValue={f.brand ?? ""} className="w-40" aria-label="Brand">{ctx.canSeeAll && <option value="">All brands</option>}{(brands.data ?? []).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</Select>
           )}
           {(salesmen.data ?? []).length > 0 && (
             <Select name="salesman" defaultValue={sp.salesman ?? ""} className="w-44" aria-label="Salesman"><option value="">All salesmen</option>{(salesmen.data ?? []).map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}</Select>

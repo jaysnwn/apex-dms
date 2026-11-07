@@ -15,6 +15,7 @@ export default async function PurchasesLayout({ children }: { children: React.Re
         items={isWarehouse ? [
           { href: "/purchases/receive", label: "Goods to receive", count: pending },
         ] : [
+          { href: "/purchases/reorder", label: "Reorder list" },
           { href: "/purchases/new", label: "New purchase" },
           { href: "/purchases/orders", label: "Orders to receive", count: pending },
           { href: "/purchases/bills", label: "Supplier bills" },

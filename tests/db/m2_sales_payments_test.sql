@@ -32,7 +32,8 @@ begin
   assert (select status from public.orders where id = v_o) = 'invoiced', 'order invoiced';
   assert (select not is_igst and cgst_total + sgst_total = 2586.69 and igst_total = 0 and due_date = invoice_date + 15
             from public.invoices where id = v_inv), 'CGST/SGST split and due date';
-  assert (select invoice_no like 'APX/INV/__-__/%' from public.invoices where id = v_inv), 'invoice number format';
+  assert (select invoice_no ~ '^CQ/[0-9]{2}-[0-9]{2}/[0-9]{5}$' and length(invoice_no) <= 16 from public.invoices where id = v_inv),
+    'brand-wise invoice number: ' || (select invoice_no from public.invoices where id = v_inv);
   insert into ids values ('inv1', v_inv);
 
   -- reserved stock now reduces availability (power bank 50 on hand, 10 reserved)
@@ -202,7 +203,7 @@ reset role;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000004', false);  -- warehouse
 set role authenticated;
 do $$
-declare v_inv1 uuid := (select v from ids where k = 'inv1'); v_d uuid; v_main uuid := (select id from public.warehouses where name = 'Main Warehouse');
+declare v_inv1 uuid := (select v from ids where k = 'inv1'); v_d uuid; v_main uuid := (select id from public.warehouses where name = 'CONQRETE Warehouse');
 begin
   v_d := public.dispatch_invoice(v_inv1, v_main, 'MH17 AB 1234', null);
   assert (select on_hand from public.stock_on_hand where product_id = '30000000-0000-0000-0000-000000000001' and warehouse_id = v_main) = 40,
@@ -223,7 +224,7 @@ select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000003
 set role authenticated;
 do $$
 declare v_inv1 uuid := (select v from ids where k = 'inv1'); v_igst uuid := (select v from ids where k = 'inv_igst'); v_cn uuid; v_line uuid;
-        v_main uuid := (select id from public.warehouses where name = 'Main Warehouse');
+        v_main uuid := (select id from public.warehouses where name = 'CONQRETE Warehouse');
 begin
   begin
     perform public.cancel_invoice(v_inv1, 'test');
