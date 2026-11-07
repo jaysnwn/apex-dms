@@ -36,6 +36,7 @@ export function checkRows(rows: Record<string, string>[], ctx: ImportContext): R
     if (!(r.name ?? "").trim()) errors.push("Product name is missing");
     else if (r.name.trim().length < 2) errors.push("Product name is too short");
     if (!sku) errors.push("SKU is missing");
+    if (!isUpdate && !(r.category ?? "").trim()) errors.push("Category is missing (new categories are created automatically)");
     else if (sku.length > 60) errors.push("SKU is longer than 60 characters");
     if (sku && (count.get(sku.toLowerCase()) ?? 0) > 1) errors.push(`SKU ${sku} appears more than once in the file`);
 

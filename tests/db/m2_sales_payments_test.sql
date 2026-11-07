@@ -132,6 +132,8 @@ end $$;
 reset role;
 
 -- ---------- IGST for an out-of-state retailer ----------
+-- a registered (GSTIN) buyer needs a billing address and PIN on the invoice
+update public.retailers set billing_address = 'Ring Road', billing_pincode = '395002' where mobile = '9822000010';
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000003', false);
 set role authenticated;
 do $$

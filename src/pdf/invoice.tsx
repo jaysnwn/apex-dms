@@ -1,4 +1,4 @@
-import { Document, Page, Text, View } from "@react-pdf/renderer";
+import { Document, Image, Page, Text, View } from "@react-pdf/renderer";
 import { CompanyHeader, Footer, TableHead, TableRow, d, money, num, s, MUTED, ACCENT, type Col, type Company } from "./base";
 import { amountInWords } from "@/lib/gst";
 import { GST_STATES } from "@/lib/states";
@@ -42,6 +42,7 @@ export type InvoicePdfData = {
     line_total: number;
   }[];
   balance?: number;
+  brand?: { name: string; color: string; logo: { data: Buffer; format: "png" | "jpg" } | null };
   title?: string;   // "TAX INVOICE" or "CREDIT NOTE"
   quotation?: { validUntil: string; salesman?: string | null }; // set for a quotation (estimate, not an invoice)
 };
@@ -88,6 +89,19 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
       <Page size="A4" style={s.page}>
         <CompanyHeader company={company} title={q ? "QUOTATION" : data.title ?? "TAX INVOICE"} subtitle={q ? "Estimate — not a tax invoice" : "Original for recipient"} />
 
+        {data.brand && (
+          <View style={[s.row, { alignItems: "center", justifyContent: "space-between", marginTop: -6, marginBottom: 10, paddingVertical: 5, paddingHorizontal: 8, borderLeftWidth: 4, borderLeftColor: data.brand.color, backgroundColor: "#f8fafc" }]}>
+            <View style={[s.row, { alignItems: "center" }]}>
+              {data.brand.logo
+                // eslint-disable-next-line jsx-a11y/alt-text
+                ? <Image src={data.brand.logo} style={{ height: 20, maxWidth: 90, objectFit: "contain", marginRight: 8 }} />
+                : <Text style={{ fontSize: 11, fontWeight: 700, color: data.brand.color, marginRight: 8, letterSpacing: 1 }}>{data.brand.name}</Text>}
+              <Text style={s.muted}>{data.brand.name} products</Text>
+            </View>
+            <Text style={[s.small, s.muted]}>Brand: {data.brand.name}</Text>
+          </View>
+        )}
+
         {inv.status === "cancelled" && (
           <View style={{ backgroundColor: "#fee2e2", padding: 6, marginBottom: 8 }}>
             <Text style={{ color: "#b91c1c", fontWeight: 700 }}>CANCELLED{inv.cancel_reason ? ` — ${inv.cancel_reason}` : ""}</Text>
@@ -124,7 +138,7 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
               <>
                 <Meta k="Invoice no." v={inv.invoice_no} bold />
                 <Meta k="Invoice date" v={d(inv.invoice_date)} />
-                <Meta k="Credit period" v={`${inv.credit_days} days`} />
+                <Meta k="Payment terms" v={Number(inv.credit_days) === 0 ? "Immediate" : `${inv.credit_days} days credit`} />
                 <Meta k="Due date" v={d(inv.due_date)} bold />
               </>
             )}

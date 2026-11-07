@@ -9,6 +9,7 @@ import { DUE_STATUS, PAYMENT_METHOD, PAYMENT_STATUS } from "@/lib/status";
 import { GST_STATES } from "@/lib/states";
 import { Alert, Badge, Card, cn } from "@/components/ui";
 import { DocButtons } from "@/components/doc-buttons";
+import { TermsButton } from "./terms-button";
 import { InvoiceActions } from "./invoice-actions";
 
 export const metadata: Metadata = { title: "Invoice" };
@@ -64,7 +65,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
             <Badge tone={ds.tone}>{ds.label}{bal?.due_status === "overdue" ? ` · ${bal.days_past_due} days` : ""}</Badge>
           </div>
           <p className="text-sm text-slate-500">
-            {date(inv.invoice_date)} · due {date(inv.due_date)} ({inv.credit_days} days) · order {order?.order_no}
+            {date(inv.invoice_date)} · due {date(inv.due_date)} ({Number(inv.credit_days) === 0 ? "immediate" : `${inv.credit_days} days`}) · order {order?.order_no}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -73,6 +74,9 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
             <Link href={`/payments/new?retailer=${inv.retailer_id}&invoice=${id}`} className="inline-flex h-10 items-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700">
               <Wallet className="size-4" /> Record payment
             </Link>
+          )}
+          {(profile.role === "super_admin" || profile.role === "manager") && !cancelled && (
+            <TermsButton invoiceId={id} invoiceDate={inv.invoice_date} creditDays={Number(inv.credit_days)} />
           )}
           {isOffice && !cancelled && (
             <InvoiceActions

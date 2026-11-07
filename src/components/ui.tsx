@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { twMerge } from "tailwind-merge";
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, Ref, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 
 // Later classes win over earlier ones (e.g. "w-full" + "w-36" -> "w-36").
 export function cn(...args: Parameters<typeof clsx>) {
@@ -43,8 +43,9 @@ const fieldClass =
   "block w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 " +
   "focus:border-accent-500 focus:outline-none focus:ring-2 focus:ring-accent-500/20 disabled:bg-slate-100";
 
-export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={cn(fieldClass, "h-10", className)} {...props} />;
+// React 19: `ref` is passed like any other prop.
+export function Input({ className, ref, ...props }: InputHTMLAttributes<HTMLInputElement> & { ref?: Ref<HTMLInputElement> }) {
+  return <input ref={ref} className={cn(fieldClass, "h-10", className)} {...props} />;
 }
 
 export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {

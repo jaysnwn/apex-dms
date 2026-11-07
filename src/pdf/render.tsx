@@ -7,6 +7,7 @@ import { InvoicePdf, type InvoicePdfData } from "./invoice";
 import { PickingPdf, PurchasePdf, ReceiptPdf, StatementPdf, type PurchasePdfData } from "./documents";
 
 import type { PdfKind } from "./kinds";
+import { brandTone } from "@/lib/brand-style";
 export type { PdfKind };
 
 export type RenderedPdf = { buffer: Buffer; filename: string; phone?: string; shareText: string };
@@ -21,6 +22,19 @@ async function company(): Promise<Company> {
     .eq("id", 1)
     .single();
   return data as Company;
+}
+
+// Brand shown on sales documents (name, colour, logo). The seller stays APEX TRADING CO.
+async function brandInfo(supabase: Awaited<ReturnType<typeof createClient>>, brandId: string | null | undefined): Promise<InvoicePdfData["brand"]> {
+  if (!brandId) return undefined;
+  const { data: b } = await supabase.from("brands").select("name, code, logo_path").eq("id", brandId).maybeSingle();
+  if (!b) return undefined;
+  let logo: { data: Buffer; format: "png" | "jpg" } | null = null;
+  if (b.logo_path && /\.(png|jpe?g)$/i.test(b.logo_path)) {
+    const { data: blob } = await supabase.storage.from("product-images").download(b.logo_path);
+    if (blob) logo = { data: Buffer.from(await blob.arrayBuffer()), format: /\.png$/i.test(b.logo_path) ? "png" : "jpg" };
+  }
+  return { name: b.name, color: brandTone(b.code).hex, logo };
 }
 
 const INV_LINE_COLS =
@@ -39,7 +53,7 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
       supabase.from("invoice_lines").select(INV_LINE_COLS).eq("invoice_id", id).order("line_no"),
       supabase.from("invoice_balances").select("balance").eq("invoice_id", id).maybeSingle(),
     ]);
-    const data = { company: co, invoice: inv, lines: lines ?? [], balance: bal?.balance } as InvoicePdfData;
+    const data = { company: co, invoice: inv, lines: lines ?? [], balance: bal?.balance, brand: await brandInfo(supabase, inv.brand_id) } as InvoicePdfData;
     const buffer = await renderToBuffer(<InvoicePdf data={data} />);
     const snap = inv.retailer_snapshot as { shop_name: string; mobile: string };
     return {
@@ -66,6 +80,7 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
     });
     const data = {
       company: co,
+      brand: await brandInfo(supabase, cn.brand_id ?? inv?.brand_id),
       title: "CREDIT NOTE",
       invoice: {
         ...inv,
@@ -224,6 +239,7 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
     const tax = qLines.reduce((t, l) => ({ cgst: t.cgst + l.cgst, sgst: t.sgst + l.sgst, igst: t.igst + l.igst }), { cgst: 0, sgst: 0, igst: 0 });
     const data = {
       company: co,
+      brand: await brandInfo(supabase, o.brand_id),
       quotation: { validUntil, salesman: (sm as { full_name: string } | null)?.full_name ?? null },
       invoice: {
         invoice_no: o.order_no,

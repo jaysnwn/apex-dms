@@ -190,7 +190,7 @@ insert into public.invoices (id, invoice_no, fy, order_id, retailer_id, invoice_
   place_of_supply, is_igst, retailer_snapshot, subtotal, discount_total, taxable_total, cgst_total, sgst_total,
   igst_total, round_off, grand_total)
 values ('50000000-0000-0000-0000-000000000001', 'TEST/INV/1', '26-27', '40000000-0000-0000-0000-000000000001',
-  '20000000-0000-0000-0000-000000000001', '2026-11-05', 15, '2026-11-20', '27', false, '{}', 1000, 0, 1000, 90, 90, 0, 0, 1180);
+  '20000000-0000-0000-0000-000000000001', '2026-11-05', 15, '2026-11-20', '27', false, '{"shop_name":"Shree Mobile Point","state_code":"27"}', 1000, 0, 1000, 90, 90, 0, 0, 1180);
 
 do $$ begin
   begin
@@ -213,7 +213,7 @@ do $$ begin
       place_of_supply, is_igst, retailer_snapshot, subtotal, discount_total, taxable_total, cgst_total, sgst_total,
       igst_total, round_off, grand_total)
     values ('X2', '26-27', '40000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000001',
-      '2026-11-05', 15, '2026-11-25', '27', false, '{}', 0, 0, 0, 0, 0, 0, 0, 0);
+      '2026-11-05', 15, '2026-11-25', '27', false, '{"shop_name":"Shree Mobile Point","state_code":"27"}', 0, 0, 0, 0, 0, 0, 0, 0);
     raise exception 'wrong due date accepted';
   exception when check_violation then null;
   end;
@@ -231,7 +231,7 @@ do $$ begin
       place_of_supply, is_igst, retailer_snapshot, subtotal, discount_total, taxable_total, cgst_total, sgst_total,
       igst_total, round_off, grand_total)
     values ('X3', '26-27', '40000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001',
-      '2026-11-05', 0, '2026-11-05', '27', false, '{}', 0, 0, 0, 0, 0, 0, 0, 0);
+      '2026-11-05', 0, '2026-11-05', '27', false, '{"shop_name":"Shree Mobile Point","state_code":"27"}', 0, 0, 0, 0, 0, 0, 0, 0);
     raise exception 'salesman inserted an invoice directly';
   exception when insufficient_privilege then null;
   end;

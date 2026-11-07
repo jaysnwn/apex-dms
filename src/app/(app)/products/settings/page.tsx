@@ -8,6 +8,7 @@ import { ActionForm } from "@/components/action-form";
 import { BrandBadge } from "@/components/brand-badge";
 import { saveMaster } from "../actions";
 import { LogoUpload } from "./logo-upload";
+import { CategoryControls } from "./category-controls";
 
 export const metadata: Metadata = { title: "Brands and categories" };
 
@@ -18,10 +19,13 @@ export default async function ProductSettingsPage() {
   const isAdmin = profile.role === "super_admin";
   const supabase = await createClient();
   const ctx = await getBrandContext();
-  const [{ data: brands }, { data: categories }] = await Promise.all([
+  const [{ data: brands }, { data: categories }, { data: used }] = await Promise.all([
     supabase.from("brands").select("id, name, code, logo_path, is_active").order("name"),
-    supabase.from("categories").select("id, name, is_active, brand_id").in("brand_id", ctx.brands.map((b) => b.id)).order("name"),
+    supabase.from("categories").select("id, name, is_active, brand_id").in("brand_id", ctx.brands.map((b) => b.id)).order("sort_order").order("name"),
+    supabase.from("products").select("category_id").in("brand_id", ctx.brands.map((b) => b.id)),
   ]);
+  const useCount = new Map<string, number>();
+  for (const u of used ?? []) if (u.category_id) useCount.set(u.category_id, (useCount.get(u.category_id) ?? 0) + 1);
   const logos = await signProductImages(supabase, (brands ?? []).map((b) => b.logo_path));
   const visibleBrands = (brands ?? []).filter((b) => isAdmin || ctx.brands.some((x) => x.id === b.id));
 
@@ -73,7 +77,7 @@ export default async function ProductSettingsPage() {
 
         <Card className="p-5">
           <h2 className="mb-1 font-semibold">Categories</h2>
-          <p className="mb-4 text-xs text-slate-500">Every brand keeps its own category list.</p>
+          <p className="mb-4 text-xs text-slate-500">Every brand keeps its own category list. The order here is the order of the tabs in the billing catalogue.</p>
           <ActionForm action={saveMaster} submitLabel="Add category" className="mb-5">
             <input type="hidden" name="kind" value="categories" />
             <div className="grid grid-cols-[140px_1fr] gap-2">
@@ -83,17 +87,20 @@ export default async function ProductSettingsPage() {
               <Input name="name" placeholder="Category name" required />
             </div>
           </ActionForm>
-          {ctx.brands.filter((b) => !ctx.current || b.id === ctx.current.id).map((b) => (
+          {ctx.brands.filter((b) => !ctx.current || b.id === ctx.current.id).map((b) => {
+            const mine = ((categories ?? []) as (Row & { brand_id: string })[]).filter((c) => c.brand_id === b.id);
+            return (
             <div key={b.id} className="mb-4">
               <div className="mb-1"><BrandBadge name={b.name} code={b.code} /></div>
               <ul className="divide-y divide-slate-100">
-                {((categories ?? []) as (Row & { brand_id: string })[]).filter((c) => c.brand_id === b.id).map((r) => (
+                {mine.map((r, idx) => (
                   <li key={r.id} className="py-2">
-                    <details>
-                      <summary className="flex cursor-pointer list-none items-center justify-between">
-                        <span className="font-medium">{r.name}</span>
-                        {r.is_active ? <Badge tone="green">Active</Badge> : <Badge>Inactive</Badge>}
-                      </summary>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="flex items-center gap-2 font-medium">{r.name} {!r.is_active && <Badge>Inactive</Badge>}</span>
+                      <CategoryControls id={r.id} name={r.name} count={useCount.get(r.id) ?? 0} first={idx === 0} last={idx === mine.length - 1} others={mine.filter((o) => o.id !== r.id).map((o) => ({ id: o.id, name: o.name }))} />
+                    </div>
+                    <details className="mt-1">
+                      <summary className="cursor-pointer text-xs font-medium text-accent-700">Rename / deactivate</summary>
                       <ActionForm action={saveMaster} submitLabel="Save" className="mt-3 grid gap-2 sm:grid-cols-2">
                         <input type="hidden" name="kind" value="categories" />
                         <input type="hidden" name="id" value={r.id} />
@@ -110,7 +117,8 @@ export default async function ProductSettingsPage() {
                 ))}
               </ul>
             </div>
-          ))}
+            );
+          })}
         </Card>
       </div>
     </>

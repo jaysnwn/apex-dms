@@ -8,13 +8,14 @@ import type { PickerRetailer } from "./actions";
 export async function builderOptions() {
   const supabase = await createClient();
   const [{ data: co }, ctx] = await Promise.all([
-    supabase.from("company_settings").select("state_code, salesman_max_discount").eq("id", 1).single(),
+    supabase.from("company_settings").select("state_code, salesman_max_discount, billing_max_discount").eq("id", 1).single(),
     getBrandContext(),
   ]);
   return {
     companyState: (co?.state_code as string) ?? "27",
     maxSalesmanDiscount: Number(co?.salesman_max_discount ?? 5),
-    brands: ctx.brands.map((b) => ({ id: b.id, name: b.name })),
+    billingMaxDiscount: Number(co?.billing_max_discount ?? 10),
+    brands: ctx.brands.map((b) => ({ id: b.id, name: b.name, code: b.code })),
     defaultBrandId: ctx.current?.id,
   };
 }
@@ -28,7 +29,7 @@ export async function loadOrder(id: string) {
     supabase.from("order_lines").select("*").eq("order_id", id).order("line_no"),
     supabase
       .from("retailer_directory")
-      .select("id, code, shop_name, owner_name, mobile, billing_city, billing_state_code, credit_days, credit_limit, status")
+      .select("id, code, shop_name, owner_name, mobile, gstin, billing_address, billing_city, billing_pincode, billing_state_code, credit_days, credit_limit, status")
       .eq("id", order.retailer_id)
       .maybeSingle(),
     supabase.from("retailer_balances").select("outstanding, overdue").eq("retailer_id", order.retailer_id).maybeSingle(),
@@ -37,7 +38,7 @@ export async function loadOrder(id: string) {
   const productIds = (lines ?? []).map((l) => l.product_id as string);
   const [{ data: products }, { data: stock }] = await Promise.all([
     productIds.length
-      ? supabase.from("catalog").select("id, name, sku, brand_id, brand_name, unit_code, retailer_price, retailer_price_mode, mrp, gst_rate").in("id", productIds)
+      ? supabase.from("catalog").select("id, name, sku, barcode, brand_id, brand_name, category_id, category_name, unit_code, retailer_price, retailer_price_mode, mrp, gst_rate").in("id", productIds)
       : Promise.resolve({ data: [] }),
     productIds.length ? supabase.from("product_stock").select("product_id, available").in("product_id", productIds) : Promise.resolve({ data: [] }),
   ]);
@@ -63,6 +64,9 @@ export async function loadOrder(id: string) {
         mrp: Number(p?.mrp ?? 0),
         gst_rate: Number(l.gst_rate),
         available: sMap.get(l.product_id) ?? 0,
+        category_id: p?.category_id ?? null,
+        category_name: p?.category_name ?? null,
+        barcode: p?.barcode ?? null,
       },
       qty: Number(l.qty),
       discount: Number(l.discount_pct),

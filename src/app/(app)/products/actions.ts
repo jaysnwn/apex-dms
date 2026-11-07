@@ -16,7 +16,7 @@ const productSchema = z
     name: z.string().min(2, "Enter the product name"),
     brand_id: z.string().uuid("Choose a brand"),
     sku: z.string().min(1, "Enter the model number / SKU").max(60),
-    category_id: z.string().uuid().optional(),
+    category_id: z.string({ message: "Choose a category" }).uuid("Choose a category"),
     barcode: z.string().max(64).optional(),
     hsn_code: z.string().regex(/^([0-9]{4,8})?$/, "HSN code is 4–8 digits").optional(),
     unit_code: z.string().min(1),
@@ -77,7 +77,7 @@ export async function saveProduct(_prev: FormResult, formData: FormData): Promis
 
   const row = {
     ...fields,
-    category_id: fields.category_id ?? null,
+    category_id: fields.category_id,
     barcode: fields.barcode ?? null,
     hsn_code: fields.hsn_code ?? null,
     description: fields.description ?? null,
@@ -245,4 +245,48 @@ export async function setProductArchived(id: string, archived: boolean) {
   revalidatePath("/products");
   revalidatePath("/stock");
   return { ok: true };
+}
+
+// ---------- Category order / delete / move products ----------
+export async function moveCategory(id: string, dir: "up" | "down") {
+  await requireRole("super_admin", "manager");
+  const supabase = await createClient();
+  const { data: me } = await supabase.from("categories").select("id, brand_id, sort_order").eq("id", id).single();
+  if (!me) return { error: "Category not found." };
+  const { data: list } = await supabase.from("categories").select("id, sort_order").eq("brand_id", me.brand_id).order("sort_order").order("name");
+  const rows = list ?? [];
+  const i = rows.findIndex((r) => r.id === id);
+  const j = dir === "up" ? i - 1 : i + 1;
+  if (i < 0 || j < 0 || j >= rows.length) return { ok: true };
+  [rows[i], rows[j]] = [rows[j], rows[i]];
+  for (const [k, r] of rows.entries()) {
+    const { error } = await supabase.from("categories").update({ sort_order: (k + 1) * 10 }).eq("id", r.id);
+    if (error) return { error: dbError(error) };
+  }
+  revalidatePath("/products/settings");
+  return { ok: true };
+}
+
+export async function deleteCategory(id: string) {
+  await requireRole("super_admin", "manager");
+  const supabase = await createClient();
+  const { count } = await supabase.from("products").select("id", { count: "exact", head: true }).eq("category_id", id);
+  if (count) return { error: `${count} product(s) still use this category. Move them to another category first.` };
+  const { error } = await supabase.from("categories").delete().eq("id", id);
+  if (error) return { error: error.code === "23503" ? "This category is still used. Move its products first." : dbError(error) };
+  revalidatePath("/products/settings");
+  return { ok: true };
+}
+
+export async function reassignCategory(fromId: string, toId: string) {
+  await requireRole("super_admin", "manager");
+  if (fromId === toId) return { error: "Choose a different category." };
+  const supabase = await createClient();
+  const { data: cats } = await supabase.from("categories").select("id, brand_id").in("id", [fromId, toId]);
+  if ((cats ?? []).length !== 2 || cats![0].brand_id !== cats![1].brand_id) return { error: "Both categories must belong to the same brand." };
+  const { data, error } = await supabase.from("products").update({ category_id: toId }).eq("category_id", fromId).select("id");
+  if (error) return { error: dbError(error) };
+  revalidatePath("/products/settings");
+  revalidatePath("/products");
+  return { ok: true, moved: (data ?? []).length };
 }

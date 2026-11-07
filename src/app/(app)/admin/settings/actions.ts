@@ -24,6 +24,10 @@ const schema = z.object({
   bank_details: optional,
   invoice_terms: optional,
   doc_prefix: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{2,6}$/, "Prefix: 2–6 letters or digits"),
+  billing_max_discount: z.coerce.number().min(0).max(100, "Discount limit is 0–100%"),
+  salesman_max_discount: z.coerce.number().min(0).max(100, "Discount limit is 0–100%"),
+  reorder_lead_days: z.coerce.number().int().min(0).max(180),
+  reorder_cover_days: z.coerce.number().int().min(1).max(365),
 });
 
 export async function saveSettings(_prev: SettingsState, formData: FormData): Promise<SettingsState> {

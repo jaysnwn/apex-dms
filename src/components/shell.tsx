@@ -172,7 +172,7 @@ export function Shell({ modules, userName, roleLabel, brands, currentBrandId, ca
             <Menu className="size-5" />
           </button>
           <span className="text-sm font-semibold tracking-wide">APEX DMS</span>
-          {brands.length > 1 && <div className="ml-auto w-52"><BrandSwitcher brands={brands} currentId={currentBrandId} canSeeAll={canSeeAllBrands} /></div>}
+          {brands.length > 1 && <div className="ml-auto w-48"><BrandSwitcher brands={brands} currentId={currentBrandId} canSeeAll={false} /></div>}
         </header>
         <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
       </div>

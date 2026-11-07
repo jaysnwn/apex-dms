@@ -8,7 +8,7 @@ export type ColumnDef = { key: string; header: string; required?: boolean; examp
 export const PRODUCT_COLUMNS: ColumnDef[] = [
   { key: "name", header: "Product name", required: true, example: "Havoc 65W GaN Charger", aliases: ["product", "item", "item name", "name", "description of goods"] },
   { key: "sku", header: "SKU / Product code", required: true, example: "CQ-HV65", aliases: ["model", "model number", "model no", "sku", "product code", "item code", "code", "model sku"] },
-  { key: "category", header: "Category", example: "Chargers & Adapters", aliases: ["group", "product category", "type"] },
+  { key: "category", header: "Category", required: true, example: "Chargers & Adapters", aliases: ["group", "product category", "type"] },
   { key: "hsn_code", header: "HSN", example: "85044030", aliases: ["hsn code", "hsn sac", "hsnsac"] },
   { key: "unit_code", header: "Unit", example: "PCS", aliases: ["uom", "units"] },
   { key: "gst_rate", header: "GST %", example: 18, aliases: ["gst", "gst rate", "tax", "tax rate", "gst percent"] },

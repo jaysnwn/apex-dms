@@ -7,8 +7,8 @@
 create temp table v (k text primary key, id uuid);
 grant all on v to authenticated;
 
--- Billing makes a fresh bill for Inc Shop A (salesman 1's route) and records one payment itself.
-select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000003', false);
+-- A manager makes a fresh bill (price 1000 set by hand) for Inc Shop A (salesman 1's route) and records one payment...
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', false);
 set role authenticated;
 do $$
 declare p uuid;

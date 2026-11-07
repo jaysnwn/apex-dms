@@ -17,8 +17,8 @@ export default async function SalesLayout({ children }: { children: React.ReactN
           { href: "/sales/pending", label: "Pending for dispatch", count: p.count ?? 0 },
           { href: "/sales/invoices", label: "Invoices" },
         ] : [
-          { href: "/sales/new", label: "New order" },
-          { href: "/sales/quotations", label: "Quotations", count: q.count ?? 0 },
+          { href: "/sales/new", label: profile.role === "salesman" ? "New order" : "Billing" },
+          { href: "/sales/quotations", label: profile.role === "salesman" ? "Quotations" : "Drafts & quotations", count: q.count ?? 0 },
           { href: "/sales/pending", label: "Pending for dispatch", count: p.count ?? 0 },
           { href: "/sales/invoices", label: profile.role === "salesman" ? "My invoices" : "Invoices" },
         ]}

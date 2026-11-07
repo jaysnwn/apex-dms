@@ -25,8 +25,8 @@ insert into public.retailers (id, shop_name, mobile, route_id) values
 insert into public.retailers (id, shop_name, mobile, salesman_id) values
   ('40000000-0000-0000-0000-00000000000e', 'Inc Shop E', '9811100005', '00000000-0000-0000-0000-000000000005');
 
--- Billing creates the invoices (price 1000 before GST, 18% → 1180 per unit).
-select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000003', false);
+-- A manager creates the invoices (only managers may set a price) (price 1000 before GST, 18% → 1180 per unit).
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', false);
 set role authenticated;
 do $$
 declare

@@ -14,6 +14,10 @@ export type CompanySettings = {
   bank_details: string | null;
   invoice_terms: string | null;
   doc_prefix: string;
+  salesman_max_discount: number;
+  billing_max_discount: number;
+  reorder_lead_days: number;
+  reorder_cover_days: number;
 };
 
 export function SettingsForm({ settings }: { settings: CompanySettings }) {
@@ -54,8 +58,26 @@ export function SettingsForm({ settings }: { settings: CompanySettings }) {
         <Textarea id="invoice_terms" name="invoice_terms" rows={3} defaultValue={settings.invoice_terms ?? ""} />
       </div>
       <div>
-        <Label htmlFor="doc_prefix" hint="e.g. APX/INV/26-27/00001">Document prefix</Label>
+        <Label htmlFor="doc_prefix" hint="orders, receipts, purchases">Document prefix</Label>
         <Input id="doc_prefix" name="doc_prefix" defaultValue={settings.doc_prefix} maxLength={6} required className="uppercase" />
+      </div>
+      <div className="hidden sm:block" />
+      <div className="border-t border-slate-100 pt-4 sm:col-span-2"><h3 className="font-semibold">Billing and stock rules</h3><p className="text-xs text-slate-500">Super Admin and Managers can give any discount and change prices; these limits apply to the other roles.</p></div>
+      <div>
+        <Label htmlFor="billing_max_discount" hint="%">Max discount — billing staff</Label>
+        <Input id="billing_max_discount" name="billing_max_discount" type="number" min={0} max={100} step="0.5" defaultValue={settings.billing_max_discount} required />
+      </div>
+      <div>
+        <Label htmlFor="salesman_max_discount" hint="%">Max discount — salesmen</Label>
+        <Input id="salesman_max_discount" name="salesman_max_discount" type="number" min={0} max={100} step="0.5" defaultValue={settings.salesman_max_discount} required />
+      </div>
+      <div>
+        <Label htmlFor="reorder_lead_days" hint="days from order to arrival">Supplier delivery time</Label>
+        <Input id="reorder_lead_days" name="reorder_lead_days" type="number" min={0} max={180} defaultValue={settings.reorder_lead_days} required />
+      </div>
+      <div>
+        <Label htmlFor="reorder_cover_days" hint="days of sales to order for">Reorder cover</Label>
+        <Input id="reorder_cover_days" name="reorder_cover_days" type="number" min={1} max={365} defaultValue={settings.reorder_cover_days} required />
       </div>
       <div className="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:items-center">
         <Button type="submit" disabled={pending}>{pending ? "Saving…" : "Save"}</Button>

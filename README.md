@@ -40,7 +40,7 @@ In the Supabase dashboard for this project:
 ### 2. Run the database migrations
 
 > **Already done for the `apex-dms` project (uiczjglzsnjxxqvxlheh)** — all migrations up to 0015 were applied on
-> 2026-11-05 through the Supabase connector, so skip this step. The applied versions are timestamped by Supabase,
+> 2026-11-05 through the Supabase connector, so skip this step (0016 still has to be applied — see below). The applied versions are timestamped by Supabase,
 > not by these file names; if you later switch to `supabase db push`, run `supabase migration list` first and use
 > `supabase migration repair` so files that are already applied are not run again.
 
@@ -71,6 +71,7 @@ Or paste each file in `supabase/migrations/` **in order** into the Supabase SQL 
 13. `20261107000013_payment_verification.sql` — office verification of salesman collections
 14. `20261107000014_stock_movement_types.sql` — new movement types (stock out, purchase return); must run before 0015
 15. `20261107000015_multi_brand.sql` — brand separation, brand access, purchase returns, stock ledger, reorder list
+16. `20261107000016_fast_billing.sql` — category order/delete, billing discount cap, manager stock override, GST details check before invoicing, payment-terms change
 
 Supabase's advisor will still list a few items on purpose: the `catalog` and stock views run with owner rights
 so salesmen and warehouse staff can see stock without seeing purchase costs (each view filters to active users
@@ -133,6 +134,11 @@ Sign in, open **Users**, and create logins for the Manager, Office/Billing, Ware
 | --- | --- |
 | Credit limit | `0` means no limit. Above the limit, only a Manager can override when confirming |
 | Salesman discount | at most 5% per line (Company settings → `salesman_max_discount`) |
+| Billing discount & prices | Billing staff: at most 10% discount per line, item + overall combined (Company settings → `billing_max_discount`). Only a Manager / Super Admin can change a selling price or give a bigger discount |
+| Stock at billing | Cart and drafts never reduce stock. If a line is short, only a Manager / Super Admin can tick "invoice anyway"; stock still goes out at dispatch |
+| GST details | No invoice without shop name and state. GSTIN shops also need billing address + PIN; any bill of ₹50,000 or more needs the address |
+| Payment terms | Immediate (cash) or N days; due date = invoice date + days, saved on the invoice. Changing a shop's default never touches old invoices. A Manager / Super Admin can change an issued invoice's terms with a reason (logged in the audit) |
+| Categories | Every product needs one, per brand. Ordered with ↑/↓ on Product settings; a category can be deleted only when no product uses it (move its products first) |
 | Invoice cancellation | Billing: same day only. Manager: any day, if not dispatched and no payments allocated |
 | Retailer on hold | can get quotations, cannot be invoiced; blocked/inactive cannot get orders |
 | Cheques | count against the balance as "pending" until marked cleared; a bounce re-opens the invoices |

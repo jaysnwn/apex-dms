@@ -73,9 +73,9 @@ export function ProductForm({
           {!isNew && <p className="mt-1 text-xs text-slate-500">Brand cannot change once the product has stock or orders.</p>}
         </div>
         <div>
-          <Label htmlFor="category_id" hint={`${brandName} categories`}>Category</Label>
-          <Select key={brand} id="category_id" name="category_id" defaultValue={product?.brand_id === brand ? product?.category_id ?? "" : ""}>
-            <option value="">—</option>
+          <Label htmlFor="category_id" hint={`${brandName} categories · add more in Brands & categories`}>Category</Label>
+          <Select key={brand} id="category_id" name="category_id" required defaultValue={product?.brand_id === brand ? product?.category_id ?? "" : ""}>
+            <option value="" disabled>Choose…</option>
             {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </Select>
         </div>
