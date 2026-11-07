@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { inr } from "@/lib/format";
 import { todayIST } from "@/lib/gst";
-import { monthLabel, shiftMonth } from "@/lib/incentive";
+import { monthLabel, shiftMonth, toSlabs } from "@/lib/incentive";
 import { Card, PageHeader } from "@/components/ui";
 import { RouteTabs } from "../../manager-tabs";
 import { SchemeForm } from "./scheme-form";
@@ -29,7 +29,7 @@ export default async function SchemePage() {
           <div className="border-b border-slate-100 px-4 py-3 font-semibold">Scheme history</div>
           <table className="w-full text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium text-slate-500">
-              <tr><th className="px-4 py-2">From</th><th className="px-3 py-2">Sales</th><th className="px-3 py-2">Shops billed</th><th className="px-3 py-2">Smart shops</th><th className="px-3 py-2">Recovery</th><th className="px-3 py-2 text-right">Max</th></tr>
+              <tr><th className="px-4 py-2">From</th><th className="px-3 py-2">Sales</th><th className="px-3 py-2">Shops billed</th><th className="px-3 py-2">Smart shops</th><th className="px-3 py-2">Collection slabs</th><th className="px-3 py-2 text-right">Max</th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {(rows ?? []).map((r) => (
@@ -38,13 +38,13 @@ export default async function SchemePage() {
                   <td className="tabular px-3 py-2">≥ {inr(r.sales_target, { decimals: false })} → {inr(r.sales_amount, { decimals: false })}</td>
                   <td className="tabular px-3 py-2">{r.billed_target} → {inr(r.billed_amount, { decimals: false })}</td>
                   <td className="tabular px-3 py-2">{r.smart_target} (≥ {inr(r.smart_min_purchase, { decimals: false })}, {r.smart_pay_days} d) → {inr(r.smart_amount, { decimals: false })}</td>
-                  <td className="tabular px-3 py-2">{Number(r.recovery_pct)}% → {inr(r.recovery_amount, { decimals: false })}</td>
-                  <td className="tabular px-3 py-2 text-right font-semibold">{inr(Number(r.sales_amount) + Number(r.billed_amount) + Number(r.smart_amount) + Number(r.recovery_amount), { decimals: false })}</td>
+                  <td className="tabular px-3 py-2">{toSlabs(r.collection_slabs).map((sl) => `${sl.min_pct}% → ${inr(sl.amount, { decimals: false })}`).join(" · ")}</td>
+                  <td className="tabular px-3 py-2 text-right font-semibold">{inr(Number(r.sales_amount) + Number(r.billed_amount) + Number(r.smart_amount) + Math.max(0, ...toSlabs(r.collection_slabs).map((x) => x.amount)), { decimals: false })}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <p className="px-4 py-3 text-xs text-slate-500">Sales are counted before GST, net of returns. Recovery = money collected in the month against that month&apos;s bills ÷ that month&apos;s billing (incl. GST).</p>
+          <p className="px-4 py-3 text-xs text-slate-500">Sales are counted before GST, net of returns. Collection % = money received in the month against every bill due by month end (old overdue included) ÷ that amount due. Only the highest slab reached is paid.</p>
         </Card>
         {profile.role === "super_admin" ? (
           <Card className="p-5">

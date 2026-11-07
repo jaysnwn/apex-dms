@@ -202,21 +202,21 @@ export const REPORTS: ReportDef[] = [
         if (!j) continue;
         rows.push({
           name: sm.full_name, net_sales: n(j.net_sales), billed_shops: n(j.billed_shops), smart_shops: n(j.smart_shops),
-          billing: n(j.month_billing), collected: n(j.month_collected), recovery: n(j.recovery_pct),
-          sales_earned: n(j.sales_earned), billed_earned: n(j.billed_earned), smart_earned: n(j.smart_earned), recovery_earned: n(j.recovery_earned),
+          due: n(j.collection_due), collected: n(j.collected), collection: n(j.collection_pct),
+          sales_earned: n(j.sales_earned), billed_earned: n(j.billed_earned), smart_earned: n(j.smart_earned), collection_earned: n(j.collection_earned),
           total: n(j.total), status: p ? (p.status === "paid" ? "Paid" : "Approved") : j.is_final ? "To approve" : "Provisional",
         });
       }
       return {
         columns: [
           { key: "name", label: "Salesman" }, { key: "net_sales", label: "Sales ex GST", type: "money" }, { key: "billed_shops", label: "Shops billed", type: "int" },
-          { key: "smart_shops", label: "Smart shops", type: "int" }, { key: "billing", label: "Month billing", type: "money" }, { key: "collected", label: "Collected of it", type: "money" },
-          { key: "recovery", label: "Recovery %", type: "pct" }, { key: "sales_earned", label: "Sales ₹", type: "money" }, { key: "billed_earned", label: "Billed ₹", type: "money" },
-          { key: "smart_earned", label: "Smart ₹", type: "money" }, { key: "recovery_earned", label: "Recovery ₹", type: "money" }, { key: "total", label: "Incentive", type: "money" },
+          { key: "smart_shops", label: "Smart shops", type: "int" }, { key: "due", label: "Due this month", type: "money" }, { key: "collected", label: "Collected", type: "money" },
+          { key: "collection", label: "Collection %", type: "pct" }, { key: "sales_earned", label: "Sales ₹", type: "money" }, { key: "billed_earned", label: "Billed ₹", type: "money" },
+          { key: "smart_earned", label: "Smart ₹", type: "money" }, { key: "collection_earned", label: "Collection ₹", type: "money" }, { key: "total", label: "Incentive", type: "money" },
           { key: "status", label: "Status" },
         ],
         rows,
-        totals: sum(rows, ["net_sales", "billing", "collected", "sales_earned", "billed_earned", "smart_earned", "recovery_earned", "total"]),
+        totals: sum(rows, ["net_sales", "due", "collected", "sales_earned", "billed_earned", "smart_earned", "collection_earned", "total"]),
         note: `Month: ${month.slice(0, 7)} (taken from the From date).`,
       };
     },

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CheckCircle2, ChevronRight, CircleDashed, Clock, IndianRupee, ShoppingBag, Sparkles, Store, Target } from "lucide-react";
 import { cn } from "@/components/ui";
 import { date, inr } from "@/lib/format";
-import { recoveryGap, type IncentiveShop, type IncentiveSummary } from "@/lib/incentive";
+import { type IncentiveShop, type IncentiveSummary } from "@/lib/incentive";
 
 // Incentive breakdown with to-do lists. Used in the salesman app and on the
 // manager's per-salesman page. shopHref decides where a shop row links to.
@@ -13,14 +13,15 @@ export function IncentiveView({ s, shops, shopHref, orderHref }: {
   const salesGap = Math.max(0, sc.sales_target - s.net_sales);
   const billedGap = Math.max(0, sc.billed_target - s.billed_shops);
   const smartGap = Math.max(0, sc.smart_target - s.smart_shops);
-  const recGap = recoveryGap(s);
 
   const onTrack = shops.filter((x) => x.status === "on_track").sort((a, b) => (a.next_deadline ?? "").localeCompare(b.next_deadline ?? ""));
   const nearMin = shops.filter((x) => x.status === "below_min").sort((a, b) => b.billed_taxable - a.billed_taxable);
   const notBilled = shops.filter((x) => x.status === "not_billed");
   const smart = shops.filter((x) => x.status === "smart");
   const missed = shops.filter((x) => x.status === "missed");
-  const toCollect = shops.map((x) => ({ ...x, due: Math.max(0, x.billed_total - x.collected_in_month) })).filter((x) => x.due > 0.99).sort((a, b) => b.due - a.due);
+  const toCollect = shops.map((x) => ({ ...x, due: Math.max(0, x.due_amount - x.due_collected) })).filter((x) => x.due > 0.99).sort((a, b) => b.due - a.due);
+  const slabs = sc.collection_slabs;
+  const topSlab = slabs[slabs.length - 1];
 
   return (
     <div className="space-y-4">
@@ -34,7 +35,7 @@ export function IncentiveView({ s, shops, shopHref, orderHref }: {
           <span className="tabular pb-1 text-emerald-100">of {inr(s.max_total, { decimals: false })}</span>
         </div>
         <div className="mt-3 grid grid-cols-4 gap-1.5">
-          {[s.sales_earned, s.billed_earned, s.smart_earned, s.recovery_earned].map((v, i) => (
+          {[s.sales_earned, s.billed_earned, s.smart_earned, s.collection_earned].map((v, i) => (
             <div key={i} className={cn("h-2 rounded-full", v > 0 ? "bg-white" : "bg-white/20")} />
           ))}
         </div>
@@ -68,20 +69,28 @@ export function IncentiveView({ s, shops, shopHref, orderHref }: {
         {missed.length > 0 && <ShopList title={`Paid late, not counted · ${missed.length}`} tone="red" rows={missed.map((x) => ({ x, right: x.unpaid > 0 ? inr(x.unpaid, { decimals: false }) : "", sub: x.unpaid > 0 ? "still unpaid" : "paid after the deadline" }))} shopHref={shopHref} />}
       </Criterion>
 
-      <Criterion icon={IndianRupee} title="Recovery of this month's bills" amount={sc.recovery_amount} met={s.recovery_earned > 0}
-        value={`${s.recovery_pct.toFixed(0)}%`} target={`${sc.recovery_pct}%`} pct={(s.recovery_pct / sc.recovery_pct) * 100}
-        hint={recGap > 0 ? `Collect ${inr(recGap, { decimals: false })} more against this month's bills` : "Done"}
-        note={`${inr(s.month_collected, { decimals: false })} collected of ${inr(s.month_billing, { decimals: false })} billed (incl. GST). Old dues don't count.`}>
+      <Criterion icon={IndianRupee} title="Payment collection (all dues this month)" amount={s.collection_earned || topSlab?.amount || 0} met={s.collection_earned > 0}
+        amountLabel={s.collection_earned > 0 ? undefined : `up to ${inr(topSlab?.amount ?? 0, { decimals: false })}`}
+        value={`${s.collection_pct.toFixed(1)}%`} target={`${slabs[0]?.min_pct ?? 0}%`} pct={topSlab ? (s.collection_pct / topSlab.min_pct) * 100 : 0}
+        hint={s.next_slab ? `Collect ${inr(s.next_slab_gap, { decimals: false })} more to reach ${s.next_slab.min_pct}% → ${inr(s.next_slab.amount, { decimals: false })}` : s.collection_due > 0 ? "Top slab reached" : "Nothing due this month"}
+        note={`${inr(s.collected, { decimals: false })} collected of ${inr(s.collection_due, { decimals: false })} due this month (old overdue included). Only the highest slab is paid.`}>
+        <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${slabs.length + 1}, minmax(0, 1fr))` }}>
+          <SlabChip label={`< ${slabs[0]?.min_pct ?? 0}%`} amount={0} active={s.collection_earned === 0} />
+          {slabs.map((sl, i) => (
+            <SlabChip key={sl.min_pct} label={slabs[i + 1] ? `${sl.min_pct}–${(slabs[i + 1].min_pct - 0.01).toFixed(2)}%` : `${sl.min_pct}%+`} amount={sl.amount}
+              active={s.collection_earned > 0 && s.collection_pct >= sl.min_pct && (!slabs[i + 1] || s.collection_pct < slabs[i + 1].min_pct)} />
+          ))}
+        </div>
         {toCollect.length > 0 && (
-          <ShopList title={`Still to collect · ${toCollect.length}`} tone="amber" rows={toCollect.map((x) => ({ x, right: inr(x.due, { decimals: false }), sub: x.city ?? "" }))} shopHref={shopHref} />
+          <ShopList open={!!s.next_slab} title={`Still to collect · ${toCollect.length}`} tone="amber" rows={toCollect.map((x) => ({ x, right: inr(x.due, { decimals: false }), sub: `due ${inr(x.due_amount, { decimals: false })} · collected ${inr(x.due_collected, { decimals: false })}` }))} shopHref={shopHref} />
         )}
       </Criterion>
     </div>
   );
 }
 
-function Criterion({ icon: Icon, title, amount, met, value, target, pct, hint, note, children }: {
-  icon: typeof Target; title: string; amount: number; met: boolean; value: string; target: string; pct: number; hint: string; note?: string; children?: React.ReactNode;
+function Criterion({ icon: Icon, title, amount, amountLabel, met, value, target, pct, hint, note, children }: {
+  icon: typeof Target; title: string; amount: number; amountLabel?: string; met: boolean; value: string; target: string; pct: number; hint: string; note?: string; children?: React.ReactNode;
 }) {
   const p = Math.max(0, Math.min(100, pct || 0));
   return (
@@ -92,7 +101,7 @@ function Criterion({ icon: Icon, title, amount, met, value, target, pct, hint, n
           <div className="flex items-start justify-between gap-2">
             <h3 className="text-sm leading-snug font-semibold">{title}</h3>
             <span className={cn("flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold", met ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-500")}>
-              {met ? <CheckCircle2 className="size-3.5" /> : <CircleDashed className="size-3.5" />} {inr(amount, { decimals: false })}
+              {met ? <CheckCircle2 className="size-3.5" /> : <CircleDashed className="size-3.5" />} {amountLabel ?? inr(amount, { decimals: false })}
             </span>
           </div>
           <div className="mt-1 flex items-baseline gap-1.5">
@@ -108,6 +117,15 @@ function Criterion({ icon: Icon, title, amount, met, value, target, pct, hint, n
       </div>
       {children && <div className="mt-3 space-y-2">{children}</div>}
     </section>
+  );
+}
+
+function SlabChip({ label, amount, active }: { label: string; amount: number; active: boolean }) {
+  return (
+    <div className={cn("rounded-xl px-1 py-1.5 text-center", active ? (amount > 0 ? "bg-emerald-600 text-white shadow-sm" : "bg-slate-700 text-white") : "bg-slate-100 text-slate-500")}>
+      <div className="tabular text-[10px] leading-tight">{label}</div>
+      <div className="tabular text-xs font-bold">{inr(amount, { decimals: false })}</div>
+    </div>
   );
 }
 

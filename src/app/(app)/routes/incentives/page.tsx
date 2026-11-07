@@ -13,8 +13,8 @@ import { ApproveButton, PaidButton, ReopenButton } from "./buttons";
 
 export const metadata: Metadata = { title: "Incentives" };
 
-type Payout = { id: string; salesman_id: string; net_sales: number; billed_shops: number; smart_shops: number; recovery_pct: number;
-  sales_earned: number; billed_earned: number; smart_earned: number; recovery_earned: number; total: number; status: string; paid_method: string | null; paid_reference: string | null; paid_at: string | null; detail: Record<string, unknown> };
+type Payout = { id: string; salesman_id: string; net_sales: number; billed_shops: number; smart_shops: number; collection_pct: number;
+  sales_earned: number; billed_earned: number; smart_earned: number; collection_earned: number; total: number; status: string; paid_method: string | null; paid_reference: string | null; paid_at: string | null; detail: Record<string, unknown> };
 
 export default async function IncentivesPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
   const { profile } = await requireRole("super_admin", "manager");
@@ -62,7 +62,7 @@ export default async function IncentivesPage({ searchParams }: { searchParams: P
           Scheme: sales ≥ {inr(scheme.sales_target, { decimals: false })} before GST ({inr(scheme.sales_amount, { decimals: false })}) ·
           {" "}{scheme.billed_target} shops billed ({inr(scheme.billed_amount, { decimals: false })}) ·
           {" "}{scheme.smart_target} smart shops ≥ {inr(scheme.smart_min_purchase, { decimals: false })} paid in {scheme.smart_pay_days} days ({inr(scheme.smart_amount, { decimals: false })}) ·
-          {" "}recovery ≥ {scheme.recovery_pct}% ({inr(scheme.recovery_amount, { decimals: false })})
+          {" "}collection {scheme.collection_slabs.map((sl) => `${sl.min_pct}% → ${inr(sl.amount, { decimals: false })}`).join(" / ")} (highest slab only)
         </p>
       )}
       {(payouts ?? []).length > 0 && (
@@ -77,7 +77,7 @@ export default async function IncentivesPage({ searchParams }: { searchParams: P
               <th className="px-3 py-2.5 text-right">Sales (ex GST)</th>
               <th className="px-3 py-2.5 text-right">Shops billed</th>
               <th className="px-3 py-2.5 text-right">Smart shops</th>
-              <th className="px-3 py-2.5 text-right">Recovery</th>
+              <th className="px-3 py-2.5 text-right">Collection</th>
               <th className="px-3 py-2.5 text-right">Incentive</th>
               <th className="px-4 py-2.5">Status</th>
             </tr>
@@ -88,8 +88,8 @@ export default async function IncentivesPage({ searchParams }: { searchParams: P
               const p = pMap.get(sm.id);
               const s = live[i];
               const row = p
-                ? { net_sales: Number(p.net_sales), billed: p.billed_shops, smart: p.smart_shops, rec: Number(p.recovery_pct), e: [p.sales_earned, p.billed_earned, p.smart_earned, p.recovery_earned].map(Number), total: Number(p.total) }
-                : s ? { net_sales: s.net_sales, billed: s.billed_shops, smart: s.smart_shops, rec: s.recovery_pct, e: [s.sales_earned, s.billed_earned, s.smart_earned, s.recovery_earned], total: s.total } : null;
+                ? { net_sales: Number(p.net_sales), billed: p.billed_shops, smart: p.smart_shops, rec: Number(p.collection_pct), e: [p.sales_earned, p.billed_earned, p.smart_earned, p.collection_earned].map(Number), total: Number(p.total) }
+                : s ? { net_sales: s.net_sales, billed: s.billed_shops, smart: s.smart_shops, rec: s.collection_pct, e: [s.sales_earned, s.billed_earned, s.smart_earned, s.collection_earned], total: s.total } : null;
               const sc = (s ?? toSummary(p?.detail ?? null))?.scheme;
               return (
                 <tr key={sm.id} className="hover:bg-slate-50">
@@ -99,7 +99,7 @@ export default async function IncentivesPage({ searchParams }: { searchParams: P
                       <Cell ok={row.e[0] > 0} v={inr(row.net_sales, { decimals: false })} t={inr(sc.sales_target, { decimals: false })} />
                       <Cell ok={row.e[1] > 0} v={String(row.billed)} t={String(sc.billed_target)} />
                       <Cell ok={row.e[2] > 0} v={String(row.smart)} t={String(sc.smart_target)} />
-                      <Cell ok={row.e[3] > 0} v={`${row.rec.toFixed(1)}%`} t={`${sc.recovery_pct}%`} />
+                      <Cell ok={row.e[3] > 0} v={`${row.rec.toFixed(1)}%`} t={row.e[3] > 0 ? `→ ${inr(row.e[3], { decimals: false })}` : `${sc.collection_slabs[0]?.min_pct ?? 0}%`} />
                       <td className="tabular px-3 py-2.5 text-right text-base font-bold">{inr(row.total, { decimals: false })}</td>
                     </>
                   ) : <td colSpan={5} className="px-3 py-2.5 text-slate-400">—</td>}

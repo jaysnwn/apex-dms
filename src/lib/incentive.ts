@@ -6,19 +6,20 @@ export type IncentiveScheme = {
   sales_target: number; sales_amount: number;
   billed_target: number; billed_amount: number;
   smart_target: number; smart_min_purchase: number; smart_pay_days: number; smart_amount: number;
-  recovery_pct: number; recovery_amount: number; notes: string | null;
+  collection_slabs: Slab[]; notes: string | null;
 };
+export type Slab = { min_pct: number; amount: number };
 
 export type IncentiveSummary = {
   month: string; final_on: string; is_final: boolean; scheme: IncentiveScheme;
   net_sales: number; returns_earlier_bills: number; billed_shops: number; smart_shops: number; on_track_shops: number;
-  month_billing: number; month_collected: number; recovery_pct: number;
-  sales_earned: number; billed_earned: number; smart_earned: number; recovery_earned: number; total: number; max_total: number;
+  collection_due: number; collected: number; collection_pct: number; next_slab: Slab | null; next_slab_gap: number;
+  sales_earned: number; billed_earned: number; smart_earned: number; collection_earned: number; total: number; max_total: number;
 };
 
 export type IncentiveShop = {
   retailer_id: string; code: string; shop_name: string; city: string | null; mobile: string;
-  invoices: number; billed_taxable: number; billed_total: number; collected_in_month: number; unpaid: number;
+  invoices: number; billed_taxable: number; billed_total: number; due_amount: number; due_collected: number; unpaid: number;
   next_deadline: string | null; status: "not_billed" | "below_min" | "smart" | "on_track" | "missed";
 };
 
@@ -38,15 +39,16 @@ export function toSummary(j: Record<string, unknown> | null): IncentiveSummary |
   return {
     ...(j as unknown as IncentiveSummary),
     net_sales: num(j.net_sales), returns_earlier_bills: num(j.returns_earlier_bills), billed_shops: num(j.billed_shops),
-    smart_shops: num(j.smart_shops), on_track_shops: num(j.on_track_shops), month_billing: num(j.month_billing),
-    month_collected: num(j.month_collected), recovery_pct: num(j.recovery_pct), sales_earned: num(j.sales_earned),
-    billed_earned: num(j.billed_earned), smart_earned: num(j.smart_earned), recovery_earned: num(j.recovery_earned),
+    smart_shops: num(j.smart_shops), on_track_shops: num(j.on_track_shops), collection_due: num(j.collection_due),
+    collected: num(j.collected), collection_pct: num(j.collection_pct), next_slab_gap: num(j.next_slab_gap),
+    next_slab: j.next_slab ? toSlabs([j.next_slab])[0] : null, sales_earned: num(j.sales_earned),
+    billed_earned: num(j.billed_earned), smart_earned: num(j.smart_earned), collection_earned: num(j.collection_earned),
     total: num(j.total), max_total: num(j.max_total), is_final: Boolean(j.is_final),
     scheme: {
       ...(s as unknown as IncentiveScheme),
       sales_target: num(s.sales_target), sales_amount: num(s.sales_amount), billed_target: num(s.billed_target), billed_amount: num(s.billed_amount),
       smart_target: num(s.smart_target), smart_min_purchase: num(s.smart_min_purchase), smart_pay_days: num(s.smart_pay_days), smart_amount: num(s.smart_amount),
-      recovery_pct: num(s.recovery_pct), recovery_amount: num(s.recovery_amount),
+      collection_slabs: toSlabs(s.collection_slabs),
     },
   };
 }
@@ -55,7 +57,7 @@ export function toShops(rows: Record<string, unknown>[] | null): IncentiveShop[]
   return (rows ?? []).map((r) => ({
     ...(r as unknown as IncentiveShop),
     invoices: num(r.invoices), billed_taxable: num(r.billed_taxable), billed_total: num(r.billed_total),
-    collected_in_month: num(r.collected_in_month), unpaid: num(r.unpaid),
+    due_amount: num(r.due_amount), due_collected: num(r.due_collected), unpaid: num(r.unpaid),
   }));
 }
 
@@ -72,7 +74,8 @@ export function shiftMonth(d: string, by: number) {
   return x.toISOString().slice(0, 10);
 }
 
-// Money still to collect (against this month's bills) to reach the recovery %.
-export function recoveryGap(s: IncentiveSummary) {
-  return Math.max(0, (s.scheme.recovery_pct / 100) * s.month_billing - s.month_collected);
+export function toSlabs(v: unknown): Slab[] {
+  return (Array.isArray(v) ? v : [])
+    .map((e) => ({ min_pct: num((e as Slab).min_pct), amount: num((e as Slab).amount) }))
+    .sort((a, b) => a.min_pct - b.min_pct);
 }

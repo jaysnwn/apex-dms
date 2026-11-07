@@ -1,8 +1,7 @@
 -- =============================================================================
 -- Salesman incentive: sales before GST net of returns, shops billed, smart
--- shops (≥ minimum, every bill paid within 21 days), recovery of the month's
--- own billing only (old dues excluded, payments applied oldest-first),
--- approval lock, privacy.
+-- shops (≥ minimum, every bill paid within 21 days), collection slab on
+-- everything due in the month (old overdue included), approval lock, privacy.
 -- Runs after m0–m3 tests. Builds a month two months back so it is "final".
 -- =============================================================================
 \set ON_ERROR_STOP 1
@@ -58,13 +57,15 @@ set role authenticated;
 do $$
 declare d date := (select d from m);
 begin
+  -- E pays 500 BEFORE the month (oldest-first → last month's bill): reduces what is due, not collection
+  perform public.record_payment('40000000-0000-0000-0000-00000000000e', 500, 'cash', d - 3);
   -- A pays in full on day 10 (within 21 days of day 2) → smart
   perform public.record_payment('40000000-0000-0000-0000-00000000000a', 7080, 'cash', d + 9);
   -- B pays in full on day 30 (28 days after the bill) → missed
   perform public.record_payment('40000000-0000-0000-0000-00000000000b', 7080, 'cash', d + 29);
   -- C pays 2360 in month, but bought below the 5000 minimum → below_min
   perform public.record_payment('40000000-0000-0000-0000-00000000000c', 2360, 'cash', d + 5);
-  -- E pays 2000: oldest first → 1180 to last month's bill, 820 to this month's
+  -- E pays 2000: oldest first → 680 left on last month's bill, then 1320 to this month's
   perform public.record_payment('40000000-0000-0000-0000-00000000000e', 2000, 'cash', d + 6);
   -- return of 1 unit on B's bill in the month → B net 5000 taxable
   perform public.create_credit_note((select v from ids where k = 'invB'), 'damaged', false,
@@ -84,14 +85,29 @@ begin
   assert (j->>'net_sales')::numeric = 15000, 'net sales ' || (j->>'net_sales');
   assert (j->>'billed_shops')::int = 4, 'billed shops ' || (j->>'billed_shops');
   assert (j->>'smart_shops')::int = 1, 'smart shops ' || (j->>'smart_shops');
-  -- billing incl GST: A 7080 + B 5900 + C 2360 + E 2360 = 17700
-  assert (j->>'month_billing')::numeric = 17700, 'month billing ' || (j->>'month_billing');
-  -- collected against this month's bills within the month: A 7080 + B 5900 (day 30 is in month) + C 2360 + E 820 = 16160
-  assert (j->>'month_collected')::numeric = 16160, 'collected ' || (j->>'month_collected');
-  assert (j->>'recovery_pct')::numeric = round(16160 / 17700.0 * 100, 2), 'recovery %';
+  -- due in the month (all bills due by month end, at what was owed on the 1st):
+  --   A 7080 + B 5900 (after return) + C 2360 + E old 680 (1180 − 500 paid before) + E new 2360 = 18380
+  assert (j->>'collection_due')::numeric = 18380, 'collection due ' || (j->>'collection_due');
+  -- collected in the month against those: A 7080 + B 5900 (capped after return) + C 2360 + E 2000 = 17340
+  assert (j->>'collected')::numeric = 17340, 'collected ' || (j->>'collected');
+  assert (j->>'collection_pct')::numeric = round(17340 / 18380.0 * 100, 2), 'collection %';
+  assert (j->>'collection_earned')::numeric = 2500, '94.34% → 85% slab = 2500, got ' || (j->>'collection_earned');
+  assert (j->'next_slab'->>'min_pct')::numeric = 95, 'next slab 95%';
+  assert (j->>'next_slab_gap')::numeric = round(0.95 * 18380 - 17340, 2), 'gap to next slab';
+  assert (j->>'max_total')::numeric = 9000, 'max 2000×3 + 3000';
   assert (j->>'is_final')::boolean, 'two months back is final';
-  assert (j->>'sales_earned')::numeric = 0 and (j->>'recovery_earned')::numeric = 2000, 'earned flags';
-  assert (j->>'total')::numeric = 2000, 'total ' || (j->>'total');
+  assert (j->>'sales_earned')::numeric = 0, 'sales not reached';
+  assert (j->>'total')::numeric = 2500, 'total ' || (j->>'total');
+
+  -- slabs: highest reached only, never added up
+  assert public.incentive_collection_amount((public.incentive_scheme_for(d)).collection_slabs, 74.99) = 0, 'below 75';
+  assert public.incentive_collection_amount((public.incentive_scheme_for(d)).collection_slabs, 75) = 2000, '75';
+  assert public.incentive_collection_amount((public.incentive_scheme_for(d)).collection_slabs, 84.99) = 2000, '84.99';
+  assert public.incentive_collection_amount((public.incentive_scheme_for(d)).collection_slabs, 85) = 2500, '85';
+  assert public.incentive_collection_amount((public.incentive_scheme_for(d)).collection_slabs, 94.99) = 2500, '94.99';
+  assert public.incentive_collection_amount((public.incentive_scheme_for(d)).collection_slabs, 95) = 3000, '95';
+  assert public.incentive_collection_amount((public.incentive_scheme_for(d)).collection_slabs, 100) = 3000, '100';
+  assert (select due_amount from public.incentive_shops(auth.uid(), d) where shop_name = 'Inc Shop E') = 3040, 'E due 680 + 2360';
 
   assert (select status from public.incentive_shops(auth.uid(), d) where shop_name = 'Inc Shop A') = 'smart', 'A smart';
   assert (select status from public.incentive_shops(auth.uid(), d) where shop_name = 'Inc Shop B') = 'missed', 'B missed (paid late)';
@@ -105,8 +121,8 @@ begin
   begin perform public.approve_incentives(d); raise exception 'salesman approved';
   exception when insufficient_privilege then null; end;
   begin
-    insert into public.incentive_schemes (effective_from, sales_target, sales_amount, billed_target, billed_amount, smart_target, smart_min_purchase, smart_pay_days, smart_amount, recovery_pct, recovery_amount)
-    values (date_trunc('month', current_date)::date, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+    insert into public.incentive_schemes (effective_from, sales_target, sales_amount, billed_target, billed_amount, smart_target, smart_min_purchase, smart_pay_days, smart_amount, collection_slabs)
+    values (date_trunc('month', current_date)::date, 1, 1, 1, 1, 1, 1, 1, 1, '[{"min_pct":1,"amount":1}]');
     raise exception 'salesman changed the scheme';
   exception when insufficient_privilege then null; end;
 end $$;
@@ -119,8 +135,8 @@ do $$
 declare d date := (select d from m); n int; v_id uuid;
 begin
   begin
-    insert into public.incentive_schemes (effective_from, sales_target, sales_amount, billed_target, billed_amount, smart_target, smart_min_purchase, smart_pay_days, smart_amount, recovery_pct, recovery_amount)
-    values (date_trunc('month', current_date)::date, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+    insert into public.incentive_schemes (effective_from, sales_target, sales_amount, billed_target, billed_amount, smart_target, smart_min_purchase, smart_pay_days, smart_amount, collection_slabs)
+    values (date_trunc('month', current_date)::date, 1, 1, 1, 1, 1, 1, 1, 1, '[{"min_pct":1,"amount":1}]');
     raise exception 'manager changed the scheme';
   exception when insufficient_privilege then null; end;
 
@@ -131,7 +147,8 @@ begin
   assert n = (select count(*) from public.profiles where role = 'salesman' and is_active), 'approved every active salesman: ' || n;
   assert public.approve_incentives(d) = 0, 'second approval adds nothing';
   select id into v_id from public.incentive_payouts where salesman_id = '00000000-0000-0000-0000-000000000005' and month = d;
-  assert (select total from public.incentive_payouts where id = v_id) = 2000, 'locked total';
+  assert (select total from public.incentive_payouts where id = v_id) = 2500, 'locked total';
+  assert (select collection_earned from public.incentive_payouts where id = v_id) = 2500, 'locked collection slab';
   assert (select jsonb_array_length(detail->'shops') from public.incentive_payouts where id = v_id) = 4, 'shop detail kept';
   begin perform public.mark_incentive_paid(v_id, 'upi'); raise exception 'paid without reference';
   exception when raise_exception then if sqlerrm not like '%reference%' then raise; end if; end;
@@ -144,8 +161,8 @@ reset role;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', false);
 set role authenticated;
 do $$ begin
-  insert into public.incentive_schemes (effective_from, sales_target, sales_amount, billed_target, billed_amount, smart_target, smart_min_purchase, smart_pay_days, smart_amount, recovery_pct, recovery_amount)
-  values ((date_trunc('month', current_date) + interval '1 month')::date, 350000, 2500, 60, 2000, 30, 5000, 21, 2000, 70, 2000);
+  insert into public.incentive_schemes (effective_from, sales_target, sales_amount, billed_target, billed_amount, smart_target, smart_min_purchase, smart_pay_days, smart_amount, collection_slabs)
+  values ((date_trunc('month', current_date) + interval '1 month')::date, 350000, 2500, 60, 2000, 30, 5000, 21, 2000, '[{"min_pct":80,"amount":2000},{"min_pct":95,"amount":3500}]');
   assert (public.incentive_scheme_for((select d from m))).sales_target = 300000, 'old month keeps old scheme';
   assert (public.incentive_scheme_for((date_trunc('month', current_date) + interval '1 month')::date)).sales_target = 350000, 'new month uses new scheme';
 end $$;

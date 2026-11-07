@@ -43,8 +43,9 @@ const schemeSchema = z.object({
   smart_min_purchase: z.number().positive(),
   smart_pay_days: z.number().int().min(1).max(90),
   smart_amount: z.number().min(0),
-  recovery_pct: z.number().gt(0).max(100),
-  recovery_amount: z.number().min(0),
+  collection_slabs: z.array(z.object({ min_pct: z.number().gt(0, "Slab % must be above 0").max(100), amount: z.number().min(0) }))
+    .min(1, "Add at least one collection slab").max(10)
+    .refine((a) => new Set(a.map((x) => x.min_pct)).size === a.length, "Two slabs have the same %"),
   notes: z.string().optional(),
 });
 
@@ -59,7 +60,8 @@ export async function saveScheme(input: z.input<typeof schemeSchema>): Promise<{
   if ((locked ?? []).length) return { error: "Months from this date are already approved. Choose a later month." };
   // One scheme per start month: replace a same-month entry instead of failing.
   await supabase.from("incentive_schemes").delete().eq("effective_from", from);
-  const { error } = await supabase.from("incentive_schemes").insert({ ...v, effective_from: from, notes: v.notes || null });
+  const slabs = [...v.collection_slabs].sort((a, b) => a.min_pct - b.min_pct);
+  const { error } = await supabase.from("incentive_schemes").insert({ ...v, collection_slabs: slabs, effective_from: from, notes: v.notes || null });
   if (error) return { error: dbError(error) };
   revalidatePath("/routes/incentives");
   revalidatePath("/m");

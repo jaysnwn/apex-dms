@@ -89,7 +89,7 @@ export function HomeView({ h, firstName }: { h: HomeData; firstName: string }) {
             <IncRow ok={h.incentive.sales_earned > 0} label="Sales" value={`${Math.min(999, Math.floor((h.incentive.net_sales / h.incentive.scheme.sales_target) * 100))}%`} />
             <IncRow ok={h.incentive.billed_earned > 0} label="Shops billed" value={`${h.incentive.billed_shops}/${h.incentive.scheme.billed_target}`} />
             <IncRow ok={h.incentive.smart_earned > 0} label="Smart shops" value={`${h.incentive.smart_shops}/${h.incentive.scheme.smart_target}`} />
-            <IncRow ok={h.incentive.recovery_earned > 0} label="Recovery" value={`${h.incentive.recovery_pct.toFixed(0)}%/${h.incentive.scheme.recovery_pct}%`} />
+            <IncRow ok={h.incentive.collection_earned > 0} label="Collection" value={`${h.incentive.collection_pct.toFixed(0)}%${h.incentive.collection_earned ? ` · ${inr(h.incentive.collection_earned, { decimals: false })}` : ""}`} />
           </div>
         </Link>
       )}

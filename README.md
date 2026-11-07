@@ -18,7 +18,7 @@ Stack: **Next.js 15 (App Router) · TypeScript · Tailwind CSS 4 · Supabase (Po
 | M6 Dashboards and reports | Role dashboards, 12 reports, Excel export | ✅ Built |
 | Purchases | Suppliers, purchase orders, goods receipt into stock, supplier bills, payments, payables | ✅ Built |
 | Salesman app | Phone app at /m: monthly target, today's route, order from live stock, outlets, add outlet with GPS, collect payment, expenses, offline | ✅ Built |
-| Salesman incentive | 4-criteria monthly incentive: live progress + to-do lists in the app, manager approval/lock/pay, scheme editable by Super Admin | ✅ Built |
+| Salesman incentive | Monthly incentive (3 targets + collection slabs): live progress + to-do lists in the app, manager approval/lock/pay, scheme editable by Super Admin | ✅ Built |
 | M7 UAT and go-live | Your corrections, data migration, training, cut-over | Next |
 
 ## First-time setup
@@ -133,7 +133,7 @@ Sign in, open **Users**, and create logins for the Manager, Office/Billing, Ware
 | Classification | High credit risk: >45 days overdue, a bounce in 90 days, or over limit. Needs attention: >15 days overdue, no order in 60 days, or <60% paid on time. Star: 4+ invoices in 90 days, nothing overdue, ≥90% on time. Otherwise Average |
 | Gross profit | invoice taxable value minus weighted average purchase cost at invoice time; credit notes not deducted |
 | Purchases | A PO is editable until received. Receiving needs the supplier's bill no. + date and adds all its stock at the net cost (after discount, before GST); it also updates the product's purchase cost unless unticked. Due date = bill date + supplier credit days. The same bill number can't be entered twice for one supplier. Only a Manager can cancel a received purchase (stock comes back out; no payments applied). Warehouse staff can receive but never see costs |
-| Incentive | Sales = before GST, net of returns · shops billed = his shops with an invoice in the month · smart = bought ≥ ₹5,000 (before GST) in the month and paid every bill of that month within 21 days · recovery = collected in the month against that month's bills ÷ that month's billing (incl. GST); old dues don't count; payments go to the oldest bill first; cheques count once cleared · his shops = assigned to him or on his route · figures are final 21 days after month end, then the manager approves and locks them |
+| Incentive | Sales = before GST, net of returns · shops billed = his shops with an invoice in the month · smart = bought ≥ ₹5,000 (before GST) in the month and paid every bill of that month within 21 days · collection = money received in the month against every bill due by month end (old overdue included, at what was owed on the 1st) ÷ that amount; slabs <75% ₹0 · 75% ₹2,000 · 85% ₹2,500 · 95% ₹3,000, highest slab only; payments go to the oldest bill first; cheques count once cleared · his shops = assigned to him or on his route · figures are final 21 days after month end, then the manager approves and locks them |
 | Field app | caches today's route and catalogue; orders, payments and visits made offline are sent when back online |
 
 ## Tests
