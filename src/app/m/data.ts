@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { addDays, todayIST } from "@/lib/gst";
 import { signProductImages } from "@/lib/images";
+import { toShops, toSummary, type IncentiveShop, type IncentiveSummary } from "@/lib/incentive";
 
 export type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
 
@@ -21,6 +22,7 @@ export type HomeData = {
   nextVisit: { retailer_id: string; shop_name: string; city: string | null } | null;
   recent: { id: string; order_no: string; status: string; grand_total: number; created_at: string; shop_name: string }[];
   expensesPending: number;
+  incentive: IncentiveSummary | null;
 };
 
 export async function getHome(supabase: SupabaseServer, userId: string): Promise<HomeData> {
@@ -40,7 +42,7 @@ export async function getHome(supabase: SupabaseServer, userId: string): Promise
   const start = (t?.period_start as string) ?? monthStart;
   const end = (t?.period_end as string) ?? monthEnd;
 
-  const [inv, quotes, pays, visits, plans, recent, exp] = await Promise.all([
+  const [inv, quotes, pays, visits, plans, recent, exp, inc] = await Promise.all([
     supabase.from("invoices").select("grand_total, orders!inner(salesman_id)").eq("orders.salesman_id", userId).eq("status", "issued").gte("invoice_date", start).lte("invoice_date", end),
     supabase.from("orders").select("grand_total, created_at").eq("salesman_id", userId).eq("status", "quotation"),
     supabase.from("payments").select("amount, payment_date").eq("collected_by", userId).in("status", ["received", "cheque_pending"]).gte("payment_date", start < monthStart ? start : monthStart),
@@ -48,6 +50,7 @@ export async function getHome(supabase: SupabaseServer, userId: string): Promise
     supabase.from("route_plans").select("routes(name)").eq("salesman_id", userId).eq("plan_date", today),
     supabase.from("orders").select("id, order_no, status, grand_total, created_at, retailers(shop_name)").eq("salesman_id", userId).order("created_at", { ascending: false }).limit(5),
     supabase.from("expenses").select("id", { count: "exact", head: true }).eq("salesman_id", userId).eq("status", "submitted"),
+    supabase.rpc("salesman_incentive", { p_salesman: userId, p_month: monthStart }),
   ]);
 
   const sum = (rows: { grand_total?: number; amount?: number }[] | null, k: "grand_total" | "amount") => (rows ?? []).reduce((s, r) => s + Number(r[k] ?? 0), 0);
@@ -85,7 +88,17 @@ export async function getHome(supabase: SupabaseServer, userId: string): Promise
       shop_name: (o.retailers as unknown as { shop_name: string } | null)?.shop_name ?? "",
     })),
     expensesPending: exp.count ?? 0,
+    incentive: inc.error ? null : toSummary(inc.data as Record<string, unknown> | null),
   };
+}
+
+// Incentive for one salesman and month, with the per-shop list.
+export async function getIncentive(supabase: SupabaseServer, userId: string, month: string): Promise<{ summary: IncentiveSummary | null; shops: IncentiveShop[] }> {
+  const [{ data: j }, { data: rows }] = await Promise.all([
+    supabase.rpc("salesman_incentive", { p_salesman: userId, p_month: month }),
+    supabase.rpc("incentive_shops", { p_salesman: userId, p_month: month }),
+  ]);
+  return { summary: toSummary(j as Record<string, unknown> | null), shops: toShops(rows as Record<string, unknown>[] | null) };
 }
 
 function isToday(ts: string, today: string) {

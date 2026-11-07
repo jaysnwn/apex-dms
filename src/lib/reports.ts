@@ -186,6 +186,41 @@ export const REPORTS: ReportDef[] = [
   { key: "brand-sales", title: "Brand-wise sales", description: "Sales by brand with share of total.", group: "Sales", roles: [...OFFICE, "warehouse"], filters: ["salesman", "route"], run: salesBy("brand") },
   { key: "product-sales", title: "Product-wise sales", description: "Quantity and value sold per product.", group: "Sales", roles: [...OFFICE, "warehouse"], filters: ["brand", "salesman", "route"], run: salesBy("product") },
   { key: "retailer-sales", title: "Retailer-wise sales", description: "Who buys the most, and how often.", group: "Sales", roles: [...OFFICE, "salesman"], filters: ["brand", "salesman", "route"], run: salesBy("retailer") },
+  {
+    key: "salesman-incentives", title: "Salesman incentives", description: "Incentive criteria and amount per salesman for the month of the From date.", group: "Team", roles: MGMT, filters: [],
+    run: async (sb, f) => {
+      const month = f.from.slice(0, 8) + "01";
+      const [{ data: people }, { data: payouts }] = await Promise.all([
+        sb.from("profiles").select("id, full_name, is_active").eq("role", "salesman").order("full_name"),
+        sb.from("incentive_payouts").select("*").eq("month", month),
+      ]);
+      const pMap = new Map((payouts ?? []).map((p) => [p.salesman_id as string, p]));
+      const rows: Record<string, string | number | null>[] = [];
+      for (const sm of (people ?? []).filter((x) => x.is_active || pMap.has(x.id))) {
+        const p = pMap.get(sm.id);
+        const j = p ? (p.detail as Record<string, unknown>) : ((await sb.rpc("salesman_incentive", { p_salesman: sm.id, p_month: month })).data as Record<string, unknown> | null);
+        if (!j) continue;
+        rows.push({
+          name: sm.full_name, net_sales: n(j.net_sales), billed_shops: n(j.billed_shops), smart_shops: n(j.smart_shops),
+          billing: n(j.month_billing), collected: n(j.month_collected), recovery: n(j.recovery_pct),
+          sales_earned: n(j.sales_earned), billed_earned: n(j.billed_earned), smart_earned: n(j.smart_earned), recovery_earned: n(j.recovery_earned),
+          total: n(j.total), status: p ? (p.status === "paid" ? "Paid" : "Approved") : j.is_final ? "To approve" : "Provisional",
+        });
+      }
+      return {
+        columns: [
+          { key: "name", label: "Salesman" }, { key: "net_sales", label: "Sales ex GST", type: "money" }, { key: "billed_shops", label: "Shops billed", type: "int" },
+          { key: "smart_shops", label: "Smart shops", type: "int" }, { key: "billing", label: "Month billing", type: "money" }, { key: "collected", label: "Collected of it", type: "money" },
+          { key: "recovery", label: "Recovery %", type: "pct" }, { key: "sales_earned", label: "Sales ₹", type: "money" }, { key: "billed_earned", label: "Billed ₹", type: "money" },
+          { key: "smart_earned", label: "Smart ₹", type: "money" }, { key: "recovery_earned", label: "Recovery ₹", type: "money" }, { key: "total", label: "Incentive", type: "money" },
+          { key: "status", label: "Status" },
+        ],
+        rows,
+        totals: sum(rows, ["net_sales", "billing", "collected", "sales_earned", "billed_earned", "smart_earned", "recovery_earned", "total"]),
+        note: `Month: ${month.slice(0, 7)} (taken from the From date).`,
+      };
+    },
+  },
   { key: "salesman-sales", title: "Salesman-wise sales", description: "Invoiced sales per salesman.", group: "Team", roles: MGMT, filters: ["brand", "route"], run: salesBy("salesman") },
   {
     key: "route-performance", title: "Route-wise performance", description: "Sales, collections and visit completion per route.", group: "Team", roles: MGMT, filters: [],

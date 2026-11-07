@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, ClipboardList, IndianRupee, MapPin, Navigation, Plus, Receipt, ShoppingBag, Store, Target, TrendingUp } from "lucide-react";
+import { CheckCircle2, ChevronRight, CircleDashed, ClipboardList, IndianRupee, MapPin, Navigation, Plus, Receipt, ShoppingBag, Sparkles, Store, Target, TrendingUp } from "lucide-react";
 import { date, inr } from "@/lib/format";
 import { ORDER_STATUS } from "@/lib/status";
 import { Badge, cn } from "@/components/ui";
@@ -73,6 +73,26 @@ export function HomeView({ h, firstName }: { h: HomeData; firstName: string }) {
           </div>
         </div>
       </section>
+
+      {/* ---------- Incentive this month ---------- */}
+      {h.incentive && (
+        <Link href="/m/incentive" className="block rounded-3xl bg-white p-4 shadow-sm ring-1 ring-emerald-200 active:bg-emerald-50/40">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-sm font-semibold text-emerald-800"><Sparkles className="size-4" /> My incentive this month</span>
+            <span className="flex items-center text-sm font-medium text-emerald-700">Details <ChevronRight className="size-4" /></span>
+          </div>
+          <div className="mt-1 flex items-baseline gap-1.5">
+            <span className="tabular text-2xl font-bold text-slate-900">{inr(h.incentive.total, { decimals: false })}</span>
+            <span className="tabular text-sm text-slate-500">of {inr(h.incentive.max_total, { decimals: false })}{h.incentive.is_final ? "" : " · so far"}</span>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <IncRow ok={h.incentive.sales_earned > 0} label="Sales" value={`${Math.min(999, Math.floor((h.incentive.net_sales / h.incentive.scheme.sales_target) * 100))}%`} />
+            <IncRow ok={h.incentive.billed_earned > 0} label="Shops billed" value={`${h.incentive.billed_shops}/${h.incentive.scheme.billed_target}`} />
+            <IncRow ok={h.incentive.smart_earned > 0} label="Smart shops" value={`${h.incentive.smart_shops}/${h.incentive.scheme.smart_target}`} />
+            <IncRow ok={h.incentive.recovery_earned > 0} label="Recovery" value={`${h.incentive.recovery_pct.toFixed(0)}%/${h.incentive.scheme.recovery_pct}%`} />
+          </div>
+        </Link>
+      )}
 
       {/* ---------- Big order button ---------- */}
       <Link href="/m/order" className="flex items-center gap-4 rounded-3xl bg-gradient-to-r from-accent-500 to-accent-600 p-4 text-white shadow-md shadow-accent-500/30 active:scale-[0.99]">
@@ -154,6 +174,15 @@ export function HomeView({ h, firstName }: { h: HomeData; firstName: string }) {
           </ul>
         )}
       </section>
+    </div>
+  );
+}
+
+function IncRow({ ok, label, value }: { ok: boolean; label: string; value: string }) {
+  return (
+    <div className={cn("flex items-center justify-between rounded-xl px-2.5 py-2 text-xs", ok ? "bg-emerald-50 text-emerald-800" : "bg-slate-50 text-slate-600")}>
+      <span className="flex items-center gap-1">{ok ? <CheckCircle2 className="size-3.5" /> : <CircleDashed className="size-3.5" />} {label}</span>
+      <span className="tabular font-bold">{value}</span>
     </div>
   );
 }

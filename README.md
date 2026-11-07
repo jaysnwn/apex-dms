@@ -18,6 +18,7 @@ Stack: **Next.js 15 (App Router) · TypeScript · Tailwind CSS 4 · Supabase (Po
 | M6 Dashboards and reports | Role dashboards, 12 reports, Excel export | ✅ Built |
 | Purchases | Suppliers, purchase orders, goods receipt into stock, supplier bills, payments, payables | ✅ Built |
 | Salesman app | Phone app at /m: monthly target, today's route, order from live stock, outlets, add outlet with GPS, collect payment, expenses, offline | ✅ Built |
+| Salesman incentive | 4-criteria monthly incentive: live progress + to-do lists in the app, manager approval/lock/pay, scheme editable by Super Admin | ✅ Built |
 | M7 UAT and go-live | Your corrections, data migration, training, cut-over | Next |
 
 ## First-time setup
@@ -34,7 +35,7 @@ In the Supabase dashboard for this project:
 
 ### 2. Run the database migrations
 
-> **Already done for the `apex-dms` project (uiczjglzsnjxxqvxlheh)** — all migrations up to 0011 were applied on
+> **Already done for the `apex-dms` project (uiczjglzsnjxxqvxlheh)** — all migrations up to 0012 were applied on
 > 2026-11-05 through the Supabase connector, so skip this step. The applied versions are timestamped by Supabase,
 > not by these file names; if you later switch to `supabase db push`, run `supabase migration list` first and use
 > `supabase migration repair` so files that are already applied are not run again.
@@ -62,6 +63,7 @@ Or paste each file in `supabase/migrations/` **in order** into the Supabase SQL 
    supplier payments (FIFO, advances), payables views
 10. `20261107000010_field_app.sql` — outlet GPS location (latitude/longitude)
 11. `20261107000011_share_links.sql` — short links for PDFs shared on WhatsApp
+12. `20261107000012_incentives.sql` — salesman incentive scheme, live calculation, approved payouts
 
 Supabase's advisor will still list a few items on purpose: the `catalog` and stock views run with owner rights
 so salesmen and warehouse staff can see stock without seeing purchase costs (each view filters to active users
@@ -131,6 +133,7 @@ Sign in, open **Users**, and create logins for the Manager, Office/Billing, Ware
 | Classification | High credit risk: >45 days overdue, a bounce in 90 days, or over limit. Needs attention: >15 days overdue, no order in 60 days, or <60% paid on time. Star: 4+ invoices in 90 days, nothing overdue, ≥90% on time. Otherwise Average |
 | Gross profit | invoice taxable value minus weighted average purchase cost at invoice time; credit notes not deducted |
 | Purchases | A PO is editable until received. Receiving needs the supplier's bill no. + date and adds all its stock at the net cost (after discount, before GST); it also updates the product's purchase cost unless unticked. Due date = bill date + supplier credit days. The same bill number can't be entered twice for one supplier. Only a Manager can cancel a received purchase (stock comes back out; no payments applied). Warehouse staff can receive but never see costs |
+| Incentive | Sales = before GST, net of returns · shops billed = his shops with an invoice in the month · smart = bought ≥ ₹5,000 (before GST) in the month and paid every bill of that month within 21 days · recovery = collected in the month against that month's bills ÷ that month's billing (incl. GST); old dues don't count; payments go to the oldest bill first; cheques count once cleared · his shops = assigned to him or on his route · figures are final 21 days after month end, then the manager approves and locks them |
 | Field app | caches today's route and catalogue; orders, payments and visits made offline are sent when back online |
 
 ## Tests
