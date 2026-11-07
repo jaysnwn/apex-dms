@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { CheckCircle2, ChevronRight, CircleDashed, ClipboardList, IndianRupee, MapPin, Navigation, Plus, Receipt, ShoppingBag, Sparkles, Store, Target, TrendingUp } from "lucide-react";
+import { CheckCircle2, ChevronRight, CircleDashed, ClipboardList, HandCoins, IndianRupee, MapPin, Navigation, Plus, Receipt, ShoppingBag, Sparkles, Store, Target, TrendingUp } from "lucide-react";
 import { date, inr } from "@/lib/format";
-import { ORDER_STATUS } from "@/lib/status";
+import { ORDER_STATUS, PAYMENT_METHOD } from "@/lib/status";
 import { Badge, cn } from "@/components/ui";
 import type { HomeData } from "./data";
 import { Ring } from "./ui";
@@ -91,6 +91,32 @@ export function HomeView({ h, firstName }: { h: HomeData; firstName: string }) {
             <IncRow ok={h.incentive.smart_earned > 0} label="Smart shops" value={`${h.incentive.smart_shops}/${h.incentive.scheme.smart_target}`} />
             <IncRow ok={h.incentive.collection_earned > 0} label="Collection" value={`${h.incentive.collection_pct.toFixed(0)}%${h.incentive.collection_earned ? ` · ${inr(h.incentive.collection_earned, { decimals: false })}` : ""}`} />
           </div>
+        </Link>
+      )}
+
+      {/* ---------- Money to hand over ---------- */}
+      {(h.withMe.count > 0 || h.withMe.rejected > 0) && (
+        <Link href="/m/collections" className="block rounded-3xl bg-amber-50 p-4 shadow-sm ring-1 ring-amber-200 active:bg-amber-100">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-sm font-semibold text-amber-900"><HandCoins className="size-4" /> Hand over to office</span>
+            <span className="flex items-center text-sm font-medium text-amber-800">Details <ChevronRight className="size-4" /></span>
+          </div>
+          {h.withMe.count > 0 ? (
+            <>
+              <div className="mt-1 flex items-baseline gap-1.5">
+                <span className="tabular text-2xl font-bold text-slate-900">{inr(h.withMe.total, { decimals: false })}</span>
+                <span className="text-sm text-slate-600">{h.withMe.count} payment{h.withMe.count === 1 ? "" : "s"} not verified</span>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5 text-xs font-semibold">
+                {Object.entries(h.withMe.byMethod).map(([m, v]) => (
+                  <span key={m} className="tabular rounded-lg bg-white px-2 py-1 text-slate-700 ring-1 ring-amber-200">{PAYMENT_METHOD[m] ?? m} {inr(v, { decimals: false })}</span>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="mt-1 text-sm text-slate-700">All your collections are verified.</div>
+          )}
+          {h.withMe.rejected > 0 && <div className="mt-2 rounded-xl bg-red-100 px-3 py-1.5 text-sm font-medium text-red-800">{h.withMe.rejected} payment{h.withMe.rejected === 1 ? " was" : "s were"} rejected by office — tap to see why</div>}
         </Link>
       )}
 

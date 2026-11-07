@@ -60,7 +60,10 @@ export function CollectButton({ retailerId, shop, outstanding, overdue }: { reta
             <div className="py-6 text-center">
               <span className="mx-auto grid size-16 place-items-center rounded-full bg-emerald-500 text-white"><Check className="size-9" strokeWidth={3} /></span>
               <p className="mt-3 text-lg font-semibold">{inr(saved, { decimals: false })} received</p>
-              <p className="text-sm text-slate-500">Applied to the oldest bills first.{method === "cheque" ? " Counts once the cheque clears." : ""}</p>
+              <p className="text-sm text-slate-500">Applied to the oldest bills first.</p>
+              <p className="mx-auto mt-3 max-w-xs rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                {method === "cash" ? "Hand over the cash to the office." : method === "cheque" ? "Hand over the cheque to the office." : "Office will check it in the bank."} It counts for your incentive once the office verifies it.
+              </p>
             </div>
           ) : (
             <div className="space-y-4">

@@ -25,7 +25,7 @@ export default async function OutletPage({ params }: { params: Promise<{ id: str
     supabase.from("retailer_balances").select("outstanding, overdue").eq("retailer_id", id).maybeSingle(),
     supabase.from("invoice_balances").select("invoice_id, invoice_no, invoice_date, due_date, balance, days_past_due").eq("retailer_id", id).gt("balance", 0).order("due_date"),
     supabase.from("orders").select("id, order_no, status, grand_total, created_at").eq("retailer_id", id).order("created_at", { ascending: false }).limit(5),
-    supabase.from("payments").select("receipt_no, payment_date, amount, method, status").eq("retailer_id", id).order("payment_date", { ascending: false }).limit(3),
+    supabase.from("payments").select("receipt_no, payment_date, amount, method, status, verified_at, notes").eq("retailer_id", id).order("payment_date", { ascending: false }).limit(3),
     supabase.from("payment_promises").select("promised_date, amount").eq("retailer_id", id).eq("status", "open").order("promised_date").limit(1).maybeSingle(),
   ]);
   const outstanding = Number(bal?.outstanding ?? 0);
@@ -119,8 +119,13 @@ export default async function OutletPage({ params }: { params: Promise<{ id: str
           <ul className="divide-y divide-slate-100">
             {(pays ?? []).map((p) => (
               <li key={p.receipt_no} className="flex items-center justify-between px-4 py-2.5 text-sm">
-                <span>{date(p.payment_date)}<span className="block text-xs text-slate-500 capitalize">{p.method.replace("_", " ")}{p.status === "cheque_pending" ? " · cheque not cleared" : p.status === "bounced" ? " · bounced" : ""}</span></span>
-                <span className={cn("tabular font-semibold", p.status === "bounced" ? "text-red-600 line-through" : "text-emerald-700")}>{inr(p.amount, { decimals: false })}</span>
+                <span>{date(p.payment_date)}<span className="block text-xs text-slate-500 capitalize">{p.method.replace("_", " ")}{p.status === "cheque_pending" ? " · cheque not cleared" : p.status === "bounced" ? " · bounced" : ""}</span>
+                  {p.status === "cancelled" && p.notes?.includes("Rejected at verification") ? <span className="mt-0.5 inline-block rounded bg-red-100 px-1.5 text-[11px] font-semibold text-red-800">Rejected by office</span>
+                    : (p.status === "received" || p.status === "cheque_pending") && (p.verified_at
+                      ? <span className="mt-0.5 inline-block rounded bg-emerald-100 px-1.5 text-[11px] font-semibold text-emerald-800">Verified</span>
+                      : <span className="mt-0.5 inline-block rounded bg-amber-100 px-1.5 text-[11px] font-semibold text-amber-900">Hand over to office</span>)}
+                </span>
+                <span className={cn("tabular font-semibold", p.status === "bounced" || p.status === "cancelled" ? "text-red-600 line-through" : "text-emerald-700")}>{inr(p.amount, { decimals: false })}</span>
               </li>
             ))}
           </ul>

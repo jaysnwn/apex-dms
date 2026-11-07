@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ChevronRight, ClipboardList, KeyRound, LogOut, Monitor, Receipt, Route as RouteIcon, Smartphone, Sparkles, Store } from "lucide-react";
+import { ChevronRight, ClipboardList, HandCoins, KeyRound, LogOut, Monitor, Receipt, Route as RouteIcon, Smartphone, Sparkles, Store } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { ROLE_LABELS } from "@/lib/roles";
 import { Avatar } from "../ui";
@@ -11,6 +11,7 @@ export default async function MorePage() {
   const { user, profile } = await requireRole("salesman", "manager", "super_admin");
   const items = [
     { href: "/m/incentive", label: "My incentive", icon: Sparkles, tone: "bg-emerald-100 text-emerald-700" },
+    { href: "/m/collections", label: "My collections", icon: HandCoins, tone: "bg-amber-100 text-amber-700" },
     { href: "/m/orders", label: "My orders", icon: ClipboardList, tone: "bg-sky-100 text-sky-700" },
     { href: "/m/route", label: "Today's route", icon: RouteIcon, tone: "bg-cyan-100 text-cyan-700" },
     { href: "/m/outlets", label: "My outlets", icon: Store, tone: "bg-violet-100 text-violet-700" },

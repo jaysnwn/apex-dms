@@ -120,3 +120,27 @@ export async function setPromiseStatus(id: string, status: "kept" | "broken" | "
   revalidatePath("/payments/promises");
   return { ok: true };
 }
+
+// ---------------------------------------------------------------------------
+// Verification of salesman collections (office)
+// ---------------------------------------------------------------------------
+export async function verifyCollections(ids: string[]): Promise<{ count?: number; error?: string }> {
+  await requireRole("super_admin", "manager", "billing");
+  if (!ids.length) return { count: 0 };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("verify_payments", { p_ids: ids });
+  if (error) return { error: error.message };
+  revalidatePath("/payments");
+  revalidatePath("/dashboard");
+  return { count: data as number };
+}
+
+export async function rejectCollection(id: string, reason: string): Promise<{ ok?: boolean; error?: string }> {
+  await requireRole("super_admin", "manager", "billing");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("reject_payment", { p_id: id, p_reason: reason });
+  if (error) return { error: error.message };
+  revalidatePath("/payments");
+  revalidatePath("/retailers");
+  return { ok: true };
+}

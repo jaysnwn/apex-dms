@@ -21,7 +21,7 @@ export default async function CollectionsPage({ searchParams }: { searchParams: 
 
   let q = supabase
     .from("payments")
-    .select("id, receipt_no, retailer_id, payment_date, amount, method, reference_no, status, collected_by, retailers(shop_name, code)")
+    .select("id, receipt_no, retailer_id, payment_date, amount, method, reference_no, status, collected_by, verified_at, retailers(shop_name, code)")
     .gte("payment_date", from)
     .lte("payment_date", to)
     .order("payment_date", { ascending: false })
@@ -84,7 +84,7 @@ export default async function CollectionsPage({ searchParams }: { searchParams: 
                   <td className="px-3 py-2.5">{r?.shop_name}<div className="font-mono text-xs text-slate-500">{r?.code}</div></td>
                   <td className="px-3 py-2.5">{p.method === "cheque" ? <CreditCard className="mr-1 inline size-3.5" /> : null}{PAYMENT_METHOD[p.method]}{p.reference_no && <div className="text-xs text-slate-500">{p.reference_no}</div>}</td>
                   <td className="hidden px-3 py-2.5 text-slate-600 md:table-cell">{p.collected_by ? uMap.get(p.collected_by) : "—"}</td>
-                  <td className="px-3 py-2.5"><Badge tone={st.tone}>{st.label}</Badge></td>
+                  <td className="px-3 py-2.5"><Badge tone={st.tone}>{st.label}</Badge>{!p.verified_at && (p.status === "received" || p.status === "cheque_pending") && <div className="mt-1"><Badge tone="amber">With salesman</Badge></div>}</td>
                   <td className="tabular px-4 py-2.5 text-right font-semibold">{inr(p.amount)}</td>
                 </tr>
               );

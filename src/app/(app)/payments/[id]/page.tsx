@@ -30,9 +30,15 @@ export default async function PaymentPage({ params, searchParams }: { params: Pr
   return (
     <div className="max-w-4xl space-y-6">
       {isNew && <Alert tone="green">Payment saved. Share the receipt with the retailer.</Alert>}
+      {!p.verified_at && (p.status === "received" || p.status === "cheque_pending") && (
+        <Alert tone="amber">
+          Not verified yet — the salesman still has to hand this money over to the office. It counts for his incentive only after verification.
+          {isOffice && <> <Link href="/payments/verify" className="font-semibold underline">Verify collections</Link></>}
+        </Alert>
+      )}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div className="flex items-center gap-2"><h2 className="font-mono text-xl font-semibold">{p.receipt_no}</h2><Badge tone={st.tone}>{st.label}</Badge></div>
+          <div className="flex items-center gap-2"><h2 className="font-mono text-xl font-semibold">{p.receipt_no}</h2><Badge tone={st.tone}>{st.label}</Badge>{p.verified_at && <Badge tone="green">Verified</Badge>}</div>
           <p className="text-sm text-slate-500">{date(p.payment_date)} · {PAYMENT_METHOD[p.method]}{p.reference_no ? ` · ${p.reference_no}` : ""} · entered {dateTime(p.created_at)}{who?.full_name ? ` by ${who.full_name}` : ""}</p>
         </div>
         <DocButtons kind="receipt" id={id} label="Receipt" />

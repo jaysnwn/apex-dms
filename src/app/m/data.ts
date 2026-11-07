@@ -23,7 +23,11 @@ export type HomeData = {
   recent: { id: string; order_no: string; status: string; grand_total: number; created_at: string; shop_name: string }[];
   expensesPending: number;
   incentive: IncentiveSummary | null;
+  withMe: WithMe;
 };
+
+// Money the salesman has collected but the office has not verified yet.
+export type WithMe = { total: number; count: number; byMethod: Record<string, number>; oldest: string | null; rejected: number };
 
 export async function getHome(supabase: SupabaseServer, userId: string): Promise<HomeData> {
   const today = todayIST();
@@ -52,6 +56,7 @@ export async function getHome(supabase: SupabaseServer, userId: string): Promise
     supabase.from("expenses").select("id", { count: "exact", head: true }).eq("salesman_id", userId).eq("status", "submitted"),
     supabase.rpc("salesman_incentive", { p_salesman: userId, p_month: monthStart }),
   ]);
+  const withMe = await getWithMe(supabase, userId, today);
 
   const sum = (rows: { grand_total?: number; amount?: number }[] | null, k: "grand_total" | "amount") => (rows ?? []).reduce((s, r) => s + Number(r[k] ?? 0), 0);
   const todaysQuotes = (quotes.data ?? []).filter((q) => isToday(q.created_at as string, today));
@@ -89,7 +94,45 @@ export async function getHome(supabase: SupabaseServer, userId: string): Promise
     })),
     expensesPending: exp.count ?? 0,
     incentive: inc.error ? null : toSummary(inc.data as Record<string, unknown> | null),
+    withMe,
   };
+}
+
+export async function getWithMe(supabase: SupabaseServer, userId: string, today = todayIST()): Promise<WithMe> {
+  const [{ data: open }, { count: rejected }] = await Promise.all([
+    supabase.from("payments").select("amount, method, payment_date").eq("collected_by", userId).is("verified_at", null).in("status", ["received", "cheque_pending"]).order("payment_date"),
+    supabase.from("payments").select("id", { count: "exact", head: true }).eq("collected_by", userId).eq("status", "cancelled").ilike("notes", "%Rejected at verification%").gte("payment_date", addDays(today, -14)),
+  ]);
+  const byMethod: Record<string, number> = {};
+  for (const p of open ?? []) byMethod[p.method as string] = (byMethod[p.method as string] ?? 0) + Number(p.amount);
+  return {
+    total: (open ?? []).reduce((t, p) => t + Number(p.amount), 0),
+    count: (open ?? []).length,
+    byMethod,
+    oldest: (open ?? [])[0]?.payment_date ?? null,
+    rejected: rejected ?? 0,
+  };
+}
+
+// The salesman's own collections with their verification state.
+export type MyCollection = {
+  id: string; receipt_no: string; payment_date: string; amount: number; method: string; reference_no: string | null;
+  status: string; verified_at: string | null; notes: string | null; shop_name: string; retailer_id: string;
+};
+export async function getMyCollections(supabase: SupabaseServer, userId: string, since: string): Promise<MyCollection[]> {
+  const { data } = await supabase
+    .from("payments")
+    .select("id, receipt_no, payment_date, amount, method, reference_no, status, verified_at, notes, retailer_id, retailers(shop_name)")
+    .eq("collected_by", userId)
+    .or(`payment_date.gte.${since},verified_at.is.null`)
+    .order("payment_date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(300);
+  return (data ?? []).map((r) => ({
+    id: r.id, receipt_no: r.receipt_no, payment_date: r.payment_date, amount: Number(r.amount), method: r.method,
+    reference_no: r.reference_no, status: r.status, verified_at: r.verified_at, notes: r.notes, retailer_id: r.retailer_id,
+    shop_name: (r.retailers as unknown as { shop_name: string } | null)?.shop_name ?? "",
+  }));
 }
 
 // Incentive for one salesman and month, with the per-shop list.

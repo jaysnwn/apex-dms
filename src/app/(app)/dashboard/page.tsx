@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import {
-  AlertTriangle, Boxes, CalendarCheck, ClipboardList, Clock, IndianRupee, Package, PackagePlus, Receipt, Route as RouteIcon,
+  AlertTriangle, Boxes, CalendarCheck, ClipboardList, Clock, HandCoins, IndianRupee, Package, PackagePlus, Receipt, Route as RouteIcon,
   ShoppingCart, Store, TrendingUp, Truck, Users, Wallet,
 } from "lucide-react";
 import { requireRole } from "@/lib/auth";
@@ -57,6 +57,8 @@ async function OfficeDash({ showProfit }: { showProfit: boolean }) {
     fetchAll<{ balance: number; due_date: string }>(() => supabase.from("purchase_balances").select("balance, due_date").gt("balance", 0)),
     supabase.from("purchases").select("id", { count: "exact", head: true }).eq("status", "ordered"),
   ]);
+  const { data: unverified } = await supabase.from("payments").select("amount").is("verified_at", null).in("status", ["received", "cheque_pending"]);
+  const toVerify = (unverified ?? []).reduce((t, p) => t + Number(p.amount), 0);
   const payable = payables.reduce((t, b) => t + Number(b.balance), 0);
   const payableOverdue = payables.filter((b) => b.due_date < today).reduce((t, b) => t + Number(b.balance), 0);
 
@@ -102,6 +104,7 @@ async function OfficeDash({ showProfit }: { showProfit: boolean }) {
         <StatCard label="Today's sales" value={inr(todaySales, { decimals: false })} icon={ShoppingCart} tone="blue" href="/sales/invoices" />
         <StatCard label="This month's sales" value={inr(monthSales, { decimals: false })} icon={TrendingUp} tone="violet" href="/reports/brand-sales" />
         <StatCard label="Collected this month" value={inr(monthCollected, { decimals: false })} icon={Wallet} tone="green" href="/payments" />
+        <StatCard label="Collections to verify" value={inr(toVerify, { decimals: false })} icon={HandCoins} tone={toVerify > 0 ? "amber" : "slate"} alert={toVerify > 0} hint={`${(unverified ?? []).length} payment(s) with salesmen`} href="/payments/verify" />
         <StatCard label="Total outstanding" value={inr(outstanding, { decimals: false })} icon={IndianRupee} tone="orange" href="/payments/outstanding" />
         <StatCard label="Overdue" value={inr(overdue, { decimals: false })} icon={AlertTriangle} tone="red" alert={overdue > 0} href="/payments/outstanding" />
         <StatCard label="Inventory value" value={inr(invValue, { decimals: false })} icon={Boxes} tone="teal" hint={`${qty(invUnits)} units`} href="/reports/stock-valuation" />
