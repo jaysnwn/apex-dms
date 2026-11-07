@@ -34,7 +34,7 @@ In the Supabase dashboard for this project:
 
 ### 2. Run the database migrations
 
-> **Already done for the `apex-dms` project (uiczjglzsnjxxqvxlheh)** — all migrations up to 0010 were applied on
+> **Already done for the `apex-dms` project (uiczjglzsnjxxqvxlheh)** — all migrations up to 0011 were applied on
 > 2026-11-05 through the Supabase connector, so skip this step. The applied versions are timestamped by Supabase,
 > not by these file names; if you later switch to `supabase db push`, run `supabase migration list` first and use
 > `supabase migration repair` so files that are already applied are not run again.
@@ -61,6 +61,7 @@ Or paste each file in `supabase/migrations/` **in order** into the Supabase SQL 
 9. `20261105000009_purchases.sql` — suppliers (CONQRETE, BLUEI seeded), purchase orders, receiving into stock,
    supplier payments (FIFO, advances), payables views
 10. `20261107000010_field_app.sql` — outlet GPS location (latitude/longitude)
+11. `20261107000011_share_links.sql` — short links for PDFs shared on WhatsApp
 
 Supabase's advisor will still list a few items on purpose: the `catalog` and stock views run with owner rights
 so salesmen and warehouse staff can see stock without seeing purchase costs (each view filters to active users
@@ -78,6 +79,7 @@ Fill in from **Project Settings → API Keys**:
 | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Project URL | already filled |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon / publishable key | safe in the browser |
+| `NEXT_PUBLIC_APP_URL` | the app's public address, e.g. `https://apex.yourdomain.in` | optional; used for short WhatsApp links `…/d/k3Xa9QpL` |
 | `SUPABASE_SERVICE_ROLE_KEY` | service_role / secret key | **server only — never commit**. Needed for creating users and WhatsApp document links |
 
 Add the same three variables in **Vercel → Project → Settings → Environment Variables**.
