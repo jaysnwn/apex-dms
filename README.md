@@ -17,6 +17,7 @@ Stack: **Next.js 15 (App Router) · TypeScript · Tailwind CSS 4 · Supabase (Po
 | M5 Field app and expenses | Route plans, targets, visits, offline field app, expense approvals, reimbursement | ✅ Built |
 | M6 Dashboards and reports | Role dashboards, 12 reports, Excel export | ✅ Built |
 | Purchases | Suppliers, purchase orders, goods receipt into stock, supplier bills, payments, payables | ✅ Built |
+| Salesman app | Phone app at /m: monthly target, today's route, order from live stock, outlets, add outlet with GPS, collect payment, expenses, offline | ✅ Built |
 | M7 UAT and go-live | Your corrections, data migration, training, cut-over | Next |
 
 ## First-time setup
@@ -33,7 +34,7 @@ In the Supabase dashboard for this project:
 
 ### 2. Run the database migrations
 
-> **Already done for the `apex-dms` project (uiczjglzsnjxxqvxlheh)** — all migrations up to 0009 were applied on
+> **Already done for the `apex-dms` project (uiczjglzsnjxxqvxlheh)** — all migrations up to 0010 were applied on
 > 2026-11-05 through the Supabase connector, so skip this step. The applied versions are timestamped by Supabase,
 > not by these file names; if you later switch to `supabase db push`, run `supabase migration list` first and use
 > `supabase migration repair` so files that are already applied are not run again.
@@ -59,6 +60,7 @@ Or paste each file in `supabase/migrations/` **in order** into the Supabase SQL 
    payments with FIFO, credit notes, ledger, sales register, classification, route plans, reimbursements
 9. `20261105000009_purchases.sql` — suppliers (CONQRETE, BLUEI seeded), purchase orders, receiving into stock,
    supplier payments (FIFO, advances), payables views
+10. `20261107000010_field_app.sql` — outlet GPS location (latitude/longitude)
 
 Supabase's advisor will still list a few items on purpose: the `catalog` and stock views run with owner rights
 so salesmen and warehouse staff can see stock without seeing purchase costs (each view filters to active users

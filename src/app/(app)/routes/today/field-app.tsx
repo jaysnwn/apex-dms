@@ -53,7 +53,8 @@ function getPosition(): Promise<{ lat: number; lng: number; accuracy: number } |
   });
 }
 
-export function FieldApp({ initial }: { initial: FieldDay | null }) {
+// mobile = shown inside the salesman app (/m): links stay inside that app.
+export function FieldApp({ initial, mobile = false }: { initial: FieldDay | null; mobile?: boolean }) {
   const [day, setDay] = useState<FieldDay | null>(initial);
   const [queue, setQueue] = useState<Queued[]>([]);
   const [online, setOnline] = useState(true);
@@ -207,7 +208,7 @@ export function FieldApp({ initial }: { initial: FieldDay | null }) {
           <Mini label="Sold today" value={inr(day.soldToday, { decimals: false })} tone="text-sky-700" />
           <Mini label="Overdue on route" value={inr(dueToday, { decimals: false })} tone={dueToday > 0 ? "text-red-700" : "text-slate-400"} />
         </div>
-        {day.target && (
+        {day.target && !mobile && (
           <div className="space-y-2 border-t border-slate-100 p-4">
             <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500"><Target className="size-3.5" /> Target {day.target.period}</div>
             <Progress label="Sales" done={day.target.salesDone} goal={day.target.sales} />
@@ -227,6 +228,7 @@ export function FieldApp({ initial }: { initial: FieldDay | null }) {
       {visits.length === 0 && (
         <Card className="p-8 text-center text-sm text-slate-500">
           {total === 0 ? "No visits planned for today. Ask your manager to plan your route." : "All visits done for today. 🎉"}
+          {mobile && total === 0 && <div className="mt-3"><Link href="/m/outlets" className="font-semibold text-sky-700">See all my outlets →</Link></div>}
         </Card>
       )}
 
@@ -238,7 +240,7 @@ export function FieldApp({ initial }: { initial: FieldDay | null }) {
             <div className="p-4">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <Link href={`/retailers/${v.retailer_id}`} className="font-semibold hover:underline">{v.shop_name}</Link>
+                  <Link href={mobile ? `/m/outlets/${v.retailer_id}` : `/retailers/${v.retailer_id}`} className="font-semibold hover:underline">{v.shop_name}</Link>
                   <div className="text-sm text-slate-500">{[v.owner_name, v.address].filter(Boolean).join(" · ")}</div>
                 </div>
                 <Badge tone={st.tone}>{st.label}</Badge>
@@ -265,7 +267,7 @@ export function FieldApp({ initial }: { initial: FieldDay | null }) {
             <div className="grid grid-cols-4 border-t border-slate-100 text-xs font-medium">
               <a href={`tel:${v.mobile}`} className="flex flex-col items-center gap-1 py-2.5 text-slate-700 hover:bg-slate-50"><Phone className="size-4" /> Call</a>
               <a href={`https://www.google.com/maps/search/?api=1&query=${mapQ}`} target="_blank" rel="noopener" className="flex flex-col items-center gap-1 py-2.5 text-slate-700 hover:bg-slate-50"><Navigation className="size-4" /> Map</a>
-              <Link href={`/sales/new?retailer=${v.retailer_id}`} className="flex flex-col items-center gap-1 py-2.5 text-sky-700 hover:bg-sky-50"><ShoppingCart className="size-4" /> Order</Link>
+              <Link href={mobile ? `/m/order?retailer=${v.retailer_id}` : `/sales/new?retailer=${v.retailer_id}`} className="flex flex-col items-center gap-1 py-2.5 font-semibold text-accent-600 hover:bg-orange-50"><ShoppingCart className="size-4" /> Order</Link>
               <a href={`/api/pdf/statement/${v.retailer_id}`} target="_blank" rel="noopener" className="flex flex-col items-center gap-1 py-2.5 text-slate-700 hover:bg-slate-50"><FileText className="size-4" /> Statement</a>
             </div>
 

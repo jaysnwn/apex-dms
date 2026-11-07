@@ -1,11 +1,22 @@
-// APEX DMS service worker: keeps the field app usable without network.
-// - App code (/_next/static) is cached on first use.
-// - The "Today's route" page is network-first, falling back to the last copy.
-const STATIC = "apex-static-v1";
-const PAGES = "apex-pages-v1";
+// APEX DMS service worker: keeps the salesman app usable with weak or no network.
+// - App code (/_next/static) and icons are cached on first use.
+// - Salesman app pages (/m/...) and "Today's route" are network-first, falling
+//   back to the last copy seen on this phone. Data (catalogue, outlets, route)
+//   is also kept in the page's local storage, and orders/visits/payments made
+//   offline are queued and sent later.
+const STATIC = "apex-static-v2";
+const PAGES = "apex-pages-v2";
 
 self.addEventListener("install", () => self.skipWaiting());
-self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
+self.addEventListener("activate", (e) =>
+  e.waitUntil(
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== STATIC && k !== PAGES).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
+  )
+);
+
+const OFFLINE_PAGES = ["/m", "/m/order", "/m/route", "/m/outlets", "/m/orders", "/m/expenses", "/m/more", "/routes/today"];
 
 self.addEventListener("fetch", (event) => {
   const req = event.request;
@@ -26,14 +37,20 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (req.mode === "navigate" && url.pathname.startsWith("/routes/today")) {
+  if (req.mode === "navigate" && OFFLINE_PAGES.includes(url.pathname)) {
+    const key = url.pathname;
     event.respondWith(
       fetch(req)
         .then((res) => {
-          if (res.ok) caches.open(PAGES).then((c) => c.put("/routes/today", res.clone()));
+          if (res.ok && !res.redirected) caches.open(PAGES).then((c) => c.put(key, res.clone()));
           return res;
         })
-        .catch(() => caches.open(PAGES).then((c) => c.match("/routes/today")).then((r) => r || new Response("Offline", { status: 503 })))
+        .catch(() =>
+          caches.open(PAGES)
+            .then((c) => c.match(key))
+            .then((r) => r || caches.open(PAGES).then((c) => c.match("/m")))
+            .then((r) => r || new Response("You are offline and this page has not been opened on this phone yet.", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } }))
+        )
     );
   }
 });

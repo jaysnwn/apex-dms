@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import {
   AlertTriangle, Boxes, CalendarCheck, ClipboardList, Clock, IndianRupee, Package, PackagePlus, Receipt, Route as RouteIcon,
   ShoppingCart, Store, TrendingUp, Truck, Users, Wallet,
@@ -19,6 +20,7 @@ export const metadata: Metadata = { title: "Dashboard" };
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ denied?: string }> }) {
   const { profile } = await requireRole();
   const { denied } = await searchParams;
+  if (profile.role === "salesman" && !denied) redirect("/m"); // salesmen use the mobile app
   const firstName = profile.full_name.split(" ")[0] || "there";
 
   return (
