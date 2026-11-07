@@ -197,6 +197,64 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
     return { buffer, filename: `Picking_list_${new Date().toISOString().slice(0, 10)}.pdf`, shareText: "Picking list" };
   }
 
+  if (kind === "quotation") {
+    const { data: o } = await supabase
+      .from("orders")
+      .select("*, retailers(code, shop_name, owner_name, mobile, gstin, billing_address, billing_city, billing_pincode, billing_state_code, delivery_address, delivery_city, delivery_pincode)")
+      .eq("id", id)
+      .maybeSingle();
+    if (!o) return null;
+    const [{ data: lines }, { data: sm }] = await Promise.all([
+      supabase.from("order_lines").select("line_no, product_id, qty, unit_price, price_mode, discount_pct, taxable_value, gst_rate, tax_amount, line_total").eq("order_id", id).order("line_no"),
+      o.salesman_id ? supabase.from("profiles").select("full_name").eq("id", o.salesman_id).maybeSingle() : Promise.resolve({ data: null }),
+    ]);
+    // Product details come from the catalogue view: salesmen cannot read the products table (it holds costs).
+    const pids = [...new Set((lines ?? []).map((l) => l.product_id as string))];
+    const { data: prods } = pids.length ? await supabase.from("catalog").select("id, name, sku, hsn_code, unit_code").in("id", pids) : { data: [] };
+    const pMap = new Map((prods ?? []).map((p) => [p.id as string, p]));
+    const r = o.retailers as unknown as Record<string, string | null>;
+    const igst = (r.billing_state_code ?? co.state_code) !== (co.state_code ?? "27");
+    const split = (tax: number) => (igst ? { cgst: 0, sgst: 0, igst: tax } : { cgst: Math.round((tax / 2) * 100) / 100, sgst: tax - Math.round((tax / 2) * 100) / 100, igst: 0 });
+    const qLines = (lines ?? []).map((l) => {
+      const pr = pMap.get(l.product_id) ?? { name: "Product", sku: "", hsn_code: null, unit_code: "PCS" };
+      return { ...l, product_name: pr.name, sku: pr.sku, hsn_code: pr.hsn_code, unit_code: pr.unit_code, ...split(Number(l.tax_amount)) };
+    });
+    const created = new Date(new Date(o.created_at).getTime() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);
+    const validUntil = new Date(Date.parse(created) + 7 * 864e5).toISOString().slice(0, 10);
+    const tax = qLines.reduce((t, l) => ({ cgst: t.cgst + l.cgst, sgst: t.sgst + l.sgst, igst: t.igst + l.igst }), { cgst: 0, sgst: 0, igst: 0 });
+    const data = {
+      company: co,
+      quotation: { validUntil, salesman: (sm as { full_name: string } | null)?.full_name ?? null },
+      invoice: {
+        invoice_no: o.order_no,
+        invoice_date: created,
+        due_date: validUntil,
+        credit_days: o.credit_days,
+        place_of_supply: r.billing_state_code ?? co.state_code,
+        is_igst: igst,
+        retailer_snapshot: { ...r, state_code: r.billing_state_code },
+        subtotal: o.subtotal,
+        discount_total: o.discount_total,
+        taxable_total: o.taxable_total,
+        cgst_total: tax.cgst,
+        sgst_total: tax.sgst,
+        igst_total: tax.igst,
+        round_off: o.round_off,
+        grand_total: o.grand_total,
+        status: o.status === "cancelled" ? "cancelled" : "issued",
+        cancel_reason: o.cancel_reason,
+      },
+      lines: qLines,
+    } as unknown as InvoicePdfData;
+    const buffer = await renderToBuffer(<InvoicePdf data={data} />);
+    return {
+      buffer,
+      filename: `Quotation_${safe(o.order_no)}.pdf`,
+      phone: r.mobile ?? undefined,
+      shareText: `Dear ${r.shop_name}, here is your quotation ${o.order_no} for ₹${Number(o.grand_total).toLocaleString("en-IN")} (incl. GST), valid until ${new Date(validUntil).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}. Thank you for your order. — ${co.legal_name}`,
+    };
+  }
+
   if (kind === "purchase-order") {
     const { data: p } = await supabase.from("purchases").select("*, suppliers(name, gstin, address, city, mobile), warehouses(name, address)").eq("id", id).maybeSingle();
     if (!p) return null;

@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArrowLeft, CheckCircle2, Circle, MessageCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Circle } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { date, dateTime, inr, qty } from "@/lib/format";
 import { cn } from "@/components/ui";
+import { ShareQuote } from "../../share-quote";
 
 export const metadata: Metadata = { title: "Order" };
 
@@ -23,12 +24,17 @@ export default async function MyOrderPage({ params }: { params: Promise<{ id: st
   const { data: o } = await supabase.from("orders").select("*, retailers(id, shop_name, mobile, billing_city)").eq("id", id).maybeSingle();
   if (!o) notFound();
   const [{ data: lines }, { data: inv }] = await Promise.all([
-    supabase.from("order_lines").select("qty, unit_price, discount_pct, line_total, products(name, sku, unit_code)").eq("order_id", id).order("line_no"),
+    supabase.from("order_lines").select("product_id, qty, unit_price, discount_pct, line_total").eq("order_id", id).order("line_no"),
     supabase.from("invoices").select("id, invoice_no, invoice_date, due_date").eq("order_id", id).maybeSingle(),
   ]);
   const r = o.retailers as unknown as { id: string; shop_name: string; mobile: string; billing_city: string | null };
+  // Product names via the catalogue view (salesmen cannot read the products table).
+  const pids = [...new Set((lines ?? []).map((l) => l.product_id as string))];
+  const { data: prods } = pids.length ? await supabase.from("catalog").select("id, name, sku, unit_code").in("id", pids) : { data: [] };
+  const pMap = new Map((prods ?? []).map((p) => [p.id as string, p as { name: string; sku: string; unit_code: string }]));
+  const prod = (pid: string) => pMap.get(pid) ?? { name: "Product", sku: "", unit_code: "PCS" };
   const reached = STEPS.findIndex((s) => s.k === o.status);
-  const text = `Order ${o.order_no} for ${r.shop_name}:\n${(lines ?? []).map((l) => `• ${(l.products as unknown as { name: string }).name} × ${qty(l.qty)}`).join("\n")}\nTotal ${inr(o.grand_total, { decimals: false })} incl. GST\n— APEX TRADING CO.`;
+  const text = `Order ${o.order_no} for ${r.shop_name}:\n${(lines ?? []).map((l) => `• ${prod(l.product_id).name} × ${qty(l.qty)}`).join("\n")}\nTotal ${inr(o.grand_total, { decimals: false })} incl. GST\n— APEX TRADING CO.`;
 
   return (
     <div className="space-y-4">
@@ -54,7 +60,7 @@ export default async function MyOrderPage({ params }: { params: Promise<{ id: st
       <section className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70">
         <ul className="divide-y divide-slate-100">
           {(lines ?? []).map((l, i) => {
-            const p = l.products as unknown as { name: string; sku: string; unit_code: string };
+            const p = prod(l.product_id);
             return (
               <li key={i} className="flex items-start justify-between gap-3 px-4 py-3 text-sm">
                 <span className="min-w-0"><span className="block font-medium">{p.name}</span><span className="tabular text-xs text-slate-500">{qty(l.qty)} {p.unit_code} × {inr(l.unit_price)}{Number(l.discount_pct) ? ` − ${Number(l.discount_pct)}%` : ""}</span></span>
@@ -65,7 +71,7 @@ export default async function MyOrderPage({ params }: { params: Promise<{ id: st
         </ul>
         {o.notes && <p className="border-t border-slate-100 px-4 py-3 text-sm text-slate-600">Note: {o.notes}</p>}
       </section>
-      <a href={`https://wa.me/91${r.mobile}?text=${encodeURIComponent(text)}`} target="_blank" rel="noopener" className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#25D366] font-semibold text-white"><MessageCircle className="size-5" /> Send to shop on WhatsApp</a>
+      {o.status !== "cancelled" && <ShareQuote orderId={o.id} orderNo={o.order_no} mobile={r.mobile} fallbackText={text} />}
     </div>
   );
 }

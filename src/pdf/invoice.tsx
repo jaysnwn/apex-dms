@@ -43,10 +43,12 @@ export type InvoicePdfData = {
   }[];
   balance?: number;
   title?: string;   // "TAX INVOICE" or "CREDIT NOTE"
+  quotation?: { validUntil: string; salesman?: string | null }; // set for a quotation (estimate, not an invoice)
 };
 
 export function InvoicePdf({ data }: { data: InvoicePdfData }) {
   const { company, invoice: inv, lines } = data;
+  const q = data.quotation;
   const r = inv.retailer_snapshot;
   const cols: Col[] = [
     { label: "#", w: 0.35 },
@@ -78,13 +80,13 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
       ? ([["IGST", money(inv.igst_total)]] as [string, string][])
       : ([["CGST", money(inv.cgst_total)], ["SGST", money(inv.sgst_total)]] as [string, string][])),
     ...(Number(inv.round_off) !== 0 ? ([["Round off", money(inv.round_off)]] as [string, string][]) : []),
-    ["Invoice total", money(inv.grand_total), true],
+    [q ? "Quotation total" : "Invoice total", money(inv.grand_total), true],
   ];
 
   return (
     <Document title={`${inv.invoice_no}`} author={company.legal_name}>
       <Page size="A4" style={s.page}>
-        <CompanyHeader company={company} title={data.title ?? "TAX INVOICE"} subtitle="Original for recipient" />
+        <CompanyHeader company={company} title={q ? "QUOTATION" : data.title ?? "TAX INVOICE"} subtitle={q ? "Estimate — not a tax invoice" : "Original for recipient"} />
 
         {inv.status === "cancelled" && (
           <View style={{ backgroundColor: "#fee2e2", padding: 6, marginBottom: 8 }}>
@@ -94,7 +96,7 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
 
         <View style={[s.row, { gap: 8, marginBottom: 10 }]}>
           <View style={[s.box, { flex: 1.4 }]}>
-            <Text style={[s.small, s.muted]}>BILL TO</Text>
+            <Text style={[s.small, s.muted]}>{q ? "QUOTATION FOR" : "BILL TO"}</Text>
             <Text style={s.h2}>{r.shop_name}</Text>
             {r.owner_name && <Text>{r.owner_name}</Text>}
             {r.billing_address && <Text>{r.billing_address}</Text>}
@@ -110,10 +112,22 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
             <Text>{[r.delivery_city ?? r.billing_city, r.delivery_pincode ?? r.billing_pincode].filter(Boolean).join(" - ")}</Text>
           </View>
           <View style={[s.box, { flex: 1 }]}>
-            <Meta k="Invoice no." v={inv.invoice_no} bold />
-            <Meta k="Invoice date" v={d(inv.invoice_date)} />
-            <Meta k="Credit period" v={`${inv.credit_days} days`} />
-            <Meta k="Due date" v={d(inv.due_date)} bold />
+            {q ? (
+              <>
+                <Meta k="Quote no." v={inv.invoice_no} bold />
+                <Meta k="Date" v={d(inv.invoice_date)} />
+                <Meta k="Valid until" v={d(q.validUntil)} bold />
+                <Meta k="Payment terms" v={Number(inv.credit_days) === 0 ? "Cash" : `${inv.credit_days} days credit`} />
+                {q.salesman && <Meta k="Salesman" v={q.salesman} />}
+              </>
+            ) : (
+              <>
+                <Meta k="Invoice no." v={inv.invoice_no} bold />
+                <Meta k="Invoice date" v={d(inv.invoice_date)} />
+                <Meta k="Credit period" v={`${inv.credit_days} days`} />
+                <Meta k="Due date" v={d(inv.due_date)} bold />
+              </>
+            )}
             <Meta k="Place of supply" v={`${inv.place_of_supply} ${GST_STATES[inv.place_of_supply] ?? ""}`} />
             <Meta k="Tax type" v={inv.is_igst ? "IGST (inter-state)" : "CGST + SGST"} />
           </View>
@@ -145,6 +159,11 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
             <Text style={[s.small, s.muted]}>AMOUNT IN WORDS</Text>
             <Text style={[s.bold, { marginBottom: 8 }]}>{amountInWords(Number(inv.grand_total))}</Text>
 
+            {q && (
+              <Text style={[s.small, { marginBottom: 6 }]}>
+                This is a quotation. The tax invoice is issued when the order is confirmed; prices and stock are confirmed at that time.
+              </Text>
+            )}
             <Text style={[s.small, s.muted, { marginBottom: 2 }]}>HSN SUMMARY</Text>
             {[...hsn.entries()].map(([key, h]) => (
               <Text key={key} style={s.small}>
@@ -187,7 +206,7 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
             </View>
           </View>
         </View>
-        <Footer note={`${inv.invoice_no} · This is a computer generated invoice.`} />
+        <Footer note={q ? `${inv.invoice_no} · Quotation — not a tax invoice.` : `${inv.invoice_no} · This is a computer generated invoice.`} />
       </Page>
     </Document>
   );

@@ -7,6 +7,7 @@ import { ORDER_STATUS } from "@/lib/status";
 import { Alert, Badge, Card, cn } from "@/components/ui";
 import { loadOrder } from "../../data";
 import { OrderActions } from "./order-actions";
+import { DocButtons } from "@/components/doc-buttons";
 
 export const metadata: Metadata = { title: "Order" };
 
@@ -45,6 +46,8 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
           />
         )}
       </div>
+
+      {isQuote && <DocButtons kind="quotation" id={id} label="Quotation PDF" />}
 
       {isQuote && short.length > 0 && (
         <Alert>

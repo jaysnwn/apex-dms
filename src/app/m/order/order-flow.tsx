@@ -12,10 +12,12 @@ import { inr } from "@/lib/format";
 import type { CatalogueItem, Outlet } from "../data";
 import { loadCatalogue, submitQuotation } from "../actions";
 import { addToOutbox, cacheGet, cacheSet } from "../outbox";
+import { ShareQuote } from "../share-quote";
 import { Sheet, Stepper } from "../ui";
 
 type Catalogue = { items: CatalogueItem[]; maxDiscount: number; loadedAt: string };
 type Cart = Record<string, { qty: number; discount: number }>;
+type DoneResult = { orderId?: string; orderNo?: string; total: number; offline: boolean; shop: string; mobile: string; lines: string[] };
 
 const CAT_KEY = "apex-m-catalogue";
 const OUT_KEY = "apex-m-outlets";
@@ -29,7 +31,7 @@ export function OrderFlow({ initialOutlets, initialCatalogue, presetRetailer }: 
   const [outletId, setOutletId] = useState<string | null>(presetRetailer ?? null);
   const [cart, setCart] = useState<Cart>({});
   const [reviewing, setReviewing] = useState(false);
-  const [done, setDone] = useState<{ orderNo?: string; total: number; offline: boolean; shop: string; mobile: string; lines: string[] } | null>(null);
+  const [done, setDone] = useState<DoneResult | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const restored = useRef(false);
 
@@ -286,7 +288,7 @@ type Line = { item: CatalogueItem; qty: number; discount: number };
 function Review({ outlet, lines, calc, totals, maxDiscount, setQty, setDiscount, onClose, onSent }: {
   outlet: Outlet; lines: Line[]; calc: ReturnType<typeof calcLine>[]; totals: ReturnType<typeof orderTotals> & { grand: number }; maxDiscount: number;
   setQty: (id: string, q: number) => void; setDiscount: (id: string, d: number) => void; onClose: () => void;
-  onSent: (r: { orderNo?: string; total: number; offline: boolean; shop: string; mobile: string; lines: string[] }) => void;
+  onSent: (r: DoneResult) => void;
 }) {
   const [credit, setCredit] = useState<number>(outlet.credit_days);
   const [notes, setNotes] = useState("");
@@ -318,7 +320,7 @@ function Review({ outlet, lines, calc, totals, maxDiscount, setQty, setDiscount,
       const res = await submitQuotation(data);
       setBusy(false);
       if (res.error) return setError(res.error);
-      onSent({ orderNo: res.orderNo, total: res.total ?? totals.grand, offline: false, shop: outlet.shop_name, mobile: outlet.mobile, lines: summary });
+      onSent({ orderId: res.orderId, orderNo: res.orderNo, total: res.total ?? totals.grand, offline: false, shop: outlet.shop_name, mobile: outlet.mobile, lines: summary });
     } catch {
       // Network dropped while sending: keep it on the phone, it will be sent later.
       addToOutbox({ id: uuid.current, kind: "order", data, shop: outlet.shop_name, total: totals.grand, at: new Date().toISOString() });
@@ -394,7 +396,7 @@ function Review({ outlet, lines, calc, totals, maxDiscount, setQty, setDiscount,
 }
 
 // ---------------------------------------------------------------------------
-function Done({ result, onNew, onHome }: { result: { orderNo?: string; total: number; offline: boolean; shop: string; mobile: string; lines: string[] }; onNew: () => void; onHome: () => void }) {
+function Done({ result, onNew, onHome }: { result: DoneResult; onNew: () => void; onHome: () => void }) {
   const text = `Order from ${result.shop}${result.orderNo ? ` (${result.orderNo})` : ""}:\n${result.lines.map((l) => `• ${l}`).join("\n")}\nTotal ${inr(result.total, { decimals: false })} incl. GST\n— APEX TRADING CO.`;
   return (
     <div className="pt-6 text-center">
@@ -405,12 +407,16 @@ function Done({ result, onNew, onHome }: { result: { orderNo?: string; total: nu
       <p className="mt-1 text-slate-600">{result.shop} · <span className="tabular font-semibold">{inr(result.total, { decimals: false })}</span></p>
       {result.orderNo && <p className="mt-1 font-mono text-sm text-slate-500">{result.orderNo}</p>}
       <p className="mx-auto mt-3 max-w-xs text-sm text-slate-500">
-        {result.offline ? "No internet right now. It will be sent to the office automatically when you are back online." : "The office will check stock and credit and make the invoice."}
+        {result.offline ? "No internet right now. It will be sent to the office automatically when you are back online. You can send the PDF quotation from My orders later." : "The office will check stock and credit and make the invoice. Now send the quotation to the shop:"}
       </p>
-      <div className="mx-auto mt-6 grid max-w-xs gap-3">
-        <a href={`https://wa.me/91${result.mobile}?text=${encodeURIComponent(text)}`} target="_blank" rel="noopener" className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#25D366] font-semibold text-white">
-          <MessageCircle className="size-5" /> Send summary to shop
-        </a>
+      <div className="mx-auto mt-6 grid max-w-sm gap-3">
+        {result.orderId && result.orderNo ? (
+          <ShareQuote orderId={result.orderId} orderNo={result.orderNo} mobile={result.mobile} fallbackText={text} />
+        ) : (
+          <a href={`https://wa.me/91${result.mobile}?text=${encodeURIComponent(text)}`} target="_blank" rel="noopener" className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-[#25D366] text-lg font-bold text-white">
+            <MessageCircle className="size-5" /> Send order summary on WhatsApp
+          </a>
+        )}
         <button onClick={onNew} className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-accent-500 font-semibold text-white"><Plus className="size-5" /> Another order</button>
         <button onClick={onHome} className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-white font-semibold ring-1 ring-slate-300"><ArrowLeft className="size-5" /> Home</button>
       </div>
