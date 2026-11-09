@@ -232,6 +232,8 @@ begin
     execute format('alter table public.%I drop column tenant_id', t);   -- its index goes with it
   end loop;
 end $$;
+drop trigger aa_tenant_default on public.audit_log;
+drop function public.audit_log_tenant_default();
 drop function public.tenant_stamp();
 drop function public.tenant_scoped_tables();
 

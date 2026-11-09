@@ -160,15 +160,52 @@ Sign in, open **Users**, and create logins for the Manager, Office/Billing, Ware
 | Incentive | Sales = before GST, net of returns · shops billed = his shops with an invoice in the month · smart = bought ≥ ₹5,000 (before GST) in the month and paid every bill of that month within 21 days · collection = money received in the month against every bill due by month end (old overdue included, at what was owed on the 1st) ÷ that amount; slabs <75% ₹0 · 75% ₹2,000 · 85% ₹2,500 · 95% ₹3,000, highest slab only; payments go to the oldest bill first; only payments verified by the office count; cheques count once cleared · his shops = assigned to him or on his route · figures are final 21 days after month end, then the manager approves and locks them |
 | Field app | caches today's route and catalogue; orders, payments and visits made offline are sent when back online |
 
+## Multi-tenant platform (branch `multi-tenant`, not yet applied to production)
+
+One platform for several independent businesses (tenants): APEX TRADING CO. is tenant 1
+(`a9e70000-0000-4000-8000-000000000001`, slug `apex`); brands stay a level below the tenant.
+
+| Migration | What it does |
+| --- | --- |
+| `20261110000019_platform_core.sql` | `tenants`, `tenant_members` (role per tenant), `platform_admins` (no data access), `current_tenant_id()`; Apex = tenant 1, existing users become Apex members |
+| `20261110000020_tenant_columns.sql` | `tenant_id` on every business table (backfilled to Apex), stamp trigger, audit rows carry the tenant |
+| `20261110000021_tenant_constraints.sql` | composite foreign keys (incl. people → membership), business keys unique per tenant, per-tenant units / settings / number series |
+| `20261110000022_tenant_definer_fence.sql` | owner-rights functions and views run as `app_definer` (no RLS bypass) fenced to the current tenant; roles from the membership; per-tenant retailer codes |
+| `20261110000023_tenant_rls.sql` | tenant check on every policy, people of the current tenant only, storage under `<tenant_id>/…` (older files = Apex) |
+
+**How the tenant is decided.** Only the database decides, in `current_tenant_id()`: a signed-in user's request
+header `x-tenant-id` counts only if they are an active member of that open tenant (a forged header gives *no*
+tenant, never a fallback); without a header, their default or only tenant. A server job with the service key
+names its tenant with `set_config('app.tenant_id', …)`. Anonymous calls never get a tenant.
+
+**Rules for new code.**
+- A new business table needs `tenant_id`, the `aa_tenant_stamp` trigger, a `definer_tenant_fence` policy and
+  composite foreign keys `(tenant_id, x_id)`; `t1_tenant_foundation_test.sql` fails otherwise.
+- A new `security definer` function must be owned by `app_definer` (`alter function … owner to app_definer`);
+  only `platform_definer_allowlist()` may stay with postgres. `t2_tenant_isolation_test.sql` fails otherwise and
+  calls every new function with another tenant's ids automatically.
+- A migration that changes data must `set_config('app.tenant_id', …)` first (no tenant = nothing visible).
+
+**Rollback** (one transaction each, in this order): `supabase/rollback/20261110000023_to_0021_down.sql`, then
+`supabase/rollback/20261110000021_to_0018_down.sql`. Tested: schema identical to 0018 (`pg_dump`), data unchanged.
+
 ## Tests
 
-Database tests (roles, RLS, audit, numbering, invoice immutability, expenses) run on plain Postgres with Supabase stubs:
+Database tests (roles, RLS, audit, numbering, invoice immutability, expenses, tenant foundation and isolation)
+run on plain Postgres with Supabase stubs. Each migration runs in one transaction, as Supabase applies them:
 
 ```bash
 PGHOST=localhost PGPORT=5432 PGUSER=postgres tests/db/run.sh
 # two people paying the same expense at the same moment (real parallel sessions):
 PGHOST=localhost PGPORT=5432 PGUSER=postgres tests/db/concurrency_expenses.sh
+# read-only fingerprints, for before/after comparison of a migration (also safe on production):
+psql -f tests/db/snapshot.sql            # data: counts, money totals, stock, balances, numbering, audit
+psql -f tests/db/schema_fingerprint.sql  # schema: columns, constraints, indexes, functions, policies, triggers, views
 ```
+
+`t2_tenant_isolation_test.sql` sets up a second distributor that runs real business, then calls **every**
+function a signed-in user can call, as every Apex role, with that distributor's ids and again with ids that
+exist nowhere: the other tenant's records must be indistinguishable from records that do not exist.
 
 ## Project layout
 

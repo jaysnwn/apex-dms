@@ -3,10 +3,13 @@
 -- through the SQL editor or the connector as well as locally.
 -- Columns added by the multi-tenant migrations (tenant_id) are left out of
 -- every fingerprint, so a correct migration gives an identical result.
+-- The RETAILER counter row in number_series is left out too: from 0022 it
+-- replaces the old global retailer_code_seq (continuity is checked separately).
 select jsonb_build_object(
   'row_counts', (
     select jsonb_object_agg(c.relname,
-             (xpath('/row/n/text()', query_to_xml(format('select count(*) as n from public.%I', c.relname), false, true, '')))[1]::text::bigint)
+             (xpath('/row/n/text()', query_to_xml(format('select count(*) as n from public.%I %s', c.relname,
+                    case when c.relname = 'number_series' then 'where doc_type <> ''RETAILER''' else '' end), false, true, '')))[1]::text::bigint)
       from pg_class c
      where c.relnamespace = 'public'::regnamespace and c.relkind = 'r'
        and c.relname not in ('tenants', 'tenant_members', 'platform_admins')),
@@ -29,7 +32,7 @@ select jsonb_build_object(
                               from public.retailer_balances),
   'invoice_balances_md5', (select md5(coalesce(string_agg(invoice_id || ':' || balance, '|' order by invoice_id), '')) from public.invoice_balances),
   'purchase_balances_md5', (select md5(coalesce(string_agg(purchase_id || ':' || balance, '|' order by purchase_id), '')) from public.purchase_balances),
-  'number_series_md5', (select md5(coalesce(string_agg(doc_type || ':' || fy || ':' || next_value, '|' order by doc_type, fy), '')) from public.number_series),
+  'number_series_md5', (select md5(coalesce(string_agg(doc_type || ':' || fy || ':' || next_value, '|' order by doc_type, fy), '')) from public.number_series where doc_type <> 'RETAILER'),
   'audit_log_md5', (select md5(coalesce(string_agg(id || ':' || table_name || ':' || coalesce(record_id, '') || ':' || action || ':'
                                                    || coalesce(old_data::text, '') || ':' || coalesce(new_data::text, ''), '|' order by id), ''))
                       from public.audit_log),

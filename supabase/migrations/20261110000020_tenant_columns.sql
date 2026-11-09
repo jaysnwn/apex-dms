@@ -107,6 +107,24 @@ begin
   end loop;
 end $$;
 
+-- Audit rows written directly by a function (not by audit_row) belong to the
+-- request's tenant. No tenant context (platform-level change): stays empty.
+create or replace function public.audit_log_tenant_default()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.tenant_id is null then
+    new.tenant_id := public.current_tenant_id();
+  end if;
+  return new;
+end $$;
+revoke all on function public.audit_log_tenant_default() from public, anon, authenticated;
+create trigger aa_tenant_default before insert on public.audit_log
+  for each row execute function public.audit_log_tenant_default();
+
 -- Lookups by tenant come first in every index we add later; this one is
 -- needed by every policy from M-T2 on.
 do $$
@@ -145,7 +163,9 @@ begin
 
   v_tenant := nullif(coalesce(v_new ->> 'tenant_id', v_old ->> 'tenant_id'), '')::uuid;
   if v_tenant is null and tg_table_name = 'tenants' then v_tenant := v_id::uuid; end if;
-  if v_tenant is null and tg_table_name <> 'profiles' and tg_table_name <> 'platform_admins' then
+  -- Rows without a tenant of their own (a person's profile) are logged in the
+  -- tenant the change was made in; platform admin changes belong to no tenant.
+  if v_tenant is null and tg_table_name <> 'platform_admins' then
     v_tenant := public.current_tenant_id();
   end if;
 

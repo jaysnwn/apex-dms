@@ -21,6 +21,8 @@ create schema storage;
 create table storage.buckets (id text primary key, name text, public boolean);
 create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text, owner uuid);
 alter table storage.objects enable row level security;
+-- as on Supabase: signed-in users may use the table; policies decide which rows
+grant select, insert, update, delete on storage.objects to anon, authenticated, service_role;
 create function storage.foldername(name text) returns text[] language sql immutable as $$
   select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1]
 $$;
