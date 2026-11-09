@@ -96,8 +96,10 @@ begin
   end if;
 end $$;
 grant anon to app_definer;
--- postgres must be able to hand functions to app_definer and replace them later.
-grant app_definer to postgres with inherit false, set true;
+-- postgres must be able to hand functions to app_definer (SET) and, as their
+-- owner's member, replace them in later migrations or hand them back (INHERIT).
+-- postgres already bypasses everything, so inheriting app_definer adds nothing.
+grant app_definer to postgres with inherit true, set true;
 
 grant usage on schema public to app_definer;
 grant all on all tables in schema public to app_definer;
@@ -368,5 +370,8 @@ begin
   end if;
   if has_schema_privilege('app_definer', 'public', 'CREATE') then
     raise exception 'M-T2 check failed: app_definer must not be able to create objects';
+  end if;
+  if not pg_has_role('postgres', 'app_definer', 'USAGE') then
+    raise exception 'M-T2 check failed: postgres must be able to maintain app_definer''s functions';
   end if;
 end $$;
