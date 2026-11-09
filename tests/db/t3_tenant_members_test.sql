@@ -60,6 +60,9 @@ begin
   exception when raise_exception then
     if sqlerrm not like '%another organization%' then raise; end if;
   end;
+  -- no name given: role / status change only, also for a shared person
+  perform public.set_member('e1000000-0000-4000-8000-000000000001', 'billing', true, false, null, null);
+  assert (select role from public.list_members() where id = 'e1000000-0000-4000-8000-000000000001') = 'billing', 'role only';
   -- an Apex-only person can be renamed
   perform public.set_member('00000000-0000-0000-0000-000000000003', 'billing', true, false, 'Bina B. Billing', '9822011111');
   assert (select full_name from public.list_members() where id = '00000000-0000-0000-0000-000000000003') = 'Bina B. Billing', 'renamed';
@@ -132,6 +135,14 @@ end $$;
 reset role;
 
 -- ---------- Last Super Admin of a business ----------
+-- make the ISO owner the only Super Admin of ISO for this check (other
+-- environments may have more); restored right after
+create temp table t3_other_owners as
+  select user_id from public.tenant_members
+   where tenant_id = 'c0000000-0000-4000-8000-00000000000c' and role = 'super_admin'
+     and user_id <> 'c1000000-0000-4000-8000-000000000001';
+update public.tenant_members set role = 'manager'
+ where tenant_id = 'c0000000-0000-4000-8000-00000000000c' and user_id in (select user_id from t3_other_owners);
 select set_config('request.jwt.claim.sub', 'c1000000-0000-4000-8000-000000000001', false);
 select set_config('request.headers', '{"x-tenant-id":"c0000000-0000-4000-8000-00000000000c"}', false);
 set role authenticated;
@@ -145,6 +156,9 @@ do $$ begin
   end;
 end $$;
 reset role;
+update public.tenant_members set role = 'super_admin'
+ where tenant_id = 'c0000000-0000-4000-8000-00000000000c' and user_id in (select user_id from t3_other_owners);
+drop table t3_other_owners;
 -- ---------- Uploads: own business, own folder ----------
 set role authenticated;
 do $$

@@ -121,9 +121,11 @@ begin
    where tenant_id = v_tenant and user_id = p_user;
 
   -- Name and phone belong to the person, not to one business: only changed
-  -- here when they work for this business alone.
+  -- here when they work for this business alone. No name given = leave
+  -- name and phone as they are.
+  if p_full_name is null then return; end if;
   select * into p from public.profiles where id = p_user;
-  if (v_name is distinct from nullif(p.full_name, '') or v_phone is distinct from p.phone) then
+  if (v_name is distinct from nullif(p.full_name, '') or v_phone is distinct from nullif(p.phone, '')) then
     if public.member_tenant_count(p_user) > 1 then
       raise exception 'This person also works for another organization; only they can change their name and phone.'
         using errcode = 'P0001';
