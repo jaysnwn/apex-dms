@@ -181,7 +181,9 @@ names its tenant with `set_config('app.tenant_id', …)`. Anonymous calls never 
 **Rules for new code.**
 - A new business table needs `tenant_id`, the `aa_tenant_stamp` trigger, a `definer_tenant_fence` policy and
   composite foreign keys `(tenant_id, x_id)`; `t1_tenant_foundation_test.sql` fails otherwise.
-- A new `security definer` function must be owned by `app_definer` (`alter function … owner to app_definer`);
+- A new `security definer` function must be owned by `app_definer`: `grant create on schema public to app_definer;
+  alter function … owner to app_definer; revoke create on schema public from app_definer;` (Supabase requires the
+  new owner to be allowed to create in the schema; the grant is only for the hand-over);
   only `platform_definer_allowlist()` may stay with postgres. `t2_tenant_isolation_test.sql` fails otherwise and
   calls every new function with another tenant's ids automatically.
 - A migration that changes data must `set_config('app.tenant_id', …)` first (no tenant = nothing visible).

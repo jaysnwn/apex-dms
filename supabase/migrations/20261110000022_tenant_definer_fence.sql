@@ -315,6 +315,9 @@ returns setof text language sql immutable as $$
 $$;
 revoke all on function public.platform_definer_allowlist() from public, anon, authenticated;
 
+-- A new owner must be allowed to create in the schema (checked on Supabase,
+-- where postgres is not a superuser). Granted only for the hand-over below.
+grant create on schema public to app_definer;
 do $$
 declare r record;
 begin
@@ -334,6 +337,7 @@ begin
     execute format('alter view %s owner to app_definer', r.v);
   end loop;
 end $$;
+revoke create on schema public from app_definer;
 
 -- -----------------------------------------------------------------------------
 -- 7. Check: nothing but the allow-list runs with the bypass any more
@@ -361,5 +365,8 @@ begin
   if pg_has_role('app_definer', 'authenticated', 'USAGE') or pg_has_role('app_definer', 'service_role', 'USAGE')
      or pg_has_role('app_definer', 'postgres', 'USAGE') then
     raise exception 'M-T2 check failed: app_definer must not act as authenticated, service_role or postgres';
+  end if;
+  if has_schema_privilege('app_definer', 'public', 'CREATE') then
+    raise exception 'M-T2 check failed: app_definer must not be able to create objects';
   end if;
 end $$;
