@@ -2,6 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { EXPENSE_REPORTS } from "./expense-reports";
+import { ROUTE_REPORTS } from "./route-reports";
 
 export type ColType = "text" | "money" | "num" | "pct" | "date" | "int";
 export type Column = { key: string; label: string; type?: ColType };
@@ -12,7 +13,7 @@ export type ReportDef = {
   key: string;
   title: string;
   description: string;
-  group: "Sales" | "Money" | "Stock" | "Purchases" | "Team" | "Expenses";
+  group: "Sales" | "Money" | "Stock" | "Purchases" | "Team" | "Routes" | "Expenses";
   roles: string[];
   filters: ("brand" | "salesman" | "route" | "employee" | "category")[];
   run: (sb: SupabaseClient, f: ReportFilters) => Promise<ReportResult>;
@@ -257,44 +258,7 @@ export const REPORTS: ReportDef[] = [
     },
   },
   { key: "salesman-sales", title: "Salesman-wise sales", description: "Invoiced sales per salesman.", group: "Team", roles: MGMT, filters: ["brand", "route"], run: salesBy("salesman") },
-  {
-    key: "route-performance", title: "Route-wise performance", description: "Sales, collections and visit completion per route.", group: "Team", roles: MGMT, filters: [],
-    run: async (sb, f) => {
-      const [rows, pays, visits, routes, retailers] = await Promise.all([
-        sales(sb, f),
-        fetchAll<{ retailer_id: string; amount: number }>(() => sb.from("payments").select("retailer_id, amount").in("status", ["received", "cheque_pending"]).gte("payment_date", f.from).lte("payment_date", f.to)),
-        fetchAll<{ retailer_id: string; status: string }>(() => sb.from("visits").select("retailer_id, status").gte("planned_date", f.from).lte("planned_date", f.to)),
-        sb.from("routes").select("id, name"),
-        fetchAll<{ id: string; route_id: string | null }>(() => sb.from("retailers").select("id, route_id")),
-      ]);
-      const routeOf = new Map(retailers.map((r) => [r.id, r.route_id ?? "none"]));
-      const out = new Map<string, Record<string, string | number | null>>();
-      const get = (id: string) => {
-        if (!out.has(id)) out.set(id, { name: (routes.data ?? []).find((r) => r.id === id)?.name ?? "No route", retailers: 0, sales: 0, collected: 0, planned: 0, visited: 0, missed: 0, completion: 0 });
-        return out.get(id)!;
-      };
-      for (const r of retailers) { const g = get(r.route_id ?? "none"); g.retailers = n(g.retailers) + 1; }
-      for (const s of rows) { const g = get(routeOf.get(s.retailer_id) ?? "none"); g.sales = n(g.sales) + n(s.line_total); }
-      for (const p of pays) { const g = get(routeOf.get(p.retailer_id) ?? "none"); g.collected = n(g.collected) + n(p.amount); }
-      for (const v of visits) {
-        const g = get(routeOf.get(v.retailer_id) ?? "none");
-        g.planned = n(g.planned) + 1;
-        if (v.status === "completed") g.visited = n(g.visited) + 1;
-        if (v.status === "missed") g.missed = n(g.missed) + 1;
-      }
-      const list = [...out.values()].map((g): Record<string, string | number | null> => ({ ...g, completion: n(g.planned) ? (n(g.visited) / n(g.planned)) * 100 : 0 }));
-      list.sort((a, b) => n(b.sales) - n(a.sales));
-      return {
-        columns: [
-          { key: "name", label: "Route" }, { key: "retailers", label: "Retailers", type: "int" }, { key: "sales", label: "Sales", type: "money" },
-          { key: "collected", label: "Collected", type: "money" }, { key: "planned", label: "Visits planned", type: "int" }, { key: "visited", label: "Visited", type: "int" },
-          { key: "missed", label: "Missed", type: "int" }, { key: "completion", label: "Completion", type: "pct" },
-        ],
-        rows: list,
-        totals: sum(list, ["retailers", "sales", "collected", "planned", "visited", "missed"]),
-      };
-    },
-  },
+  ...ROUTE_REPORTS,
   {
     key: "invoice-ageing", title: "Invoice ageing", description: "Unpaid invoices by days past due (as of today).", group: "Money", roles: [...OFFICE, "salesman"], filters: ["salesman", "route"],
     run: async (sb, f) => {

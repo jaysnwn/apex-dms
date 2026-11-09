@@ -28,6 +28,10 @@ const schema = z.object({
   salesman_max_discount: z.coerce.number().min(0).max(100, "Discount limit is 0–100%"),
   reorder_lead_days: z.coerce.number().int().min(0).max(180),
   reorder_cover_days: z.coerce.number().int().min(1).max(365),
+  expense_claim_days: z.coerce.number().int().min(1, "Claim window is 1–365 days").max(365, "Claim window is 1–365 days"),
+  geofence_radius_m: z.coerce.number().int().min(20, "Shop radius is 20–5000 m").max(5000, "Shop radius is 20–5000 m"),
+  gps_min_accuracy_m: z.coerce.number().int().min(5, "GPS accuracy is 5–2000 m").max(2000, "GPS accuracy is 5–2000 m"),
+  live_location_minutes: z.coerce.number().int().min(2).max(120),
 });
 
 export async function saveSettings(_prev: SettingsState, formData: FormData): Promise<SettingsState> {

@@ -88,7 +88,7 @@ async function OfficeDash({ showProfit }: { showProfit: boolean }) {
   for (const s of sales) byRetailer.set(s.retailer_id, { name: s.shop_name, v: (byRetailer.get(s.retailer_id)?.v ?? 0) + Number(s.line_total) });
 
   const team = (salesmen.data ?? []).map((s) => {
-    const vs = (visits.data ?? []).filter((v) => v.salesman_id === s.id);
+    const vs = (visits.data ?? []).filter((v) => v.salesman_id === s.id && v.status !== "rescheduled" && v.status !== "cancelled");
     return {
       name: s.full_name as string,
       sold: sumN(invs.filter((i) => i.invoice_date >= monthStart && i.orders?.salesman_id === s.id), (i) => Number(i.grand_total)),
@@ -233,8 +233,8 @@ async function SalesmanDash({ userId }: { userId: string }) {
     supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "quotation").eq("created_by", userId),
     supabase.from("targets").select("*").eq("salesman_id", userId).lte("period_start", today).gte("period_end", today).order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
-  const v = visits.data ?? [];
-  const done = v.filter((x) => x.status !== "planned").length;
+  const v = (visits.data ?? []).filter((x) => x.status !== "rescheduled" && x.status !== "cancelled");
+  const done = v.filter((x) => x.status === "completed" || x.status === "missed").length;
   const sumN = (rows: { amount?: number; grand_total?: number; outstanding?: number; overdue?: number }[] | null, k: "amount" | "grand_total" | "outstanding" | "overdue") => (rows ?? []).reduce((t, r) => t + Number(r[k] ?? 0), 0);
   const sold = sumN(invs.data, "grand_total");
   const collected = sumN(pays.data, "amount");

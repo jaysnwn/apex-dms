@@ -122,35 +122,7 @@ export async function saveRetailer(_prev: FormResult, formData: FormData): Promi
   return { ok: "Retailer created.", redirectTo: `/retailers/${data.id}` };
 }
 
-// ---------- Routes (full route planning comes in M5) ----------
-
-const routeSchema = z.object({
-  id: z.string().uuid().optional(),
-  name: z.string().min(2, "Enter a route name").max(80),
-  description: z.string().max(300).optional(),
-  default_salesman_id: z.string().uuid().optional(),
-  is_active: z.enum(["true", "false"]).optional(),
-});
-
-export async function saveRoute(_prev: FormResult, formData: FormData): Promise<FormResult> {
-  await requireRole("super_admin", "manager");
-  const raw = formObject(formData);
-  for (const k of Object.keys(raw)) if (raw[k] === "") delete raw[k];
-  const parsed = routeSchema.safeParse(raw);
-  if (!parsed.success) return { error: zodMessage(parsed.error) };
-  const { id, ...v } = parsed.data;
-  const row = {
-    name: v.name,
-    description: v.description ?? null,
-    default_salesman_id: v.default_salesman_id ?? null,
-    is_active: v.is_active !== "false",
-  };
-  const supabase = await createClient();
-  const { error } = id ? await supabase.from("routes").update(row).eq("id", id) : await supabase.from("routes").insert(row);
-  if (error) return { error: dbError(error) };
-  revalidatePath("/retailers/routes");
-  return { ok: id ? "Route saved." : `${v.name} added.`, resetForm: !id };
-}
+// Routes are managed through the route functions (src/app/(app)/routes/manage/actions.ts).
 
 // Recalculate Star / Average / Needs Attention / High Credit Risk for every retailer.
 export async function runClassification() {

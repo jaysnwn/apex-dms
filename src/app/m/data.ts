@@ -60,8 +60,8 @@ export async function getHome(supabase: SupabaseServer, userId: string): Promise
 
   const sum = (rows: { grand_total?: number; amount?: number }[] | null, k: "grand_total" | "amount") => (rows ?? []).reduce((s, r) => s + Number(r[k] ?? 0), 0);
   const todaysQuotes = (quotes.data ?? []).filter((q) => isToday(q.created_at as string, today));
-  const v = visits.data ?? [];
-  const pending = v.filter((x) => x.status === "planned");
+  const v = (visits.data ?? []).filter((x) => x.status !== "rescheduled" && x.status !== "cancelled");
+  const pending = v.filter((x) => x.status === "planned" || x.status === "in_progress");
   let nextVisit: HomeData["nextVisit"] = null;
   if (pending.length) {
     const { data: rs } = await supabase.from("retailers").select("id, shop_name, billing_city, route_sequence").in("id", pending.map((p) => p.retailer_id as string));
@@ -83,7 +83,7 @@ export async function getHome(supabase: SupabaseServer, userId: string): Promise
       quotes: (todayAll ?? []).length || todaysQuotes.length,
       quoteValue: sum(todayAll as { grand_total: number }[] | null, "grand_total"),
       collected: (pays.data ?? []).filter((p) => p.payment_date === today).reduce((s, p) => s + Number(p.amount), 0),
-      visitsDone: v.filter((x) => x.status !== "planned").length,
+      visitsDone: v.filter((x) => x.status === "completed" || x.status === "missed").length,
       visitsTotal: v.length,
       routeNames: (plans.data ?? []).map((p) => (p.routes as unknown as { name: string } | null)?.name ?? "Route"),
     },

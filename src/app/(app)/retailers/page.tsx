@@ -56,7 +56,7 @@ export default async function RetailersPage({
             {(role === "super_admin" || role === "manager") && (
               <>
                 <ClassifyButton />
-                <LinkButton href="/retailers/routes"><RouteIcon className="size-4" /> <span className="hidden sm:inline">Routes</span></LinkButton>
+                <LinkButton href="/routes/manage"><RouteIcon className="size-4" /> <span className="hidden sm:inline">Routes</span></LinkButton>
                 <LinkButton href="/import?tab=retailers"><Upload className="size-4" /> <span className="hidden sm:inline">Import</span></LinkButton>
               </>
             )}

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ChevronRight, ClipboardList, HandCoins, KeyRound, LogOut, Monitor, Receipt, Route as RouteIcon, Smartphone, Sparkles, Store } from "lucide-react";
+import { ChevronRight, ClipboardList, Map as MapIcon, HandCoins, KeyRound, LogOut, Monitor, Receipt, Route as RouteIcon, Smartphone, Sparkles, Store } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { ROLE_LABELS } from "@/lib/roles";
 import { Avatar } from "../ui";
@@ -14,6 +14,7 @@ export default async function MorePage() {
     { href: "/m/collections", label: "My collections", icon: HandCoins, tone: "bg-amber-100 text-amber-700" },
     { href: "/m/orders", label: "My orders", icon: ClipboardList, tone: "bg-sky-100 text-sky-700" },
     { href: "/m/route", label: "Today's route", icon: RouteIcon, tone: "bg-cyan-100 text-cyan-700" },
+    { href: "/m/routes", label: "My routes", icon: MapIcon, tone: "bg-teal-100 text-teal-700" },
     { href: "/m/outlets", label: "My outlets", icon: Store, tone: "bg-violet-100 text-violet-700" },
     { href: "/m/expenses", label: "Expenses", icon: Receipt, tone: "bg-rose-100 text-rose-700" },
     { href: "/account", label: "Change password", icon: KeyRound, tone: "bg-slate-200 text-slate-700" },

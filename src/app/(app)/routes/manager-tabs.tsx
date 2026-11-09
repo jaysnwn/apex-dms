@@ -4,12 +4,13 @@ export function RouteTabs() {
   return (
     <Tabs
       items={[
-        { href: "/routes", label: "Today's progress", exact: true },
-        { href: "/routes/plan", label: "Plan routes" },
+        { href: "/routes", label: "Live progress", exact: true },
+        { href: "/routes/manage", label: "Routes" },
+        { href: "/routes/assignments", label: "Salesmen & routes" },
+        { href: "/routes/plan", label: "Visit schedule" },
+        { href: "/routes/places", label: "Towns & territories" },
         { href: "/routes/targets", label: "Targets" },
         { href: "/routes/incentives", label: "Incentives" },
-        { href: "/retailers/routes", label: "Route list" },
-        { href: "/routes/today", label: "My route (field app)" },
       ]}
     />
   );

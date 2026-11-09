@@ -65,8 +65,29 @@ export const PROMISE_STATUS: S = {
 
 export const VISIT_STATUS: S = {
   planned: { label: "To visit", tone: "amber" },
+  in_progress: { label: "At the shop", tone: "blue" },
   completed: { label: "Visited", tone: "green" },
   missed: { label: "Missed", tone: "red" },
+  rescheduled: { label: "Rescheduled", tone: "violet" },
+  cancelled: { label: "Cancelled", tone: "slate" },
+};
+
+// Result of comparing the check-in GPS with the outlet's saved location.
+export const GEO_STATUS: S = {
+  verified: { label: "GPS verified", tone: "green" },
+  outside: { label: "Outside shop area", tone: "red" },
+  no_gps: { label: "No GPS", tone: "slate" },
+  low_accuracy: { label: "Weak GPS", tone: "amber" },
+  no_outlet_location: { label: "Shop location not saved", tone: "slate" },
+};
+
+export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]; // ISO 1..7
+export const ROUTE_FREQUENCY: Record<string, string> = { weekly: "Weekly", fortnightly: "Every 2 weeks", on_demand: "Only when planned" };
+export const OUTLET_FREQUENCY: Record<string, string> = {
+  every_visit: "Every route day",
+  weekly: "Once a week",
+  fortnightly: "Every 2 weeks",
+  monthly: "Once a month",
 };
 
 // Expense statuses and categories: see src/lib/expense-labels.ts and the expense_categories table.

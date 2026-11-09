@@ -39,11 +39,13 @@ export function RetailerForm({
   salesmen,
   routes,
   isSalesman,
+  defaults,
 }: {
   retailer?: RetailerRow;
   salesmen: Option[];
   routes: Option[];
   isSalesman: boolean;
+  defaults?: { route_id?: string; billing_city?: string };
 }) {
   const [dups, setDups] = useState<Duplicate[]>([]);
   const [state, setState] = useState(retailer?.billing_state_code ?? "27");
@@ -138,7 +140,7 @@ export function RetailerForm({
         </div>
         <div>
           <Label htmlFor="billing_city">City / town</Label>
-          <Input id="billing_city" name="billing_city" defaultValue={retailer?.billing_city ?? ""} onBlur={onBlurCheck} />
+          <Input id="billing_city" name="billing_city" defaultValue={retailer?.billing_city ?? defaults?.billing_city ?? ""} onBlur={onBlurCheck} />
         </div>
         <div>
           <Label htmlFor="billing_pincode">PIN code</Label>
@@ -186,7 +188,7 @@ export function RetailerForm({
         )}
         <div>
           <Label htmlFor="route_id">Route</Label>
-          <Select id="route_id" name="route_id" defaultValue={retailer?.route_id ?? ""}>
+          <Select id="route_id" name="route_id" defaultValue={retailer?.route_id ?? defaults?.route_id ?? ""}>
             <option value="">— No route —</option>
             {routes.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
           </Select>

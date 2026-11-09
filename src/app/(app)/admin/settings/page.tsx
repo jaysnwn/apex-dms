@@ -11,7 +11,7 @@ export default async function SettingsPage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("company_settings")
-    .select("legal_name, gstin, state_code, address, phone, email, bank_details, invoice_terms, doc_prefix, salesman_max_discount, billing_max_discount, reorder_lead_days, reorder_cover_days")
+    .select("legal_name, gstin, state_code, address, phone, email, bank_details, invoice_terms, doc_prefix, salesman_max_discount, billing_max_discount, reorder_lead_days, reorder_cover_days, expense_claim_days, geofence_radius_m, gps_min_accuracy_m, live_location_minutes")
     .eq("id", 1)
     .single<CompanySettings>();
 

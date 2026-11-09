@@ -274,8 +274,10 @@ reset role;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000005', false);
 set role authenticated;
 do $$ begin
-  update public.visits set status = 'completed', checkin_at = now(), latitude = 19.57, longitude = 74.21, remarks = 'ok'
-   where salesman_id = auth.uid() and planned_date = current_date;
+  perform public.visit_check_in(v.id, null, 19.57, 74.21, 15, now(), null) from public.visits v
+   where v.salesman_id = auth.uid() and v.planned_date = current_date;
+  perform public.visit_check_out(v.id, null, 19.57, 74.21, 15, 'ok', null, now(), null) from public.visits v
+   where v.salesman_id = auth.uid() and v.planned_date = current_date;
   assert (select count(*) from public.visits where status = 'completed') >= 1, 'visit completed';
   perform public.expense_save(null, null, (select id from public.expense_categories where code = 'fuel'), 450, current_date,
     '10000000-0000-0000-0000-000000000001', null, 'Petrol', 'cash', 'employee', null, null, true, null, 'salesman_app');

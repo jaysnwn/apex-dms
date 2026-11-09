@@ -18,6 +18,10 @@ export type CompanySettings = {
   billing_max_discount: number;
   reorder_lead_days: number;
   reorder_cover_days: number;
+  expense_claim_days: number;
+  geofence_radius_m: number;
+  gps_min_accuracy_m: number;
+  live_location_minutes: number;
 };
 
 export function SettingsForm({ settings }: { settings: CompanySettings }) {
@@ -78,6 +82,22 @@ export function SettingsForm({ settings }: { settings: CompanySettings }) {
       <div>
         <Label htmlFor="reorder_cover_days" hint="days of sales to order for">Reorder cover</Label>
         <Input id="reorder_cover_days" name="reorder_cover_days" type="number" min={1} max={365} defaultValue={settings.reorder_cover_days} required />
+      </div>
+      <div>
+        <Label htmlFor="expense_claim_days" hint="older ones must be entered by the office">Salesman expense claim window (days)</Label>
+        <Input id="expense_claim_days" name="expense_claim_days" type="number" min={1} max={365} defaultValue={settings.expense_claim_days} required />
+      </div>
+      <div>
+        <Label htmlFor="geofence_radius_m" hint="check-in within this distance = GPS verified">Shop check-in radius (m)</Label>
+        <Input id="geofence_radius_m" name="geofence_radius_m" type="number" min={20} max={5000} defaultValue={settings.geofence_radius_m} required />
+      </div>
+      <div>
+        <Label htmlFor="gps_min_accuracy_m" hint="weaker GPS is shown as “Weak GPS”">Minimum GPS accuracy (m)</Label>
+        <Input id="gps_min_accuracy_m" name="gps_min_accuracy_m" type="number" min={5} max={2000} defaultValue={settings.gps_min_accuracy_m} required />
+      </div>
+      <div>
+        <Label htmlFor="live_location_minutes" hint="older positions show as last known">Live location counts for (minutes)</Label>
+        <Input id="live_location_minutes" name="live_location_minutes" type="number" min={2} max={120} defaultValue={settings.live_location_minutes} required />
       </div>
       <div className="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:items-center">
         <Button type="submit" disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
