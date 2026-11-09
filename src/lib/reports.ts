@@ -1,19 +1,20 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { EXPENSE_REPORTS } from "./expense-reports";
 
 export type ColType = "text" | "money" | "num" | "pct" | "date" | "int";
 export type Column = { key: string; label: string; type?: ColType };
 export type ReportResult = { columns: Column[]; rows: Record<string, string | number | null>[]; totals?: Record<string, number>; note?: string };
-export type ReportFilters = { from: string; to: string; brand?: string; salesman?: string; route?: string };
+export type ReportFilters = { from: string; to: string; brand?: string; salesman?: string; route?: string; employee?: string; category?: string };
 
 export type ReportDef = {
   key: string;
   title: string;
   description: string;
-  group: "Sales" | "Money" | "Stock" | "Purchases" | "Team";
+  group: "Sales" | "Money" | "Stock" | "Purchases" | "Team" | "Expenses";
   roles: string[];
-  filters: ("brand" | "salesman" | "route")[];
+  filters: ("brand" | "salesman" | "route" | "employee" | "category")[];
   run: (sb: SupabaseClient, f: ReportFilters) => Promise<ReportResult>;
 };
 
@@ -407,32 +408,7 @@ export const REPORTS: ReportDef[] = [
       };
     },
   },
-  {
-    key: "expenses", title: "Expense report", description: "Salesman expenses by category (approved and reimbursed).", group: "Team", roles: [...OFFICE], filters: ["salesman"],
-    run: async (sb, f) => {
-      const [ex, people] = await Promise.all([
-        fetchAll<{ salesman_id: string; category: string; amount: number; status: string }>(() => {
-          let q = sb.from("expenses").select("salesman_id, category, amount, status").gte("expense_date", f.from).lte("expense_date", f.to);
-          if (f.salesman) q = q.eq("salesman_id", f.salesman);
-          return q;
-        }),
-        sb.from("profiles").select("id, full_name"),
-      ]);
-      const u = new Map((people.data ?? []).map((p) => [p.id as string, p.full_name as string]));
-      const cats = ["fuel", "food", "parking", "accommodation", "travel", "other"];
-      const g = group(ex.filter((e) => e.status !== "rejected"), (e) => e.salesman_id, (e) => ({ name: u.get(e.salesman_id) ?? "", ...Object.fromEntries(cats.map((c) => [c, 0])), pending: 0, total: 0 }), (a, e) => {
-        a[e.category] = n(a[e.category]) + n(e.amount);
-        a.total = n(a.total) + n(e.amount);
-        if (e.status === "submitted") a.pending = n(a.pending) + n(e.amount);
-      });
-      return {
-        columns: [{ key: "name", label: "Salesman" }, ...cats.map((c) => ({ key: c, label: c[0].toUpperCase() + c.slice(1), type: "money" as const })), { key: "pending", label: "Awaiting approval", type: "money" }, { key: "total", label: "Total", type: "money" }],
-        rows: g.sort((a, b) => n(b.total) - n(a.total)),
-        totals: sum(g, [...cats, "pending", "total"]),
-        note: "Rejected expenses are excluded.",
-      };
-    },
-  },
+  ...EXPENSE_REPORTS,
   {
     key: "payment-behaviour", title: "Retailer payment behaviour", description: "On-time payment, average days to pay, overdue and bounces.", group: "Money", roles: OFFICE, filters: ["route", "salesman"],
     run: async (sb, f) => {

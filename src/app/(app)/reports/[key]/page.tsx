@@ -38,7 +38,7 @@ const PRESETS = (today: string) => {
   ];
 };
 
-export default async function ReportPage({ params, searchParams }: { params: Promise<{ key: string }>; searchParams: Promise<{ from?: string; to?: string; brand?: string; salesman?: string; route?: string }> }) {
+export default async function ReportPage({ params, searchParams }: { params: Promise<{ key: string }>; searchParams: Promise<{ from?: string; to?: string; brand?: string; salesman?: string; route?: string; employee?: string; category?: string }> }) {
   const { profile } = await requireRole();
   const { key } = await params;
   const def = reportByKey(key);
@@ -52,14 +52,16 @@ export default async function ReportPage({ params, searchParams }: { params: Pro
   const brand = def.filters.includes("brand")
     ? (ctx.brands.some((b) => b.id === sp.brand) ? sp.brand : wantAll ? undefined : ctx.current?.id ?? (ctx.canSeeAll ? undefined : ctx.brands[0]?.id))
     : undefined;
-  const f = { from: sp.from || today.slice(0, 8) + "01", to: sp.to || today, brand, salesman: profile.role === "salesman" ? undefined : sp.salesman, route: sp.route };
+  const f = { from: sp.from || today.slice(0, 8) + "01", to: sp.to || today, brand, salesman: profile.role === "salesman" ? undefined : sp.salesman, route: sp.route, employee: sp.employee, category: sp.category };
   const supabase = await createClient();
 
-  const [result, brands, salesmen, routes] = await Promise.all([
+  const [result, brands, salesmen, routes, employees, expenseCats] = await Promise.all([
     def.run(supabase, f),
     Promise.resolve({ data: def.filters.includes("brand") ? ctx.brands.map((b) => ({ id: b.id, name: b.name })) : [] }),
     def.filters.includes("salesman") && profile.role !== "salesman" ? supabase.from("profiles").select("id, full_name").eq("role", "salesman").order("full_name") : Promise.resolve({ data: [] }),
     def.filters.includes("route") ? supabase.from("routes").select("id, name").order("name") : Promise.resolve({ data: [] }),
+    def.filters.includes("employee") ? supabase.from("profiles").select("id, full_name").order("full_name") : Promise.resolve({ data: [] }),
+    def.filters.includes("category") ? supabase.from("expense_categories").select("id, name").order("sort_order") : Promise.resolve({ data: [] }),
   ]);
   const numeric = (c: Column) => ["money", "num", "int", "pct"].includes(c.type ?? "");
   const presetHref = (p: { from: string; to: string }) => {
@@ -81,6 +83,12 @@ export default async function ReportPage({ params, searchParams }: { params: Pro
           )}
           {(salesmen.data ?? []).length > 0 && (
             <Select name="salesman" defaultValue={sp.salesman ?? ""} className="w-44" aria-label="Salesman"><option value="">All salesmen</option>{(salesmen.data ?? []).map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}</Select>
+          )}
+          {(employees.data ?? []).length > 0 && (
+            <Select name="employee" defaultValue={sp.employee ?? ""} className="w-44" aria-label="Employee"><option value="">All employees</option>{(employees.data ?? []).map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}</Select>
+          )}
+          {(expenseCats.data ?? []).length > 0 && (
+            <Select name="category" defaultValue={sp.category ?? ""} className="w-44" aria-label="Category"><option value="">All categories</option>{(expenseCats.data ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>
           )}
           {(routes.data ?? []).length > 0 && (
             <Select name="route" defaultValue={sp.route ?? ""} className="w-44" aria-label="Route"><option value="">All routes</option>{(routes.data ?? []).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</Select>

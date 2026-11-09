@@ -74,6 +74,7 @@ export async function updateUser(_prev: ActionState, formData: FormData): Promis
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const { id, full_name, phone, role, is_active } = parsed.data;
   const active = is_active === "true";
+  const canReimburse = formData.get("can_reimburse") === "true" && (role === "manager" || role === "billing");
   const isSelf = id === me.id;
 
   if (isSelf && !active) return { error: "You cannot disable your own account." };
@@ -86,7 +87,7 @@ export async function updateUser(_prev: ActionState, formData: FormData): Promis
   // "last Super Administrator" guard all apply.
   const { error } = await supabase
     .from("profiles")
-    .update({ full_name, phone: phone || null, role, is_active: active })
+    .update({ full_name, phone: phone || null, role, is_active: active, can_reimburse: canReimburse })
     .eq("id", id);
   if (error) return { error: error.message };
 

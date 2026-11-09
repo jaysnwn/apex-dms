@@ -277,22 +277,25 @@ do $$ begin
   update public.visits set status = 'completed', checkin_at = now(), latitude = 19.57, longitude = 74.21, remarks = 'ok'
    where salesman_id = auth.uid() and planned_date = current_date;
   assert (select count(*) from public.visits where status = 'completed') >= 1, 'visit completed';
-  insert into public.expenses (category, amount, description) values ('fuel', 450, 'Petrol');
+  perform public.expense_save(null, null, (select id from public.expense_categories where code = 'fuel'), 450, current_date,
+    '10000000-0000-0000-0000-000000000001', null, 'Petrol', 'cash', 'employee', null, null, true, null, 'salesman_app');
   begin
-    update public.expenses set status = 'approved' where salesman_id = auth.uid();
+    update public.expenses set status = 'approved' where employee_id = auth.uid();
     raise exception 'salesman approved own expense';
   exception when insufficient_privilege or check_violation then null;
   end;
 end $$;
 reset role;
 
+update public.profiles set can_reimburse = true where id = '00000000-0000-0000-0000-000000000002';
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', false);
 set role authenticated;
 do $$ declare v_r uuid; begin
-  update public.expenses set status = 'approved', reviewed_by = auth.uid(), reviewed_at = now() where category = 'fuel';
-  v_r := public.reimburse_expenses(array(select id from public.expenses where category = 'fuel'), 'upi', 'UPI-1');
+  perform public.expense_review(array(select id from public.expenses where amount = 450), 'approve');
+  v_r := public.reimburse_expenses((select jsonb_agg(jsonb_build_object('expense_id', id, 'amount', 450)) from public.expenses where amount = 450),
+                                   current_date, 'upi', 'UPI-1', null, null, null);
   assert (select amount from public.reimbursements where id = v_r) = 450, 'reimbursed 450';
-  assert (select status from public.expenses where category = 'fuel') = 'reimbursed', 'expense reimbursed';
+  assert (select reimbursement_status from public.expenses where amount = 450) = 'reimbursed', 'expense reimbursed';
 end $$;
 reset role;
 

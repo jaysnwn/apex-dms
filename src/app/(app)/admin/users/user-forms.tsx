@@ -77,6 +77,7 @@ type UserRow = {
   phone: string | null;
   role: AppRole;
   is_active: boolean;
+  can_reimburse?: boolean;
 };
 
 export function EditUserForm({ user, isSelf, brands, brandIds }: { user: UserRow; isSelf: boolean; brands: BrandOpt[]; brandIds: string[] }) {
@@ -115,6 +116,10 @@ export function EditUserForm({ user, isSelf, brands, brandIds }: { user: UserRow
           {isSelf && <input type="hidden" name="is_active" value="true" />}
         </div>
         <div className="sm:col-span-4"><BrandBoxes brands={brands} selected={brandIds} idPrefix={`brand-${user.id}`} /></div>
+        <label className="flex items-start gap-2 text-sm sm:col-span-4">
+          <input type="checkbox" name="can_reimburse" value="true" defaultChecked={!!user.can_reimburse} className="mt-0.5 size-4 accent-ink-900" />
+          <span><span className="font-medium">Can reimburse expenses</span><span className="block text-xs text-slate-500">Lets a Manager or Billing user pay employees for approved expenses. The Super Admin can always do this; salesmen and warehouse staff never can.</span></span>
+        </label>
         <div className="flex flex-wrap items-center gap-3 sm:col-span-4">
           <Button type="submit" size="sm" disabled={pending}>{pending ? "Saving…" : "Save changes"}</Button>
           <Button type="button" size="sm" variant="secondary" onClick={() => setShowPw((v) => !v)}>

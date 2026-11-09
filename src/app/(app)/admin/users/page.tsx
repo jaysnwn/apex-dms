@@ -12,7 +12,7 @@ export default async function UsersPage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("profiles")
-    .select("id, full_name, email, phone, role, is_active, created_at")
+    .select("id, full_name, email, phone, role, is_active, can_reimburse, created_at")
     .order("is_active", { ascending: false })
     .order("full_name");
   const users = (data ?? []) as Profile[];

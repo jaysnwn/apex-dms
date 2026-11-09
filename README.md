@@ -22,6 +22,7 @@ Stack: **Next.js 15 (App Router) · TypeScript · Tailwind CSS 4 · Supabase (Po
 | Inventory module | Inventory dashboard, product table with filters / sort / archive, distributor price, Excel import with column matching + preview + fixes, stock inward / outward / adjustment (confirm) / damage, movement history with before / after stock, brand PDF stock report, 6-column verification Excel | ✅ Built |
 | Purchase returns & reorder | Return goods to supplier (debit note, stock and payable down); daily reorder list (8-day delivery, 30 days cover) that creates purchase orders | ✅ Built |
 | Collection verification | Salesman enters money collected + mode in the app; office verifies after hand-over (or rejects with a reason); only verified money counts for incentives | ✅ Built |
+| Unified expenses | One expense record for office and salesman entries: central categories, approval (bulk), returns for correction, partial reimbursements, double-entry journal, 7 reports + journal export | ✅ Built |
 | Salesman incentive | Monthly incentive (3 targets + collection slabs): live progress + to-do lists in the app, manager approval/lock/pay, scheme editable by Super Admin | ✅ Built |
 | M7 UAT and go-live | Your corrections, data migration, training, cut-over | Next |
 
@@ -72,6 +73,7 @@ Or paste each file in `supabase/migrations/` **in order** into the Supabase SQL 
 14. `20261107000014_stock_movement_types.sql` — new movement types (stock out, purchase return); must run before 0015
 15. `20261107000015_multi_brand.sql` — brand separation, brand access, purchase returns, stock ledger, reorder list
 16. `20261107000016_fast_billing.sql` — category order/delete, billing discount cap, manager stock override, GST details check before invoicing, payment-terms change
+17. `20261109000017_unified_expenses.sql` — expense categories, employee vs creator, draft/returned/cancelled, reimbursement lines (partial), expense history, journal entries
 
 Supabase's advisor will still list a few items on purpose: the `catalog` and stock views run with owner rights
 so salesmen and warehouse staff can see stock without seeing purchase costs (each view filters to active users
@@ -151,15 +153,18 @@ Sign in, open **Users**, and create logins for the Manager, Office/Billing, Ware
 | Verification Excel | Exactly six columns: Sr. No., Product Name, Qty (system), Physical Qty (blank), Difference = Physical − Qty (blank until counted), Notes (blank). Red = shortage, green = extra |
 | Purchases | A PO is editable until received. Receiving needs the supplier's bill no. + date and adds all its stock at the net cost (after discount, before GST); it also updates the product's purchase cost unless unticked. Due date = bill date + supplier credit days. The same bill number can't be entered twice for one supplier. Only a Manager can cancel a received purchase (stock comes back out; no payments applied). Warehouse staff can receive but never see costs |
 | Collection verification | Payments entered by office staff are verified automatically · payments a salesman enters in the app reduce the shop's balance at once but show as **With salesman** until the office verifies them in *Payments → Verify collections* (grouped by salesman, with cash / UPI / cheque / bank totals to match the hand-over) · **Reject** needs a reason: the payment is cancelled, the bills become due again and the salesman sees the reason in *My collections* · a verified cheque still has to clear before it counts |
+| Expenses | One `expenses` table for both the office and the salesman app; every change goes through database functions (nobody can update the table directly). **Who:** anyone enters their own; Super Admin / Manager / Billing can enter for another employee (the employee and the person who entered it are stored separately; the office's internal notes are hidden from the employee). **Flow:** Draft → Submitted → Approved / Rejected / Returned for correction; a returned expense is corrected and resent; after submitting it is locked (a Manager may still correct it before approving). **Approval:** Super Admin / Manager, never their own expense (Super Admin excepted); may approve less than claimed with a reason; bulk approval writes one history row per expense. **Categories:** managed in *Expenses → Categories*: receipt required, route required, needs approval, auto-approve up to ₹X, disable. **Limits:** amount ₹0.01–₹10,00,000, no future dates, salesmen can claim up to 60 days back (`expense_claim_days`); the same form sent twice is saved once. **Reimbursement:** only approved, employee-paid expenses; part payments allowed; never more than what is still due (row locks + a database check, tested with simultaneous payments); one payment = one employee; Super Admin always, Manager / Billing only with *Can reimburse* ticked in *Users* (existing managers kept it). **No deletes:** only drafts are deleted; a returned expense is withdrawn (cancelled); a Manager cancels a submitted/approved expense with a reason; a payment made by mistake is reversed by the Super Admin. **Accounting:** approval posts Dr *Expense: category* / Cr *Employee payable* (or Cr the company account for company-paid); a reimbursement posts Dr *Employee payable* / Cr Cash/Bank; cancellations post reversals; each event is posted once (unique per source + event) — see the *Expense journal* report |
 | Incentive | Sales = before GST, net of returns · shops billed = his shops with an invoice in the month · smart = bought ≥ ₹5,000 (before GST) in the month and paid every bill of that month within 21 days · collection = money received in the month against every bill due by month end (old overdue included, at what was owed on the 1st) ÷ that amount; slabs <75% ₹0 · 75% ₹2,000 · 85% ₹2,500 · 95% ₹3,000, highest slab only; payments go to the oldest bill first; only payments verified by the office count; cheques count once cleared · his shops = assigned to him or on his route · figures are final 21 days after month end, then the manager approves and locks them |
 | Field app | caches today's route and catalogue; orders, payments and visits made offline are sent when back online |
 
 ## Tests
 
-Database tests (roles, RLS, audit, numbering, invoice immutability) run on plain Postgres with Supabase stubs:
+Database tests (roles, RLS, audit, numbering, invoice immutability, expenses) run on plain Postgres with Supabase stubs:
 
 ```bash
 PGHOST=localhost PGPORT=5432 PGUSER=postgres tests/db/run.sh
+# two people paying the same expense at the same moment (real parallel sessions):
+PGHOST=localhost PGPORT=5432 PGUSER=postgres tests/db/concurrency_expenses.sh
 ```
 
 ## Project layout

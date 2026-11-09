@@ -1,126 +1,198 @@
+import Link from "next/link";
 import type { Metadata } from "next";
-import { CheckCircle2, Clock, Receipt, Wallet } from "lucide-react";
+import { BadgeIndianRupee, Building2, CheckCircle2, Clock, Receipt, Send, Settings2, Wallet, XCircle } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { date, inr } from "@/lib/format";
-import { EXPENSE_CATEGORY, EXPENSE_STATUS } from "@/lib/status";
+import { inr } from "@/lib/format";
 import { todayIST } from "@/lib/gst";
-import { Badge, Card, PageHeader } from "@/components/ui";
+import { EXPENSE_STATUS, type ExpenseRow } from "@/lib/expense-labels";
+import { PAGE_SIZE, expenseQuery, expenseSummary, listExpenses, loadExpenseOptions, monthRange, type ExpenseFilters } from "@/lib/expenses";
+import { Button, Card, Input, PageHeader, Select, cn } from "@/components/ui";
 import { Chip } from "@/components/chip";
 import { StatCard } from "@/components/stat-card";
 import { ExpenseForm } from "./expense-form";
-import { ReimburseButton, ReviewButtons } from "./review";
+import { ExpenseTable } from "./expense-table";
+import { PaymentsList, ReimbursePanel, type PaymentRow } from "./reimburse-panel";
 
 export const metadata: Metadata = { title: "Expenses" };
 
-type Exp = { id: string; salesman_id: string; route_id: string | null; expense_date: string; category: string; amount: number; description: string | null; receipt_path: string | null; status: string; rejection_reason: string | null };
+type SP = { tab?: string; month?: string; from?: string; to?: string; employee?: string; category?: string; brand?: string; route?: string; status?: string; q?: string; sort?: string; page?: string };
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ tab?: string; month?: string }> }) {
+export default async function ExpensesPage({ searchParams }: { searchParams: Promise<SP> }) {
   const { user, profile } = await requireRole();
   const sp = await searchParams;
-  const isManager = profile.role === "super_admin" || profile.role === "manager";
-  const canSeeAll = isManager || profile.role === "billing";
-  const tab = canSeeAll ? sp.tab ?? (isManager ? "approve" : "all") : "mine";
-  const month = sp.month || todayIST().slice(0, 7);
+  const mgr = profile.role === "super_admin" || profile.role === "manager";
+  const office = mgr || profile.role === "billing";
+  const tabs = ["mine", ...(mgr ? ["approve"] : []), ...(office ? ["reimburse", "all"] : [])];
+  const tab = tabs.includes(sp.tab ?? "") ? sp.tab! : mgr ? "approve" : office ? "all" : "mine";
+  const today = todayIST();
+  const month = /^\d{4}-\d{2}$/.test(sp.month ?? "") ? sp.month! : today.slice(0, 7);
+  const range = sp.from && DATE.test(sp.from) && sp.to && DATE.test(sp.to) ? { from: sp.from, to: sp.to } : monthRange(month);
   const supabase = await createClient();
 
-  let q = supabase.from("expenses").select("id, salesman_id, route_id, expense_date, category, amount, description, receipt_path, status, rejection_reason").order("expense_date", { ascending: false }).limit(500);
-  if (tab === "mine") q = q.eq("salesman_id", user.id);
-  if (tab === "approve") q = q.eq("status", "submitted");
-  if (tab === "reimburse") q = q.eq("status", "approved");
-  if (tab === "all" || tab === "mine") q = q.gte("expense_date", `${month}-01`).lte("expense_date", `${month}-31`);
-  const [{ data }, { data: people }, { data: routes }] = await Promise.all([
-    q,
-    supabase.from("profiles").select("id, full_name"),
-    supabase.from("routes").select("id, name").eq("is_active", true).order("name"),
-  ]);
-  const rows = (data ?? []) as Exp[];
-  const uMap = new Map((people ?? []).map((p) => [p.id as string, p.full_name as string]));
-  const rMap = new Map((routes ?? []).map((r) => [r.id as string, r.name as string]));
-  const paths = rows.map((r) => r.receipt_path).filter(Boolean) as string[];
-  const { data: signed } = paths.length ? await supabase.storage.from("expense-receipts").createSignedUrls(paths, 3600) : { data: [] };
-  const urls = new Map((signed ?? []).map((s) => [s.path as string, s.signedUrl as string]));
+  const f: ExpenseFilters = {
+    ...range,
+    employee: tab === "mine" ? user.id : sp.employee,
+    category: sp.category, brand: sp.brand, route: sp.route, status: sp.status, q: sp.q,
+    sort: (["amount", "-amount", "submitted"] as const).find((s) => s === sp.sort) ?? "date",
+    page: Math.max(1, Number(sp.page) || 1),
+  };
+  const ALL_TIME = { from: "2020-01-01", to: today };
 
-  const sum = (st?: string) => rows.filter((r) => !st || r.status === st).reduce((t, r) => t + Number(r.amount), 0);
+  const [options, canPayRes] = await Promise.all([loadExpenseOptions(supabase), supabase.rpc("can_reimburse_expenses")]);
+  const canPay = canPayRes.data === true;
 
-  // reimbursement grouped by salesman
-  const bySalesman = new Map<string, Exp[]>();
-  if (tab === "reimburse") for (const r of rows) bySalesman.set(r.salesman_id, [...(bySalesman.get(r.salesman_id) ?? []), r]);
+  let list: { rows: ExpenseRow[]; total: number; page: number } = { rows: [], total: 0, page: 1 };
+  let summary = null;
+  let groups: { employeeId: string; name: string; rows: ExpenseRow[] }[] = [];
+  let payments: PaymentRow[] = [];
+  let pendingTotal = 0;
 
-  // monthly summary by category
-  const byCat = new Map<string, number>();
-  for (const r of rows) if (r.status !== "rejected") byCat.set(r.category, (byCat.get(r.category) ?? 0) + Number(r.amount));
+  if (tab === "mine" || tab === "all") {
+    [list, summary] = await Promise.all([listExpenses(supabase, f), expenseSummary(supabase, f)]);
+  } else if (tab === "approve") {
+    const af: ExpenseFilters = { ...ALL_TIME, employee: sp.employee, category: sp.category, brand: sp.brand, route: sp.route, q: sp.q, status: "submitted", sort: f.sort === "date" ? "submitted" : f.sort, page: f.page };
+    const [l, s] = await Promise.all([listExpenses(supabase, af), expenseSummary(supabase, af)]);
+    list = l; pendingTotal = s.pending;
+  } else {
+    const [{ data: owed }, { data: pays }] = await Promise.all([
+      expenseQuery(supabase, { ...ALL_TIME, status: "to_reimburse", employee: sp.employee }).order("expense_date").limit(1000),
+      supabase.from("reimbursements").select("id, reimbursement_no, employee_id, paid_on, amount, method, reference_no, notes, cancelled_at, cancel_reason, created_by").order("created_at", { ascending: false }).limit(25),
+    ]);
+    const m = new Map<string, { employeeId: string; name: string; rows: ExpenseRow[] }>();
+    for (const r of (owed ?? []) as ExpenseRow[]) {
+      if (!m.has(r.employee_id)) m.set(r.employee_id, { employeeId: r.employee_id, name: r.employee_name, rows: [] });
+      m.get(r.employee_id)!.rows.push(r);
+    }
+    groups = [...m.values()].sort((a, b) => b.rows.reduce((t, r) => t + Number(r.outstanding), 0) - a.rows.reduce((t, r) => t + Number(r.outstanding), 0));
+    const nm = new Map(options.allPeople.map((p) => [p.id, p.full_name]));
+    payments = (pays ?? []).map((p) => ({ ...p, employee_name: nm.get(p.employee_id) ?? "", created_by_name: nm.get(p.created_by) ?? null })) as PaymentRow[];
+  }
+
+  const qs = (over: Partial<SP>) => {
+    const n = new URLSearchParams(Object.entries({ ...sp, ...over }).filter(([, v]) => v !== undefined && v !== "") as [string, string][]);
+    return `/expenses?${n}`;
+  };
+  const pages = Math.max(1, Math.ceil(list.total / PAGE_SIZE));
+  const me = { id: user.id, name: profile.full_name, role: profile.role };
+  const owedTotal = groups.reduce((t, g) => t + g.rows.reduce((s, r) => s + Number(r.outstanding), 0), 0);
 
   return (
     <>
-      <PageHeader title="Expenses" description="Fuel, food, parking, stay and travel — with receipt photos and manager approval." />
+      <PageHeader
+        title="Expenses"
+        description="One expense record for office and salesman entries — approval, reimbursement and accounting in one flow."
+        actions={
+          <div className="flex gap-2">
+            {office && <Link href="/reports#expenses"><Button variant="secondary">Reports</Button></Link>}
+            {mgr && <Link href="/expenses/categories"><Button variant="secondary"><Settings2 className="size-4" /> Categories</Button></Link>}
+          </div>
+        }
+      />
       <div className="mb-5 flex flex-wrap gap-2">
         <Chip href="/expenses?tab=mine" active={tab === "mine"}>My expenses</Chip>
-        {isManager && <Chip href="/expenses?tab=approve" active={tab === "approve"}>To approve</Chip>}
-        {isManager && <Chip href="/expenses?tab=reimburse" active={tab === "reimburse"}>To reimburse</Chip>}
-        {canSeeAll && <Chip href="/expenses?tab=all" active={tab === "all"}>All (month)</Chip>}
+        {mgr && <Chip href="/expenses?tab=approve" active={tab === "approve"}>To approve</Chip>}
+        {office && <Chip href="/expenses?tab=reimburse" active={tab === "reimburse"}>To reimburse</Chip>}
+        {office && <Chip href="/expenses?tab=all" active={tab === "all"}>All expenses</Chip>}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
-        <div className="space-y-4">
-          {(tab === "mine" || tab === "all") && (
-            <>
-              <form className="flex items-center gap-2">
+      <div className={cn("grid gap-6", (tab === "mine" || tab === "all") && "xl:grid-cols-[1fr_380px]")}>
+        <div className="min-w-0 space-y-4">
+          {(tab === "mine" || tab === "all" || tab === "approve") && (
+            <Card className="p-3">
+              <form className="flex flex-wrap items-end gap-2">
                 <input type="hidden" name="tab" value={tab} />
-                <input type="month" name="month" defaultValue={month} className="h-10 rounded-lg border border-slate-300 px-3 text-sm" aria-label="Month" />
-                <button className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm">Show</button>
+                <Input name="q" defaultValue={sp.q} placeholder="Search no., description, employee…" className="w-56" aria-label="Search" />
+                {tab !== "approve" && (
+                  <>
+                    <Input type="month" name="month" defaultValue={sp.from ? "" : month} className="w-40" aria-label="Month" />
+                    <span className="self-center text-xs text-slate-400">or</span>
+                    <Input type="date" name="from" defaultValue={sp.from} className="w-38" aria-label="From date" />
+                    <Input type="date" name="to" defaultValue={sp.to} className="w-38" aria-label="To date" />
+                  </>
+                )}
+                {tab !== "mine" && (
+                  <Select name="employee" defaultValue={sp.employee ?? ""} className="w-44" aria-label="Employee">
+                    <option value="">All employees</option>
+                    {options.allPeople.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+                  </Select>
+                )}
+                <Select name="category" defaultValue={sp.category ?? ""} className="w-40" aria-label="Category">
+                  <option value="">All categories</option>
+                  {options.categories.map((c) => <option key={c.id} value={c.id}>{c.name}{c.is_active ? "" : " (disabled)"}</option>)}
+                </Select>
+                <Select name="brand" defaultValue={sp.brand ?? ""} className="w-36" aria-label="Brand">
+                  <option value="">Any brand</option>
+                  <option value="none">For all brands</option>
+                  {options.brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </Select>
+                {options.routes.length > 0 && (
+                  <Select name="route" defaultValue={sp.route ?? ""} className="w-36" aria-label="Route">
+                    <option value="">All routes</option>
+                    {options.routes.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  </Select>
+                )}
+                {tab !== "approve" && (
+                  <Select name="status" defaultValue={sp.status ?? ""} className="w-44" aria-label="Status">
+                    <option value="">Any status</option>
+                    {Object.entries(EXPENSE_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                    <option value="to_reimburse">Approved, still to pay</option>
+                  </Select>
+                )}
+                <Select name="sort" defaultValue={sp.sort ?? ""} className="w-40" aria-label="Sort">
+                  <option value="">{tab === "approve" ? "Oldest first" : "Newest first"}</option>
+                  <option value="-amount">Amount: high to low</option>
+                  <option value="amount">Amount: low to high</option>
+                </Select>
+                <Button type="submit" variant="secondary">Apply</Button>
+                <Link href={`/expenses?tab=${tab}`} className="self-center text-xs text-slate-500 hover:text-slate-800">Clear</Link>
               </form>
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <StatCard label="This month" value={inr(sum(), { decimals: false })} icon={Receipt} tone="violet" />
-                <StatCard label="Waiting approval" value={inr(sum("submitted"), { decimals: false })} icon={Clock} tone="amber" />
-                <StatCard label="Approved" value={inr(sum("approved"), { decimals: false })} icon={CheckCircle2} tone="blue" />
-                <StatCard label="Reimbursed" value={inr(sum("reimbursed"), { decimals: false })} icon={Wallet} tone="green" />
-              </div>
-              {byCat.size > 0 && (
-                <Card className="p-4">
-                  <div className="mb-2 text-sm font-medium">By category</div>
-                  <div className="flex flex-wrap gap-2">{[...byCat.entries()].map(([k, v]) => <Badge key={k} tone="violet">{EXPENSE_CATEGORY[k]}: {inr(v, { decimals: false })}</Badge>)}</div>
-                </Card>
-              )}
-            </>
+            </Card>
+          )}
+
+          {summary && (
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <StatCard label="Total incurred" value={inr(summary.incurred, { decimals: false })} icon={Receipt} tone="violet" hint="submitted + approved" />
+              <StatCard label="Submitted" value={inr(summary.submitted, { decimals: false })} icon={Send} tone="slate" hint={summary.drafts ? `${summary.drafts} draft${summary.drafts > 1 ? "s" : ""} not sent` : "all sent for approval"} />
+              <StatCard label="Waiting approval" value={inr(summary.pending, { decimals: false })} icon={Clock} tone="amber" hint={`${summary.pending_count} expense${summary.pending_count === 1 ? "" : "s"}`} href={mgr ? "/expenses?tab=approve" : undefined} />
+              <StatCard label="Approved" value={inr(summary.approved, { decimals: false })} icon={CheckCircle2} tone="blue" hint={`${summary.approved_count} expense${summary.approved_count === 1 ? "" : "s"}`} />
+              <StatCard label="Rejected" value={inr(summary.rejected, { decimals: false })} icon={XCircle} tone="red" hint={`${summary.rejected_count} expense${summary.rejected_count === 1 ? "" : "s"}`} />
+              <StatCard label="Still to reimburse" value={inr(summary.outstanding, { decimals: false })} icon={Wallet} tone="orange" href={office ? "/expenses?tab=reimburse" : undefined} />
+              <StatCard label="Reimbursed" value={inr(summary.reimbursed, { decimals: false })} icon={BadgeIndianRupee} tone="green" hint="paid to employees" />
+              <StatCard label="Company paid" value={inr(summary.company_paid, { decimals: false })} icon={Building2} tone="teal" hint="no reimbursement" />
+            </div>
+          )}
+
+          {tab === "approve" && (
+            <p className="text-sm text-slate-600"><b>{list.total}</b> expense{list.total === 1 ? "" : "s"} waiting for approval · <b className="tabular">{inr(pendingTotal)}</b>. Tick several to approve, return or reject them together.</p>
           )}
 
           {tab === "reimburse" ? (
-            [...bySalesman.entries()].length === 0 ? <Card className="p-8 text-center text-sm text-slate-500">Nothing waiting for reimbursement.</Card> :
-            [...bySalesman.entries()].map(([sid, list]) => (
-              <Card key={sid} className="p-4">
-                <div className="mb-2 flex items-center justify-between"><span className="font-semibold">{uMap.get(sid)}</span><ReimburseButton ids={list.map((l) => l.id)} total={list.reduce((t, l) => t + Number(l.amount), 0)} name={uMap.get(sid) ?? ""} /></div>
-                <ul className="text-sm text-slate-600">{list.map((l) => <li key={l.id} className="flex justify-between"><span>{date(l.expense_date)} · {EXPENSE_CATEGORY[l.category]} · {l.description}</span><span className="tabular">{inr(l.amount)}</span></li>)}</ul>
-              </Card>
-            ))
+            <>
+              <p className="text-sm text-slate-600">Approved expenses paid by employees and not yet fully paid back: <b className="tabular">{inr(owedTotal)}</b>. Company-paid expenses never appear here.</p>
+              <ReimbursePanel groups={groups} canPay={canPay} me={user.id} />
+              <PaymentsList rows={payments} superAdmin={profile.role === "super_admin"} />
+            </>
           ) : (
-            <Card className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium text-slate-500">
-                  <tr><th className="px-4 py-2.5">Date</th>{tab !== "mine" && <th className="px-3 py-2.5">Salesman</th>}<th className="px-3 py-2.5">Expense</th><th className="px-3 py-2.5">Receipt</th><th className="px-3 py-2.5">Status</th><th className="px-4 py-2.5 text-right">Amount</th></tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {rows.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-slate-500">{tab === "approve" ? "Nothing waiting for approval." : "No expenses."}</td></tr>}
-                  {rows.map((r) => {
-                    const st = EXPENSE_STATUS[r.status];
-                    const url = r.receipt_path ? urls.get(r.receipt_path) : undefined;
-                    return (
-                      <tr key={r.id}>
-                        <td className="px-4 py-2.5 whitespace-nowrap">{date(r.expense_date)}</td>
-                        {tab !== "mine" && <td className="px-3 py-2.5">{uMap.get(r.salesman_id)}</td>}
-                        <td className="px-3 py-2.5"><span className="font-medium">{EXPENSE_CATEGORY[r.category]}</span><div className="text-xs text-slate-500">{r.description}{r.route_id ? ` · ${rMap.get(r.route_id) ?? ""}` : ""}</div>{r.rejection_reason && <div className="text-xs text-red-700">Rejected: {r.rejection_reason}</div>}</td>
-                        <td className="px-3 py-2.5">{url ? <a href={url} target="_blank" rel="noopener" className="text-accent-700 hover:underline">View</a> : <span className="text-slate-400">None</span>}</td>
-                        <td className="px-3 py-2.5">{tab === "approve" ? <ReviewButtons id={r.id} /> : <Badge tone={st.tone}>{st.label}</Badge>}</td>
-                        <td className="tabular px-4 py-2.5 text-right font-medium">{inr(r.amount)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </Card>
+            <>
+              <ExpenseTable rows={list.rows} me={me} office={office} options={options} selectable={tab === "approve"} showEmployee={tab !== "mine"}
+                empty={tab === "approve" ? "Nothing waiting for approval." : "No expenses for these filters."} />
+              {pages > 1 && (
+                <div className="flex items-center justify-between text-sm text-slate-600">
+                  <span>{(list.page - 1) * PAGE_SIZE + 1}–{Math.min(list.page * PAGE_SIZE, list.total)} of {list.total}</span>
+                  <div className="flex gap-2">
+                    {list.page > 1 && <Link href={qs({ page: String(list.page - 1) })}><Button variant="secondary" size="sm">Previous</Button></Link>}
+                    {list.page < pages && <Link href={qs({ page: String(list.page + 1) })}><Button variant="secondary" size="sm">Next</Button></Link>}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
-        <div><ExpenseForm userId={user.id} routes={routes ?? []} /></div>
+        {(tab === "mine" || tab === "all") && (
+          <div><ExpenseForm me={{ id: user.id, name: profile.full_name }} office={office} options={options} /></div>
+        )}
       </div>
     </>
   );

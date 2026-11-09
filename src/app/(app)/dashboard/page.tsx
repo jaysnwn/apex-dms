@@ -50,7 +50,7 @@ async function OfficeDash({ showProfit }: { showProfit: boolean }) {
     supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "invoiced"),
     supabase.from("payments").select("amount").eq("status", "cheque_pending"),
     supabase.from("payment_promises").select("id, amount, promised_date, retailers(shop_name)").eq("status", "open").lte("promised_date", today).order("promised_date").limit(6),
-    supabase.from("expenses").select("amount, status").gte("expense_date", monthStart).neq("status", "rejected"),
+    supabase.from("expenses").select("amount, approved_amount, status").gte("expense_date", monthStart).in("status", ["submitted", "approved"]),
     supabase.from("profiles").select("id, full_name").eq("role", "salesman").eq("is_active", true),
     supabase.from("visits").select("salesman_id, status").gte("planned_date", monthStart).lte("planned_date", today),
     showProfit ? fetchAll<{ line_id: string; cost: number }>(() => supabase.from("sales_costs").select("line_id, cost")) : Promise.resolve([]),
@@ -70,7 +70,7 @@ async function OfficeDash({ showProfit }: { showProfit: boolean }) {
   const overdue = sumN(balances, (b) => Number(b.overdue));
   const invValue = sumN(valuation, (v) => Number(v.stock_value));
   const invUnits = sumN(valuation, (v) => Number(v.on_hand));
-  const monthExpenses = sumN(expenses.data ?? [], (e) => Number(e.amount));
+  const monthExpenses = sumN(expenses.data ?? [], (e) => Number(e.approved_amount ?? e.amount));
   const costMap = new Map(costs.map((c) => [c.line_id, Number(c.cost)]));
   const taxable = sumN(sales, (s) => Number(s.taxable_value));
   const cost = sumN(sales, (s) => costMap.get(s.line_id) ?? 0);

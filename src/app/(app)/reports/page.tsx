@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { BarChart3, Boxes, IndianRupee, PackagePlus, Users } from "lucide-react";
+import { BarChart3, Boxes, IndianRupee, PackagePlus, Receipt, Users } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { REPORTS } from "@/lib/reports";
 import { Card, PageHeader, cn } from "@/components/ui";
@@ -13,6 +13,7 @@ const GROUPS = [
   { key: "Stock", icon: Boxes, tone: "bg-teal-50 text-teal-600" },
   { key: "Purchases", icon: PackagePlus, tone: "bg-fuchsia-50 text-fuchsia-600" },
   { key: "Team", icon: Users, tone: "bg-violet-50 text-violet-600" },
+  { key: "Expenses", icon: Receipt, tone: "bg-rose-50 text-rose-600" },
 ] as const;
 
 export default async function ReportsPage() {
@@ -20,13 +21,13 @@ export default async function ReportsPage() {
   const mine = REPORTS.filter((r) => r.roles.includes(profile.role));
   return (
     <>
-      <PageHeader title="Reports" description="Every report can be filtered by date and exported to Excel." />
+      <PageHeader title="Reports" description="Every report can be filtered by date and exported to Excel or CSV." />
       <div className="space-y-8">
         {GROUPS.map((g) => {
           const list = mine.filter((r) => r.group === g.key);
           if (!list.length) return null;
           return (
-            <section key={g.key}>
+            <section key={g.key} id={g.key.toLowerCase()}>
               <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
                 <span className={cn("grid size-7 place-items-center rounded-md", g.tone)}><g.icon className="size-4" /></span> {g.key}
               </h2>

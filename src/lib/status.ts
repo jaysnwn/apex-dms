@@ -69,21 +69,7 @@ export const VISIT_STATUS: S = {
   missed: { label: "Missed", tone: "red" },
 };
 
-export const EXPENSE_STATUS: S = {
-  submitted: { label: "Waiting approval", tone: "amber" },
-  approved: { label: "Approved", tone: "blue" },
-  rejected: { label: "Rejected", tone: "red" },
-  reimbursed: { label: "Reimbursed", tone: "green" },
-};
-
-export const EXPENSE_CATEGORY: Record<string, string> = {
-  fuel: "Fuel",
-  food: "Food",
-  parking: "Parking",
-  accommodation: "Accommodation",
-  travel: "Travel",
-  other: "Other",
-};
+// Expense statuses and categories: see src/lib/expense-labels.ts and the expense_categories table.
 
 export const RETAILER_STATUS: S = {
   active: { label: "Active", tone: "green" },

@@ -27,9 +27,31 @@ export function ExportButton({ title, columns, rows, totals }: { title: string; 
       sheet: title.slice(0, 30),
     }).toFile(`${title.replace(/[^\w]+/g, "_")}.xlsx`);
   }
+  function csv() {
+    const esc = (v: unknown) => {
+      if (v === null || v === undefined) return "";
+      const t = String(v);
+      return /[",\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+    };
+    const lines = [columns.map((c) => esc(c.label)).join(",")];
+    for (const r of rows) lines.push(columns.map((c) => esc(r[c.key])).join(","));
+    if (totals) lines.push(columns.map((c, i) => (i === 0 ? "Total" : totals[c.key] !== undefined ? esc(totals[c.key]) : "")).join(","));
+    // BOM so Excel opens ₹ and Marathi/Hindi text correctly
+    const blob = new Blob(["\ufeff" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${title.replace(/[^\w]+/g, "_")}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
   return (
-    <Button variant="secondary" onClick={run} disabled={rows.length === 0}>
-      <Download className="size-4" /> Excel
-    </Button>
+    <div className="flex gap-2">
+      <Button variant="secondary" onClick={run} disabled={rows.length === 0}>
+        <Download className="size-4" /> Excel
+      </Button>
+      <Button variant="secondary" onClick={csv} disabled={rows.length === 0}>
+        <Download className="size-4" /> CSV
+      </Button>
+    </div>
   );
 }

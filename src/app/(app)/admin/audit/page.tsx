@@ -14,7 +14,7 @@ const TABLES = [
   "products", "product_images", "stock_movements", "stock_counts", "stock_count_lines",
   "routes", "retailers", "orders", "order_lines", "invoices", "invoice_lines",
   "credit_notes", "credit_note_lines", "dispatches", "payments", "payment_allocations",
-  "payment_promises", "route_plans", "visits", "targets", "expenses", "reimbursements",
+  "payment_promises", "route_plans", "visits", "targets", "expenses", "reimbursements", "reimbursement_lines", "expense_categories",
   "suppliers", "purchases", "purchase_lines", "purchase_returns", "supplier_payments", "profile_brands",
 ];
 

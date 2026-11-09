@@ -53,7 +53,7 @@ export async function getHome(supabase: SupabaseServer, userId: string): Promise
     supabase.from("visits").select("retailer_id, status").eq("salesman_id", userId).eq("planned_date", today),
     supabase.from("route_plans").select("routes(name)").eq("salesman_id", userId).eq("plan_date", today),
     supabase.from("orders").select("id, order_no, status, grand_total, created_at, retailers(shop_name)").eq("salesman_id", userId).order("created_at", { ascending: false }).limit(5),
-    supabase.from("expenses").select("id", { count: "exact", head: true }).eq("salesman_id", userId).eq("status", "submitted"),
+    supabase.from("expenses").select("id", { count: "exact", head: true }).eq("employee_id", userId).in("status", ["submitted", "returned"]),
     supabase.rpc("salesman_incentive", { p_salesman: userId, p_month: monthStart }),
   ]);
   const withMe = await getWithMe(supabase, userId, today);
