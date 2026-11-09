@@ -50,7 +50,7 @@ export default async function MorePage() {
       <form action="/auth/signout" method="post">
         <button className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white font-semibold text-red-600 ring-1 ring-red-200 active:bg-red-50"><LogOut className="size-5" /> Sign out</button>
       </form>
-      <p className="text-center text-xs text-slate-400">APEX DMS · salesman app</p>
+      <p className="text-center text-xs text-slate-400">DMS · salesman app</p>
     </div>
   );
 }

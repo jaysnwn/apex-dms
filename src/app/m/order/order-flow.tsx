@@ -11,7 +11,7 @@ import { calcLine, orderTotals } from "@/lib/gst";
 import { inr } from "@/lib/format";
 import type { CatalogueItem, Outlet } from "../data";
 import { loadCatalogue, submitQuotation } from "../actions";
-import { addToOutbox, cacheGet, cacheSet } from "../outbox";
+import { addToOutbox, cacheGet, cacheRemove, cacheSet } from "../outbox";
 import { ShareQuote } from "../share-quote";
 import { Sheet, Stepper } from "../ui";
 
@@ -19,9 +19,9 @@ type Catalogue = { items: CatalogueItem[]; maxDiscount: number; loadedAt: string
 type Cart = Record<string, { qty: number; discount: number }>;
 type DoneResult = { orderId?: string; orderNo?: string; total: number; offline: boolean; shop: string; mobile: string; lines: string[]; orders?: { orderId: string; orderNo: string; total: number; brand: string }[] };
 
-const CAT_KEY = "apex-m-catalogue";
-const OUT_KEY = "apex-m-outlets";
-const DRAFT_KEY = "apex-m-draft";
+const CAT_KEY = "dms-m-catalogue";
+const OUT_KEY = "dms-m-outlets";
+const DRAFT_KEY = "dms-m-draft";
 const CREDIT = [0, 7, 15, 30];
 
 export function OrderFlow({ initialOutlets, initialCatalogue, presetRetailer }: { initialOutlets: Outlet[] | null; initialCatalogue: Catalogue | null; presetRetailer?: string }) {
@@ -89,7 +89,7 @@ export function OrderFlow({ initialOutlets, initialCatalogue, presetRetailer }: 
 
   function clearDraft() {
     setCart({});
-    try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+    cacheRemove(DRAFT_KEY);
   }
 
   if (done) return <Done result={done} onNew={() => { setDone(null); setOutletId(null); }} onHome={() => router.push("/m")} />;

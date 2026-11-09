@@ -31,7 +31,7 @@ export default async function ManageRoutesPage({ searchParams }: { searchParams:
   const [{ data: routes }, { data: territories }, { data: salesmen }, { data: outlets }, { data: towns }, { data: assigns }] = await Promise.all([
     q,
     sb.from("territories").select("id, name").order("name"),
-    sb.from("profiles").select("id, full_name").eq("role", "salesman").order("full_name"),
+    sb.from("tenant_people").select("id, full_name").eq("role", "salesman").order("full_name"),
     sb.from("route_outlets").select("route_id").eq("is_active", true),
     sb.from("route_locations").select("route_id, sequence, locations(name)").order("sequence"),
     sb.from("route_assignments").select("route_id, salesman_id, status, start_date").is("end_date", null),

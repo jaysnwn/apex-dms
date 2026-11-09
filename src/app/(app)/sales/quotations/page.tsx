@@ -26,7 +26,7 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
   const rIds = [...new Set((orders ?? []).map((o) => o.retailer_id as string))];
   const [{ data: retailers }, { data: people }] = await Promise.all([
     rIds.length ? supabase.from("retailers").select("id, shop_name, code").in("id", rIds) : Promise.resolve({ data: [] }),
-    supabase.from("profiles").select("id, full_name"),
+    supabase.from("tenant_people").select("id, full_name"),
   ]);
   const rMap = new Map((retailers ?? []).map((r) => [r.id as string, r]));
   const uMap = new Map((people ?? []).map((u) => [u.id as string, u.full_name as string]));

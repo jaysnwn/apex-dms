@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Camera, ClipboardList, PackageCheck, Truck } from "lucide-react";
 import { Alert, Badge, Button, Card, Input, Label, Select, cn } from "@/components/ui";
 import { Dialog } from "../sales/order-builder";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, tenantStoragePath } from "@/lib/supabase/client";
 import { date, dateTime, inr, qty } from "@/lib/format";
 import { confirmDelivery, dispatchInvoice } from "./actions";
 
@@ -218,7 +218,7 @@ function DeliveryDialog({ row, onClose }: { row: DispatchedRow; onClose: () => v
         <Button className="bg-emerald-600 hover:bg-emerald-700" disabled={pending} onClick={() => start(async () => {
           let path: string | null = null;
           if (file) {
-            path = `${row.id}/${crypto.randomUUID()}-${file.name.replace(/[^\w.]+/g, "_")}`;
+            path = tenantStoragePath(`${row.id}/${crypto.randomUUID()}-${file.name.replace(/[^\w.]+/g, "_")}`);
             const { error: upErr } = await createClient().storage.from("delivery-proofs").upload(path, file);
             if (upErr) { setError(`Photo upload failed: ${upErr.message}`); return; }
           }

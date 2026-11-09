@@ -9,7 +9,7 @@ import { RETAILER_CLASS } from "@/lib/status";
 import type { Outlet } from "../data";
 import { cacheGet, cacheSet } from "../outbox";
 
-const KEY = "apex-m-outlets";
+const KEY = "dms-m-outlets";
 
 export function OutletList({ initial }: { initial: Outlet[] | null }) {
   const [outlets, setOutlets] = useState<Outlet[]>(initial ?? []);

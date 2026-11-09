@@ -17,7 +17,7 @@ export default async function PromisesPage({ searchParams }: { searchParams: Pro
   const supabase = await createClient();
   let q = supabase.from("payment_promises").select("id, retailer_id, invoice_id, promised_date, amount, status, remarks, created_by, retailers(shop_name, code, mobile)").order("promised_date").limit(300);
   q = sp.show === "all" ? q : q.eq("status", "open");
-  const [{ data: rows }, { data: people }] = await Promise.all([q, supabase.from("profiles").select("id, full_name")]);
+  const [{ data: rows }, { data: people }] = await Promise.all([q, supabase.from("tenant_people").select("id, full_name")]);
   const uMap = new Map((people ?? []).map((u) => [u.id as string, u.full_name as string]));
   const today = todayIST();
 

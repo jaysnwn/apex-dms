@@ -15,7 +15,7 @@ function shortCode(len = 8) {
 }
 
 // The public address of this app, for links sent to retailers.
-// Set NEXT_PUBLIC_APP_URL (e.g. https://apex.yourdomain.in) once the app is online.
+// Set NEXT_PUBLIC_APP_URL (e.g. https://dms.yourdomain.in) once the app is online.
 async function appOrigin() {
   const env = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "");
   if (env) return env;
@@ -31,7 +31,8 @@ const isLocal = (origin: string) => /^https?:\/\/(localhost|127\.|10\.|192\.168\
 // returns a WhatsApp link with a short download link for the retailer:
 //   https://<app>/d/k3Xa9QpL   (valid 30 days, re-signed on every open)
 export async function shareOnWhatsApp(kind: PdfKind, id: string, query = ""): Promise<{ url?: string; error?: string; localLink?: boolean }> {
-  const { user } = await requireRole();
+  const { user, tenant } = await requireRole();
+  // Rendered with the caller's own permissions, inside their business.
   const pdf = await renderPdf(kind, id, new URLSearchParams(query));
   if (!pdf) return { error: "Document not found." };
 
@@ -39,7 +40,9 @@ export async function shareOnWhatsApp(kind: PdfKind, id: string, query = ""): Pr
   let localLink = false;
   try {
     const admin = createAdminClient();
-    const path = `${kind}/${id}/${pdf.filename}`;
+    // The service key bypasses every database rule, so the business is named
+    // explicitly here: its own storage folder, and the link row carries it.
+    const path = `${tenant.id}/${kind}/${id}/${pdf.filename}`;
     const { error: upErr } = await admin.storage.from("documents").upload(path, pdf.buffer, { contentType: "application/pdf", upsert: true });
     if (upErr) throw upErr;
 
@@ -53,12 +56,12 @@ export async function shareOnWhatsApp(kind: PdfKind, id: string, query = ""): Pr
       localLink = true;
     } else {
       // Reuse an existing, still-valid short link for the same document.
-      const { data: existing } = await admin.from("share_links").select("code").eq("path", path).gt("expires_at", new Date(Date.now() + 864e5).toISOString()).limit(1).maybeSingle();
+      const { data: existing } = await admin.from("share_links").select("code").eq("tenant_id", tenant.id).eq("path", path).gt("expires_at", new Date(Date.now() + 864e5).toISOString()).limit(1).maybeSingle();
       let code = existing?.code as string | undefined;
       if (!code) {
         for (let i = 0; i < 3 && !code; i++) {
           const c = shortCode();
-          const { error } = await admin.from("share_links").insert({ code: c, path, filename: pdf.filename, expires_at: new Date(Date.now() + LINK_DAYS * 864e5).toISOString(), created_by: user.id });
+          const { error } = await admin.from("share_links").insert({ tenant_id: tenant.id, code: c, path, filename: pdf.filename, expires_at: new Date(Date.now() + LINK_DAYS * 864e5).toISOString(), created_by: user.id });
           if (!error) code = c;
         }
       }

@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 export async function retailerFormOptions(role: string, userId: string) {
   const supabase = await createClient();
   const [salesmen, routes] = await Promise.all([
-    supabase.from("profiles").select("id, full_name").eq("role", "salesman").eq("is_active", true).order("full_name"),
+    supabase.from("tenant_people").select("id, full_name").eq("role", "salesman").eq("is_active", true).order("full_name"),
     (() => {
       let q = supabase.from("routes").select("id, name, default_salesman_id").eq("is_active", true).order("name");
       if (role === "salesman") q = q.eq("default_salesman_id", userId);

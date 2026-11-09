@@ -69,7 +69,7 @@ export async function expenseSummary(sb: SupabaseClient, f: ExpenseFilters): Pro
 export async function loadExpenseOptions(sb: SupabaseClient) {
   const [cats, people, routes, brandIds, brands] = await Promise.all([
     sb.from("expense_categories").select("id, code, name, receipt_required, route_required, approval_required, auto_approve_limit, is_active, sort_order").order("sort_order").order("name"),
-    sb.from("profiles").select("id, full_name, role, is_active").order("full_name"),
+    sb.from("tenant_people").select("id, full_name, role, is_active").order("full_name"),
     sb.from("routes").select("id, name, default_salesman_id, is_active").order("name"),
     sb.rpc("my_brand_ids"),
     sb.from("brands").select("id, name, code, is_active").order("name"),

@@ -34,7 +34,7 @@ export default async function ReceivePage() {
 
   return (
     <>
-      <p className="mb-4 text-sm text-slate-500">When goods arrive from CONQRETE, BlueI or any supplier: count them against the order, then press <b>Receive goods</b> and enter the supplier&apos;s bill number. Stock is added straight away.</p>
+      <p className="mb-4 text-sm text-slate-500">When goods arrive from a supplier: count them against the order, then press <b>Receive goods</b> and enter the supplier&apos;s bill number. Stock is added straight away.</p>
       {toReceive.length === 0 && (
         <Card className="p-10 text-center text-slate-500"><PackageOpen className="mx-auto mb-2 size-8 text-slate-300" />Nothing waiting to be received.</Card>
       )}

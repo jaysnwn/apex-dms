@@ -10,6 +10,7 @@ import {
 import type { ModuleDef, ModuleKey } from "@/lib/roles";
 import { cn } from "@/components/ui";
 import { BrandSwitcher, type SwitcherBrand } from "@/components/brand-switcher";
+import { PLATFORM_NAME } from "@/lib/tenant-shared";
 
 // Each module keeps one colour everywhere, so people find it at a glance.
 // icon = icon colour, tile = soft background behind the icon.
@@ -53,6 +54,8 @@ type Props = {
   modules: ModuleDef[];
   userName: string;
   roleLabel: string;
+  orgName: string;
+  canSwitchOrg: boolean;
   brands: SwitcherBrand[];
   currentBrandId: string | null;
   canSeeAllBrands: boolean;
@@ -71,7 +74,7 @@ function isActive(href: string, pathname: string) {
   return pathname === base || pathname.startsWith(base + "/");
 }
 
-export function Shell({ modules, userName, roleLabel, brands, currentBrandId, canSeeAllBrands, children }: Props) {
+export function Shell({ modules, userName, roleLabel, orgName, canSwitchOrg, brands, currentBrandId, canSeeAllBrands, children }: Props) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -88,9 +91,12 @@ export function Shell({ modules, userName, roleLabel, brands, currentBrandId, ca
           <rect width="32" height="32" rx="9" fill="#f28c18" />
           <path d="M9 23 16 8l7 15h-4l-3-7-3 7z" fill="#1f2937" />
         </svg>
-        <div className="leading-tight">
-          <div className="text-[15px] font-bold tracking-wide text-white">APEX DMS</div>
-          <div className="text-[11px] font-medium tracking-wider text-gray-300/80">APEX TRADING CO.</div>
+        <div className="min-w-0 leading-tight">
+          <div className="truncate text-[15px] font-bold tracking-wide text-white">{orgName}</div>
+          <div className="text-[11px] font-medium tracking-wider text-gray-300/80">
+            {PLATFORM_NAME}
+            {canSwitchOrg && <> · <Link href="/select-org" className="underline-offset-2 hover:text-white hover:underline">switch</Link></>}
+          </div>
         </div>
       </div>
 
@@ -171,7 +177,7 @@ export function Shell({ modules, userName, roleLabel, brands, currentBrandId, ca
           <button aria-label="Open menu" onClick={() => setOpen(true)} className="rounded-md p-1.5 text-slate-700 hover:bg-slate-100">
             <Menu className="size-5" />
           </button>
-          <span className="text-sm font-semibold tracking-wide">APEX DMS</span>
+          <span className="truncate text-sm font-semibold tracking-wide">{orgName}</span>
           {brands.length > 1 && <div className="ml-auto w-48"><BrandSwitcher brands={brands} currentId={currentBrandId} canSeeAll={false} /></div>}
         </header>
         <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>

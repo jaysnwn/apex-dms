@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isTenantPath } from "@/lib/tenant-shared";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -20,7 +21,8 @@ export async function dispatchInvoice(invoiceId: string, warehouseId: string, ve
 }
 
 export async function confirmDelivery(dispatchId: string, remarks: string, proofPath: string | null) {
-  await requireRole("super_admin", "manager", "warehouse", "salesman");
+  const { tenant } = await requireRole("super_admin", "manager", "warehouse", "salesman");
+  if (!isTenantPath(tenant.id, proofPath)) return { error: "Upload the photo again." };
   const supabase = await createClient();
   const { error } = await supabase.rpc("confirm_delivery", { p_dispatch_id: dispatchId, p_remarks: remarks || null, p_proof_path: proofPath });
   if (error) return { error: error.message };

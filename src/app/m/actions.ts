@@ -19,6 +19,9 @@ export async function loadCatalogue() {
 
 export type QuoteInput = {
   clientUuid: string;
+  // the business the order was taken in (stamped on the phone); an order is
+  // never sent into another business
+  tenantId?: string;
   retailerId: string;
   creditDays: number;
   notes: string;
@@ -36,10 +39,13 @@ function brandKey(clientUuid: string, brandId: string, first: boolean) {
 export type SentQuote = { orderId: string; orderNo: string; total: number; brand: string };
 
 // Save a quotation (never an invoice). One invoice is for one brand, so a cart
-// with CONQRETE and BLUEI items becomes one quotation per brand automatically.
+// with items of two brands becomes one quotation per brand automatically.
 // Safe to resend: the same clientUuid returns the same order(s).
 export async function submitQuotation(q: QuoteInput): Promise<{ ok?: boolean; orderId?: string; orderNo?: string; total?: number; orders?: SentQuote[]; error?: string }> {
-  await requireRole(...FIELD);
+  const { tenant } = await requireRole(...FIELD);
+  if (q.tenantId && q.tenantId !== tenant.id) {
+    return { error: "This order was taken for another organization. Switch to it to send the order." };
+  }
   if (!q.retailerId) return { error: "Choose the outlet." };
   if (!q.lines.length) return { error: "Add at least one product." };
   const supabase = await createClient();

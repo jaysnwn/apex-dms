@@ -227,7 +227,7 @@ export const REPORTS: ReportDef[] = [
     run: async (sb, f) => {
       const month = f.from.slice(0, 8) + "01";
       const [{ data: people }, { data: payouts }] = await Promise.all([
-        sb.from("profiles").select("id, full_name, is_active").eq("role", "salesman").order("full_name"),
+        sb.from("tenant_people").select("id, full_name, is_active").eq("role", "salesman").order("full_name"),
         sb.from("incentive_payouts").select("*").eq("month", month),
       ]);
       const pMap = new Map((payouts ?? []).map((p) => [p.salesman_id as string, p]));
@@ -298,7 +298,7 @@ export const REPORTS: ReportDef[] = [
           if (f.salesman) q = q.eq("collected_by", f.salesman);
           return q;
         }),
-        sb.from("profiles").select("id, full_name"),
+        sb.from("tenant_people").select("id, full_name"),
       ]);
       const u = new Map((people.data ?? []).map((p) => [p.id as string, p.full_name as string]));
       const M: Record<string, string> = { cash: "Cash", upi: "UPI", bank_transfer: "Bank transfer", cheque: "Cheque" };

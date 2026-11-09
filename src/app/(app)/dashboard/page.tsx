@@ -51,7 +51,7 @@ async function OfficeDash({ showProfit }: { showProfit: boolean }) {
     supabase.from("payments").select("amount").eq("status", "cheque_pending"),
     supabase.from("payment_promises").select("id, amount, promised_date, retailers(shop_name)").eq("status", "open").lte("promised_date", today).order("promised_date").limit(6),
     supabase.from("expenses").select("amount, approved_amount, status").gte("expense_date", monthStart).in("status", ["submitted", "approved"]),
-    supabase.from("profiles").select("id, full_name").eq("role", "salesman").eq("is_active", true),
+    supabase.from("tenant_people").select("id, full_name").eq("role", "salesman").eq("is_active", true),
     supabase.from("visits").select("salesman_id, status").gte("planned_date", monthStart).lte("planned_date", today),
     showProfit ? fetchAll<{ line_id: string; cost: number }>(() => supabase.from("sales_costs").select("line_id, cost")) : Promise.resolve([]),
     fetchAll<{ balance: number; due_date: string }>(() => supabase.from("purchase_balances").select("balance, due_date").gt("balance", 0)),

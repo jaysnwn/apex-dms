@@ -110,7 +110,7 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
     const [{ data: r }, { data: allocs }, { data: who }] = await Promise.all([
       supabase.from("retailers").select("shop_name, code, mobile, billing_city").eq("id", p.retailer_id).single(),
       supabase.from("payment_allocations").select("amount, invoices(invoice_no, invoice_date)").eq("payment_id", id),
-      p.collected_by ? supabase.from("profiles").select("full_name").eq("id", p.collected_by).maybeSingle() : Promise.resolve({ data: null }),
+      p.collected_by ? supabase.from("tenant_people").select("full_name").eq("id", p.collected_by).maybeSingle() : Promise.resolve({ data: null }),
     ]);
     const allocations = (allocs ?? []).map((a) => {
       const inv = a.invoices as unknown as { invoice_no: string; invoice_date: string };
@@ -221,7 +221,7 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
     if (!o) return null;
     const [{ data: lines }, { data: sm }] = await Promise.all([
       supabase.from("order_lines").select("line_no, product_id, qty, unit_price, price_mode, discount_pct, taxable_value, gst_rate, tax_amount, line_total").eq("order_id", id).order("line_no"),
-      o.salesman_id ? supabase.from("profiles").select("full_name").eq("id", o.salesman_id).maybeSingle() : Promise.resolve({ data: null }),
+      o.salesman_id ? supabase.from("tenant_people").select("full_name").eq("id", o.salesman_id).maybeSingle() : Promise.resolve({ data: null }),
     ]);
     // Product details come from the catalogue view: salesmen cannot read the products table (it holds costs).
     const pids = [...new Set((lines ?? []).map((l) => l.product_id as string))];

@@ -31,7 +31,7 @@ export default async function CollectionsPage({ searchParams }: { searchParams: 
   if (sp.status) q = q.eq("status", sp.status);
   const [{ data: rows }, { data: people }, { data: pendingCheques }] = await Promise.all([
     q,
-    supabase.from("profiles").select("id, full_name"),
+    supabase.from("tenant_people").select("id, full_name"),
     supabase.from("payments").select("id, amount").eq("status", "cheque_pending"),
   ]);
   const uMap = new Map((people ?? []).map((u) => [u.id as string, u.full_name as string]));

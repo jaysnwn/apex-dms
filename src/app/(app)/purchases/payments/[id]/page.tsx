@@ -19,7 +19,7 @@ export default async function SupplierPaymentPage({ params, searchParams }: { pa
   if (!p) notFound();
   const [{ data: allocs }, { data: by }] = await Promise.all([
     supabase.from("supplier_payment_allocations").select("amount, is_auto, purchases(id, purchase_no, supplier_bill_no, supplier_bill_date)").eq("payment_id", id),
-    p.created_by ? supabase.from("profiles").select("full_name").eq("id", p.created_by).maybeSingle() : Promise.resolve({ data: null }),
+    p.created_by ? supabase.from("tenant_people").select("full_name").eq("id", p.created_by).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   const s = p.suppliers as unknown as { id: string; name: string };
   const st = SUPPLIER_PAYMENT_STATUS[p.status];

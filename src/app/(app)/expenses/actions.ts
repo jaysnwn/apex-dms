@@ -177,7 +177,7 @@ export async function getExpenseDetail(id: string): Promise<Result<{ detail: Exp
     supabase.from("reimbursement_lines").select("amount, reimbursements(id, reimbursement_no, paid_on, method, reference_no, amount, cancelled_at, notes, proof_path)").eq("expense_id", id),
   ]);
   const people = [...new Set((ev ?? []).map((x) => x.performed_by).filter(Boolean))] as string[];
-  const { data: names } = people.length ? await supabase.from("profiles").select("id, full_name").in("id", people) : { data: [] };
+  const { data: names } = people.length ? await supabase.from("tenant_people").select("id, full_name").in("id", people) : { data: [] };
   const nm = new Map((names ?? []).map((n) => [n.id as string, n.full_name as string]));
   const paths = [e.receipt_path, ...(lines ?? []).map((l) => (l.reimbursements as unknown as { proof_path: string | null } | null)?.proof_path)].filter(Boolean) as string[];
   const { data: signed } = paths.length ? await supabase.storage.from("expense-receipts").createSignedUrls(paths, 3600) : { data: [] };

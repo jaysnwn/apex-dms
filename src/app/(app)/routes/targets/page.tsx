@@ -14,7 +14,7 @@ export default async function TargetsPage() {
   const supabase = await createClient();
   const today = todayIST();
   const [{ data: salesmen }, { data: targets }] = await Promise.all([
-    supabase.from("profiles").select("id, full_name").eq("role", "salesman").eq("is_active", true).order("full_name"),
+    supabase.from("tenant_people").select("id, full_name").eq("role", "salesman").eq("is_active", true).order("full_name"),
     supabase.from("targets").select("*").gte("period_end", today).order("period_start"),
   ]);
   const minStart = (targets ?? []).reduce((m, t) => (t.period_start < m ? t.period_start : m), today);

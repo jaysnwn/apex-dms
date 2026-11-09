@@ -290,7 +290,7 @@ async function Visits({ id }: { id: string }) {
   const supabase = await createClient();
   const [{ data }, { data: people }] = await Promise.all([
     supabase.from("visits").select("id, planned_date, status, checkin_at, remarks, missed_reason, salesman_id, latitude, longitude").eq("retailer_id", id).order("planned_date", { ascending: false }).limit(100),
-    supabase.from("profiles").select("id, full_name"),
+    supabase.from("tenant_people").select("id, full_name"),
   ]);
   const u = new Map((people ?? []).map((p) => [p.id as string, p.full_name as string]));
   return (

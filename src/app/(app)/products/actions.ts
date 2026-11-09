@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { isTenantPath } from "@/lib/tenant-shared";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { dbError, formObject, zodMessage } from "@/lib/actions";
@@ -41,7 +42,7 @@ const productSchema = z
   });
 
 export async function saveProduct(_prev: FormResult, formData: FormData): Promise<FormResult> {
-  await requireRole("super_admin", "manager");
+  const { tenant } = await requireRole("super_admin", "manager");
   const photo = formData.get("photo");
   formData.delete("photo");
   const raw = formObject(formData);
@@ -105,7 +106,7 @@ export async function saveProduct(_prev: FormResult, formData: FormData): Promis
       return { error: "Product created. The photo was not saved: use a JPG or PNG under 4 MB.", redirectTo: `/products/${created.id}` };
     }
     const ext = photo.type === "image/png" ? "png" : photo.type === "image/webp" ? "webp" : "jpg";
-    const path = `${created.id}/${crypto.randomUUID()}.${ext}`;
+    const path = `${tenant.id}/${created.id}/${crypto.randomUUID()}.${ext}`;
     const { error: upErr } = await supabase.storage.from("product-images").upload(path, photo, { contentType: photo.type });
     if (!upErr) await supabase.from("product_images").insert({ product_id: created.id, storage_path: path, is_primary: true, sort_order: 0 });
   }
@@ -132,7 +133,10 @@ export async function saveProduct(_prev: FormResult, formData: FormData): Promis
 // ---------- Photos (file itself is uploaded from the browser to Storage) ----------
 
 export async function addProductImage(productId: string, storagePath: string) {
-  await requireRole("super_admin", "manager");
+  const { tenant } = await requireRole("super_admin", "manager");
+  // The browser uploads into its organization's folder; never record a path
+  // that points into someone else's.
+  if (!storagePath.startsWith(`${tenant.id}/`) || !isTenantPath(tenant.id, storagePath)) return { error: "Invalid photo." };
   const supabase = await createClient();
   const { count } = await supabase
     .from("product_images")
@@ -224,8 +228,8 @@ export async function saveMaster(_prev: FormResult, formData: FormData): Promise
 
 // Brand logo for stock reports (uploaded from the browser to product-images/brands/...).
 export async function setBrandLogo(brandId: string, path: string | null) {
-  await requireRole("super_admin");
-  if (path && !path.startsWith(`brands/${brandId}/`)) return { error: "Wrong file location." };
+  const { tenant } = await requireRole("super_admin");
+  if (path && !path.startsWith(`${tenant.id}/brands/${brandId}/`)) return { error: "Wrong file location." };
   const supabase = await createClient();
   const { data: old } = await supabase.from("brands").select("logo_path").eq("id", brandId).single();
   const { error } = await supabase.from("brands").update({ logo_path: path }).eq("id", brandId);

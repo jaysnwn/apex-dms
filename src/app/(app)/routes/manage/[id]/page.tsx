@@ -22,7 +22,7 @@ export default async function RoutePage({ params }: { params: Promise<{ id: stri
   const [{ data: territories }, { data: locations }, { data: salesmen }] = await Promise.all([
     sb.from("territories").select("id, name").eq("is_active", true).order("name"),
     sb.from("locations").select("id, name, territory_id, latitude, longitude, is_active").order("name"),
-    sb.from("profiles").select("id, full_name").eq("role", "salesman").eq("is_active", true).order("full_name"),
+    sb.from("tenant_people").select("id, full_name").eq("role", "salesman").eq("is_active", true).order("full_name"),
   ]);
 
   if (isNew) {
@@ -45,7 +45,7 @@ export default async function RoutePage({ params }: { params: Promise<{ id: stri
     sb.from("route_events").select("id, action, details, performed_by, created_at").eq("route_id", id).order("id", { ascending: false }).limit(80),
   ]);
   const people = [...new Set((ev ?? []).map((e) => e.performed_by).filter(Boolean))] as string[];
-  const { data: who } = people.length ? await sb.from("profiles").select("id, full_name").in("id", people) : { data: [] };
+  const { data: who } = people.length ? await sb.from("tenant_people").select("id, full_name").in("id", people) : { data: [] };
   const nm = new Map((who ?? []).map((p) => [p.id as string, p.full_name as string]));
   const events = (ev ?? []).map((e) => ({ id: e.id as number, action: e.action as string, details: e.details as Record<string, unknown> | null, by: e.performed_by ? nm.get(e.performed_by) ?? "" : "System", at: e.created_at as string }));
 

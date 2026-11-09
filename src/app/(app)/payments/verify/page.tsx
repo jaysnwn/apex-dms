@@ -19,7 +19,7 @@ export default async function VerifyPage() {
     .order("created_at")
     .limit(1000);
   const ids = [...new Set((rows ?? []).map((r) => r.collected_by as string).filter(Boolean))];
-  const { data: people } = ids.length ? await supabase.from("profiles").select("id, full_name").in("id", ids) : { data: [] };
+  const { data: people } = ids.length ? await supabase.from("tenant_people").select("id, full_name").in("id", ids) : { data: [] };
   const names = new Map((people ?? []).map((p) => [p.id as string, p.full_name as string]));
   const list: PendingPayment[] = (rows ?? []).map((r) => {
     const ret = r.retailers as unknown as { shop_name: string; code: string; billing_city: string | null };

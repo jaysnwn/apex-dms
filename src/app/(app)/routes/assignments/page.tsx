@@ -16,7 +16,7 @@ export default async function AssignmentsPage() {
   const today = todayIST();
   const [{ data: routes }, { data: salesmen }, { data: assigns }, { data: outlets }] = await Promise.all([
     sb.from("routes").select("id, name, code, visit_days, visit_frequency, is_active").is("archived_at", null).order("sort_order").order("name"),
-    sb.from("profiles").select("id, full_name").eq("role", "salesman").eq("is_active", true).order("full_name"),
+    sb.from("tenant_people").select("id, full_name").eq("role", "salesman").eq("is_active", true).order("full_name"),
     sb.from("route_assignments").select("route_id, salesman_id, status, start_date, end_date").or(`end_date.is.null,end_date.gte.${today}`),
     sb.from("route_outlets").select("route_id").eq("is_active", true),
   ]);

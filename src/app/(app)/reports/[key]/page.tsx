@@ -58,9 +58,9 @@ export default async function ReportPage({ params, searchParams }: { params: Pro
   const [result, brands, salesmen, routes, employees, expenseCats] = await Promise.all([
     def.run(supabase, f),
     Promise.resolve({ data: def.filters.includes("brand") ? ctx.brands.map((b) => ({ id: b.id, name: b.name })) : [] }),
-    def.filters.includes("salesman") && profile.role !== "salesman" ? supabase.from("profiles").select("id, full_name").eq("role", "salesman").order("full_name") : Promise.resolve({ data: [] }),
+    def.filters.includes("salesman") && profile.role !== "salesman" ? supabase.from("tenant_people").select("id, full_name").eq("role", "salesman").order("full_name") : Promise.resolve({ data: [] }),
     def.filters.includes("route") ? supabase.from("routes").select("id, name").order("name") : Promise.resolve({ data: [] }),
-    def.filters.includes("employee") ? supabase.from("profiles").select("id, full_name").order("full_name") : Promise.resolve({ data: [] }),
+    def.filters.includes("employee") ? supabase.from("tenant_people").select("id, full_name").order("full_name") : Promise.resolve({ data: [] }),
     def.filters.includes("category") ? supabase.from("expense_categories").select("id, name").order("sort_order") : Promise.resolve({ data: [] }),
   ]);
   const numeric = (c: Column) => ["money", "num", "int", "pct"].includes(c.type ?? "");

@@ -40,7 +40,7 @@ export default async function RetailersPage({
   const [{ data: rows }, { data: routes }, { data: salesmen }, { data: balances }] = await Promise.all([
     query,
     supabase.from("routes").select("id, name").order("name"),
-    isOffice ? supabase.from("profiles").select("id, full_name").eq("role", "salesman").order("full_name") : Promise.resolve({ data: [] }),
+    isOffice ? supabase.from("tenant_people").select("id, full_name").eq("role", "salesman").order("full_name") : Promise.resolve({ data: [] }),
     supabase.from("retailer_balances").select("retailer_id, outstanding, overdue"),
   ]);
   const balMap = new Map((balances ?? []).map((b) => [b.retailer_id as string, b]));

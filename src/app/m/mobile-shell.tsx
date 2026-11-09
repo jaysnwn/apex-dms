@@ -19,7 +19,7 @@ const TABS = [
   { href: "/m/more", label: "More", icon: LayoutGrid },
 ];
 
-export function MobileShell({ name, roleLabel, children }: { name: string; roleLabel: string; children: ReactNode }) {
+export function MobileShell({ name, roleLabel, orgName, tenantId, children }: { name: string; roleLabel: string; orgName: string; tenantId: string; children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [online, setOnline] = useState(true);
@@ -34,8 +34,10 @@ export function MobileShell({ name, roleLabel, children }: { name: string; roleL
     const left: OutboxItem[] = [];
     let sent = 0;
     for (const it of items) {
+      // never send an order into a business other than the one it was taken in
+      if (it.tenantId && it.tenantId !== tenantId) { left.push(it); continue; }
       try {
-        const res = await submitQuotation(it.data);
+        const res = await submitQuotation({ ...it.data, tenantId: it.tenantId ?? tenantId });
         if (res.error) left.push({ ...it, error: res.error });
         else sent++;
       } catch {
@@ -45,7 +47,7 @@ export function MobileShell({ name, roleLabel, children }: { name: string; roleL
     writeOutbox(left);
     setSyncing(false);
     if (sent) router.refresh();
-  }, [router]);
+  }, [router, tenantId]);
 
   useEffect(() => {
     setOnline(navigator.onLine);
@@ -72,7 +74,7 @@ export function MobileShell({ name, roleLabel, children }: { name: string; roleL
             <Avatar name={name} size={42} />
             <span className="min-w-0 leading-tight">
               <span className="block truncate text-base font-semibold text-slate-900">{firstName}</span>
-              <span className="block truncate text-xs text-slate-500">{roleLabel} · APEX TRADING CO.</span>
+              <span className="block truncate text-xs text-slate-500">{roleLabel} · {orgName}</span>
             </span>
           </Link>
           <span className={cn("flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium", online ? "bg-emerald-50 text-emerald-700" : "bg-amber-100 text-amber-800")}>

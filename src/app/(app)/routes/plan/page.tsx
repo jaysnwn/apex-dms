@@ -28,7 +28,7 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
   const [schedule, { data: routes }, { data: salesmen }] = await Promise.all([
     loadSchedule(sb, from, 14),
     sb.from("routes").select("id, name, code, default_salesman_id").eq("is_active", true).is("archived_at", null).order("sort_order").order("name"),
-    sb.from("profiles").select("id, full_name").eq("role", "salesman").eq("is_active", true).order("full_name"),
+    sb.from("tenant_people").select("id, full_name").eq("role", "salesman").eq("is_active", true).order("full_name"),
   ]);
   const days = Array.from({ length: 14 }, (_, i) => addDays(from, i));
   const rMap = new Map((routes ?? []).map((r) => [r.id as string, r]));

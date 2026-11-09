@@ -21,7 +21,7 @@ export default async function OutstandingPage({ searchParams }: { searchParams: 
     supabase.from("retailer_balances").select("*").gt("outstanding", 0),
     supabase.from("retailer_directory").select("id, route_id, route_name, salesman_id, salesman_name, mobile, classification, billing_city"),
     supabase.from("routes").select("id, name").order("name"),
-    isOffice ? supabase.from("profiles").select("id, full_name").eq("role", "salesman").order("full_name") : Promise.resolve({ data: [] }),
+    isOffice ? supabase.from("tenant_people").select("id, full_name").eq("role", "salesman").order("full_name") : Promise.resolve({ data: [] }),
   ]);
   const dMap = new Map((dir ?? []).map((d) => [d.id as string, d]));
   let rows = (bal ?? []).map((b) => ({ ...b, d: dMap.get(b.retailer_id) }));

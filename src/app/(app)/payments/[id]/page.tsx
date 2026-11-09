@@ -21,7 +21,7 @@ export default async function PaymentPage({ params, searchParams }: { params: Pr
   const [{ data: r }, { data: allocs }, { data: who }] = await Promise.all([
     supabase.from("retailers").select("id, shop_name, code, mobile").eq("id", p.retailer_id).single(),
     supabase.from("payment_allocations").select("invoice_id, amount, is_auto, invoices(invoice_no, invoice_date, due_date)").eq("payment_id", id),
-    p.collected_by ? supabase.from("profiles").select("full_name").eq("id", p.collected_by).maybeSingle() : Promise.resolve({ data: null }),
+    p.collected_by ? supabase.from("tenant_people").select("full_name").eq("id", p.collected_by).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   const allocated = (allocs ?? []).reduce((t, a) => t + Number(a.amount), 0);
   const st = PAYMENT_STATUS[p.status];

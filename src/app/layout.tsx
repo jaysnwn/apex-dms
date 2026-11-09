@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { PLATFORM_NAME, PLATFORM_TAGLINE } from "@/lib/tenant-shared";
 
 export const metadata: Metadata = {
-  title: { default: "APEX DMS", template: "%s · APEX DMS" },
-  description: "Distribution Management System for APEX TRADING CO.",
+  title: { default: PLATFORM_NAME, template: `%s · ${PLATFORM_NAME}` },
+  description: PLATFORM_TAGLINE,
 };
 
 export const viewport: Viewport = {

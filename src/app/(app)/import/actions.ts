@@ -172,7 +172,7 @@ export async function importRetailers(rows: Record<string, string>[]): Promise<I
   const [existingRes, routesRes, salesRes] = await Promise.all([
     supabase.from("retailers").select("mobile, gstin"),
     supabase.from("routes").select("id, name"),
-    supabase.from("profiles").select("id, email, full_name").eq("role", "salesman"),
+    supabase.from("tenant_people").select("id, email, full_name").eq("role", "salesman"),
   ]);
   const mobiles = new Set((existingRes.data ?? []).map((r) => r.mobile as string));
   const gstins = new Set((existingRes.data ?? []).map((r) => r.gstin as string).filter(Boolean));
