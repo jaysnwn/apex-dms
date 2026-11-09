@@ -172,6 +172,16 @@ One platform for several independent businesses (tenants): APEX TRADING CO. is t
 | `20261110000021_tenant_constraints.sql` | composite foreign keys (incl. people → membership), business keys unique per tenant, per-tenant units / settings / number series |
 | `20261110000022_tenant_definer_fence.sql` | owner-rights functions and views run as `app_definer` (no RLS bypass) fenced to the current tenant; roles from the membership; per-tenant retailer codes |
 | `20261110000023_tenant_rls.sql` | tenant check on every policy, people of the current tenant only, storage under `<tenant_id>/…` (older files = Apex) |
+| `20261110000024_tenant_app_support.sql` | branded login lookup, member management in the current tenant (`list_members`, `set_member`, `add_member`, `password_reset_allowed`), uploads checked with `is_own_upload()` |
+
+**In the app.** The organization is kept in the `dms_tenant` cookie and sent as the `x-tenant-id` header by the
+server and browser clients; the database verifies it (see below). Entry: `/o/<slug>` (or `/o` for the default),
+`/select-org` when someone works for several, `/login/<slug>` for an organization's own login page. Role and
+status come from the membership, never from `profiles`. People lists read the `tenant_people` view. Uploads go
+to `<tenant_id>/…` (`tenantStoragePath()`), browser caches and the offline outbox are kept per tenant
+(`tenantKey()`). In Users, disabling someone disables them in this organization only; their login is blocked
+only when they are active nowhere, and a person shared with another organization keeps their own name, phone
+and password. New Super Admin: `scripts/create-super-admin.mjs <email> "<name>" <password> [org-slug]`.
 
 **How the tenant is decided.** Only the database decides, in `current_tenant_id()`: a signed-in user's request
 header `x-tenant-id` counts only if they are an active member of that open tenant (a forged header gives *no*
@@ -188,7 +198,8 @@ names its tenant with `set_config('app.tenant_id', …)`. Anonymous calls never 
   calls every new function with another tenant's ids automatically.
 - A migration that changes data must `set_config('app.tenant_id', …)` first (no tenant = nothing visible).
 
-**Rollback** (one transaction each, in this order): `supabase/rollback/20261110000023_to_0021_down.sql`, then
+**Rollback** (one transaction each, in this order): `supabase/rollback/20261110000024_to_0023_down.sql`,
+`supabase/rollback/20261110000023_to_0021_down.sql`, then
 `supabase/rollback/20261110000021_to_0018_down.sql`. Tested: schema identical to 0018 (`pg_dump`), data unchanged.
 
 ## Tests
