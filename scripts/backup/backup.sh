@@ -44,7 +44,15 @@ exec 3> "$WORK/in"
 echo "begin isolation level repeatable read read only; select pg_export_snapshot();" >&3
 for _ in $(seq 1 60); do [ -s "$WORK/holder.out" ] && break; sleep 1; done
 SNAP=$(head -n1 "$WORK/holder.out")
-[ -n "$SNAP" ] || { cat "$WORK/holder.err" >&2; echo "could not open a snapshot" >&2; exit 1; }
+if [ -z "$SNAP" ]; then
+  cat "$WORK/holder.err" >&2
+  if grep -q "password authentication failed" "$WORK/holder.err"; then
+    echo "::error::Cannot sign in to the database. Check the PROD_DB_URL secret: Session pooler URI (port 5432), user postgres.<project-ref>, [YOUR-PASSWORD] replaced, and any @ # / ? % in the password URL-encoded (or reset the database password to letters and digits only)." >&2
+  else
+    echo "::error::Could not open a read-only snapshot of the database (see the message above)." >&2
+  fi
+  exit 1
+fi
 log "snapshot $SNAP"
 
 SIZE_MB=$(psql "$SOURCE_URL" -X -qAt -c "select pg_database_size(current_database()) / 1048576")
