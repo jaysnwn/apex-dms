@@ -11,6 +11,7 @@ import type { ModuleDef, ModuleKey } from "@/lib/roles";
 import { cn } from "@/components/ui";
 import { BrandSwitcher, type SwitcherBrand } from "@/components/brand-switcher";
 import { PLATFORM_NAME } from "@/lib/tenant-shared";
+import { SignOutButton } from "@/components/sign-out-button";
 
 // Each module keeps one colour everywhere, so people find it at a glance.
 // icon = icon colour, tile = soft background behind the icon.
@@ -134,15 +135,9 @@ export function Shell({ modules, userName, roleLabel, orgName, canSwitchOrg, bra
               <span className="block truncate text-[11px] text-gray-300">{roleLabel}</span>
             </span>
           </Link>
-          <form action="/auth/signout" method="post">
-            <button
-              title="Sign out"
-              aria-label="Sign out"
-              className="grid size-9 place-items-center rounded-lg text-gray-300 transition hover:bg-red-500/20 hover:text-red-200"
-            >
-              <LogOut className="size-[18px]" />
-            </button>
-          </form>
+          <SignOutButton className="grid size-9 place-items-center rounded-lg text-gray-300 transition hover:bg-red-500/20 hover:text-red-200">
+            <LogOut className="size-[18px]" aria-label="Sign out" />
+          </SignOutButton>
         </div>
       </div>
     </nav>

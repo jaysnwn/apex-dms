@@ -12,6 +12,16 @@ export const PLATFORM_TAGLINE = "Distribution Management System";
 export const TENANT_COOKIE = "dms_tenant";
 export const TENANT_HEADER = "x-tenant-id";
 
+// Who is signed in on this browser, readable by the page's scripts so data kept
+// on the device (offline queues, caches) is kept per person as well as per
+// business. Set by the middleware from the verified session; never trusted
+// for access, which the database decides from the session token itself.
+export const OWNER_COOKIE = "dms_uid";
+
+// Signed out after this long without any request (salesmen: overnight).
+export const IDLE_COOKIE = "dms_seen";
+export const IDLE_LIMIT_MS = 12 * 60 * 60 * 1000;
+
 // APEX TRADING CO. (tenant 1). Used only to move offline data saved on phones
 // before multi-tenancy into Apex's own space, once.
 export const APEX_TENANT_ID = "a9e70000-0000-4000-8000-000000000001";

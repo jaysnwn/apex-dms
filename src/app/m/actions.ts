@@ -22,6 +22,8 @@ export type QuoteInput = {
   // the business the order was taken in (stamped on the phone); an order is
   // never sent into another business
   tenantId?: string;
+  // who took it (stamped on the phone); never sent under another login
+  userId?: string;
   retailerId: string;
   creditDays: number;
   notes: string;
@@ -42,9 +44,12 @@ export type SentQuote = { orderId: string; orderNo: string; total: number; brand
 // with items of two brands becomes one quotation per brand automatically.
 // Safe to resend: the same clientUuid returns the same order(s).
 export async function submitQuotation(q: QuoteInput): Promise<{ ok?: boolean; orderId?: string; orderNo?: string; total?: number; orders?: SentQuote[]; error?: string }> {
-  const { tenant } = await requireRole(...FIELD);
+  const { tenant, user } = await requireRole(...FIELD);
   if (q.tenantId && q.tenantId !== tenant.id) {
     return { error: "This order was taken for another organization. Switch to it to send the order." };
+  }
+  if (q.userId && q.userId !== user.id) {
+    return { error: "This order was taken by another login on this phone. It is sent when that person signs in." };
   }
   if (!q.retailerId) return { error: "Choose the outlet." };
   if (!q.lines.length) return { error: "Add at least one product." };

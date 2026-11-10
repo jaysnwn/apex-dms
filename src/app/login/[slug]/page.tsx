@@ -26,9 +26,10 @@ export default async function OrgLoginPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ next?: string; error?: string }>;
+  searchParams: Promise<{ next?: string; error?: string; expired?: string }>;
 }) {
-  const [{ slug }, { next, error }] = await Promise.all([params, searchParams]);
+  const [{ slug }, { next, error: err, expired }] = await Promise.all([params, searchParams]);
+  const error = err ?? (expired ? "expired" : undefined);
   const org = await findOrg(slug);
   if (!org) notFound();
   return <LoginScreen next={next} error={error} org={org} />;

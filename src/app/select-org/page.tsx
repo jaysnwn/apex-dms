@@ -9,6 +9,7 @@ import { getTenantContext, isOpenTenant } from "@/lib/tenant";
 import { ROLE_LABELS } from "@/lib/roles";
 import { PLATFORM_NAME, safeNext } from "@/lib/tenant-shared";
 import { Alert } from "@/components/ui";
+import { SignOutButton } from "@/components/sign-out-button";
 
 export const metadata: Metadata = { title: "Choose organization" };
 
@@ -71,9 +72,9 @@ export default async function SelectOrgPage({ searchParams }: { searchParams: Pr
           </ul>
         )}
 
-        <form action="/auth/signout" method="post" className="mt-8">
-          <button className="text-sm font-medium text-slate-600 underline-offset-4 hover:underline">Sign out</button>
-        </form>
+        <div className="mt-8">
+          <SignOutButton className="text-sm font-medium text-slate-600 underline-offset-4 hover:underline">Sign out</SignOutButton>
+        </div>
       </div>
     </main>
   );

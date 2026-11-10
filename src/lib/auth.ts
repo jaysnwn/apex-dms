@@ -22,10 +22,14 @@ export type Profile = {
 // The signed-in user, their profile and their business, once per request.
 export const getSession = cache(async () => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  // The middleware has just verified and refreshed this session; getClaims
+  // checks the token's signature again without a trip to the auth server
+  // (when the project uses asymmetric signing keys). What a person may see is
+  // still decided by the database from this same token.
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (!claims?.sub) return null;
+  const user = { id: claims.sub as string, email: (claims.email as string | undefined) ?? null };
 
   const [{ data: person }, ctx] = await Promise.all([
     supabase.from("profiles").select("id, full_name, email, phone, created_at").eq("id", user.id).single(),

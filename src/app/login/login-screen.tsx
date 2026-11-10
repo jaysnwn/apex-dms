@@ -1,8 +1,10 @@
 import { LoginForm } from "./login-form";
+import { OfflineReset } from "./offline-reset";
 import { PLATFORM_NAME, PLATFORM_TAGLINE } from "@/lib/tenant-shared";
 
 const ERRORS: Record<string, string> = {
   inactive: "Your account is not active. Ask the administrator to enable it.",
+  expired: "You were signed out after 12 hours without activity. Sign in again.",
 };
 
 // The sign-in screen. On the shared page (/login) it shows the platform; on a
@@ -11,6 +13,7 @@ const ERRORS: Record<string, string> = {
 export function LoginScreen({ next, error, org }: { next?: string; error?: string; org?: { slug: string; name: string } }) {
   return (
     <main className="grid min-h-dvh lg:grid-cols-2">
+      <OfflineReset />
       <section className="relative hidden flex-col justify-between overflow-hidden bg-ink-900 p-12 text-white lg:flex">
         <div className="flex items-center gap-3">
           <Logo />

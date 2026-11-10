@@ -3,11 +3,13 @@
 // Orders saved on the phone while offline, sent automatically when the
 // network is back. Each has a one-time id, so a resend never duplicates.
 //
-// Everything kept on the phone is kept per business (tenant): a salesman who
+// Everything kept on the phone is kept per business (tenant) and per person
+// (see tenantKey): on a shared phone nobody sees or sends another person's
+// orders. Per business as well: a salesman who
 // works for two distributors never sends one's orders into the other, and
 // never sees one's cached catalogue in the other. Each queued order also
 // carries its business, and the server refuses it in any other business.
-import { currentTenantId, tenantKey } from "@/lib/supabase/client";
+import { currentTenantId, currentUserId, tenantKey } from "@/lib/supabase/client";
 import { APEX_TENANT_ID } from "@/lib/tenant-shared";
 import type { QuoteInput } from "./actions";
 
@@ -19,6 +21,7 @@ export type OutboxItem = {
   total: number;
   at: string;
   tenantId?: string;
+  userId?: string;
   error?: string;
 };
 
@@ -64,7 +67,8 @@ export function writeOutbox(items: OutboxItem[]) {
 
 export function addToOutbox(item: OutboxItem) {
   const tenantId = currentTenantId() ?? undefined;
-  const stamped = { ...item, tenantId, data: { ...item.data, tenantId } };
+  const userId = currentUserId() ?? undefined;
+  const stamped = { ...item, tenantId, userId, data: { ...item.data, tenantId, userId } };
   writeOutbox([...readOutbox().filter((i) => i.id !== item.id), stamped]);
 }
 

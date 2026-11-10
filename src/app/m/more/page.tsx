@@ -4,6 +4,7 @@ import { ChevronRight, ClipboardList, Map as MapIcon, HandCoins, KeyRound, LogOu
 import { requireRole } from "@/lib/auth";
 import { ROLE_LABELS } from "@/lib/roles";
 import { Avatar } from "../ui";
+import { SignOutButton } from "@/components/sign-out-button";
 
 export const metadata: Metadata = { title: "More" };
 
@@ -47,9 +48,7 @@ export default async function MorePage() {
         <div className="mb-1 flex items-center gap-2 font-semibold"><Smartphone className="size-4" /> Put the app on your home screen</div>
         Android (Chrome): tap ⋮ → <b>Add to Home screen</b>. iPhone (Safari): tap Share → <b>Add to Home Screen</b>. It then opens like a normal app and works with weak network.
       </section>
-      <form action="/auth/signout" method="post">
-        <button className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white font-semibold text-red-600 ring-1 ring-red-200 active:bg-red-50"><LogOut className="size-5" /> Sign out</button>
-      </form>
+      <SignOutButton className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white font-semibold text-red-600 ring-1 ring-red-200 active:bg-red-50"><LogOut className="size-5" /> Sign out</SignOutButton>
       <p className="text-center text-xs text-slate-400">DMS · salesman app</p>
     </div>
   );
