@@ -57,8 +57,8 @@ export function CreateUserForm({ brands }: { brands: BrandOpt[] }) {
         <Input id="new-phone" name="phone" inputMode="numeric" maxLength={10} placeholder="10 digits" />
       </div>
       <div className="sm:col-span-2">
-        <Label htmlFor="new-password" hint="min. 8 characters · not used if the email already has a login">Temporary password</Label>
-        <Input id="new-password" name="password" type="text" minLength={8} autoComplete="new-password" />
+        <Label htmlFor="new-password" hint="10+ characters, letters and numbers · not used if the email already has a login">Temporary password</Label>
+        <Input id="new-password" name="password" type="text" minLength={10} autoComplete="new-password" />
       </div>
       <BrandBoxes brands={brands} selected={brands.map((b) => b.id)} idPrefix="new-brand" />
       <div className="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:items-center">
@@ -143,7 +143,7 @@ export function EditUserForm({ user, isSelf, brands, brandIds }: { user: UserRow
           <input type="hidden" name="id" value={user.id} />
           <div className="flex-1">
             <Label htmlFor={`pw-${user.id}`}>New password</Label>
-            <Input id={`pw-${user.id}`} name="password" type="text" minLength={8} required autoComplete="new-password" />
+            <Input id={`pw-${user.id}`} name="password" type="text" minLength={10} required autoComplete="new-password" placeholder="10+ characters, letters and numbers" />
           </div>
           <Button type="submit" size="sm" disabled={pwPending}>{pwPending ? "Saving…" : "Set password"}</Button>
           {pwState.error && <Alert>{pwState.error}</Alert>}

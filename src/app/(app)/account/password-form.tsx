@@ -18,12 +18,12 @@ export function PasswordForm() {
         <Input id="current" name="current" type="password" autoComplete="current-password" required />
       </div>
       <div>
-        <Label htmlFor="password">New password</Label>
-        <Input id="password" name="password" type="password" autoComplete="new-password" minLength={8} required />
+        <Label htmlFor="password" hint="10+ characters, letters and numbers">New password</Label>
+        <Input id="password" name="password" type="password" autoComplete="new-password" minLength={10} required />
       </div>
       <div>
         <Label htmlFor="confirm">Repeat new password</Label>
-        <Input id="confirm" name="confirm" type="password" autoComplete="new-password" minLength={8} required />
+        <Input id="confirm" name="confirm" type="password" autoComplete="new-password" minLength={10} required />
       </div>
       <Button type="submit" disabled={pending}>{pending ? "Saving…" : "Change password"}</Button>
       {state.error && <Alert>{state.error}</Alert>}

@@ -6,6 +6,8 @@ import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { ROLES, type AppRole } from "@/lib/roles";
+import { allowAttempt, TOO_MANY } from "@/lib/rate-limit";
+import { passwordProblem } from "@/lib/password-policy";
 
 export type ActionState = { ok?: string; error?: string };
 
@@ -39,7 +41,7 @@ async function activeMembershipCount(userId: string) {
 }
 
 export async function createUser(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { tenant } = await requireRole("super_admin");
+  const { tenant, user: me } = await requireRole("super_admin");
 
   const parsed = createSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -47,6 +49,7 @@ export async function createUser(_prev: ActionState, formData: FormData): Promis
 
   const brandIds = formData.getAll("brand_ids").map(String).filter(Boolean);
   if (role !== "super_admin" && brandIds.length === 0) return { error: "Tick at least one brand this user works with." };
+  if (!(await allowAttempt(`admin:${me.id}`, 30, 600))) return { error: TOO_MANY };
 
   const supabase = await createClient();
 
@@ -58,7 +61,8 @@ export async function createUser(_prev: ActionState, formData: FormData): Promis
   let joined = !!userId;
 
   if (!userId) {
-    if (!password || password.length < 8) return { error: "Password must be at least 8 characters" };
+    const problem = passwordProblem(password ?? "", { email, name: full_name });
+    if (problem) return { error: problem };
     const admin = createAdminClient();
     const { data: created, error } = await admin.auth.admin.createUser({
       email,
@@ -132,14 +136,17 @@ export async function updateUser(_prev: ActionState, formData: FormData): Promis
 
 const passwordSchema = z.object({
   id: z.string().uuid(),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z.string().min(1, "Enter the new password"),
 });
 
 export async function resetPassword(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireRole("super_admin");
+  const { user: me } = await requireRole("super_admin");
 
   const parsed = passwordSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const problem = passwordProblem(parsed.data.password);
+  if (problem) return { error: problem };
+  if (!(await allowAttempt(`admin:${me.id}`, 30, 600))) return { error: TOO_MANY };
 
   // A login that also opens another business is not this business's to reset.
   const supabase = await createClient();

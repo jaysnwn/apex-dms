@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { BRAND_COOKIE } from "@/lib/brand";
 import { isOpenTenant, pickDefault, type TenantSummary } from "@/lib/tenant";
 import { safeNext, SLUG_RE, TENANT_COOKIE, tenantCookieOptions } from "@/lib/tenant-shared";
+import { allowAttempt, clientIp, TOO_MANY } from "@/lib/rate-limit";
 
 export type LoginState = { error?: string };
 
@@ -16,6 +17,15 @@ export async function signIn(_prev: LoginState, formData: FormData): Promise<Log
   const org = String(formData.get("org") ?? "").trim().toLowerCase();
 
   if (!email || !password) return { error: "Enter your email and password." };
+
+  // Guessing passwords: at most 8 tries per email and 30 per network address
+  // in 15 minutes (on top of Supabase's own limits).
+  const ip = await clientIp();
+  const [byEmail, byIp] = await Promise.all([
+    allowAttempt(`login:email:${email}`, 8, 900),
+    allowAttempt(`login:ip:${ip}`, 30, 900),
+  ]);
+  if (!byEmail || !byIp) return { error: TOO_MANY };
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
