@@ -1,0 +1,77 @@
+# Production database backup with an automatic restore check.
+# Runs twice a day (02:47 and 14:47 India time) and on demand (Actions → "Database backup" → Run workflow).
+# Needs two repository secrets (Settings → Secrets and variables → Actions):
+#   PROD_DB_URL        production "Session pooler" connection string, port 5432
+#   BACKUP_PASSPHRASE  long random passphrase; keep a copy OUTSIDE GitHub, it is needed to restore
+# and, for the stored files (receipts, photos), two more:
+#   PROD_SUPABASE_URL      https://<project>.supabase.co
+#   PROD_SERVICE_ROLE_KEY  the project's service_role key
+# A failed run e-mails the repository owner (GitHub's default for scheduled workflows).
+# The runs also count as database activity, so the free-plan project is not paused.
+name: Database backup
+
+on:
+  schedule:
+    - cron: "17 21,9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      scratch:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: scratch
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common gnupg
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+      - name: Back up, restore into scratch, compare, encrypt
+        env:
+          SOURCE_URL: ${{ secrets.PROD_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          RESTORE_URL: postgresql://postgres:scratch@localhost:5432/postgres
+          OUT_DIR: backup-out
+        run: scripts/backup/backup.sh
+
+      - name: Back up stored files (receipts, photos, documents)
+        env:
+          SOURCE_URL: ${{ secrets.PROD_DB_URL }}
+          SUPABASE_URL: ${{ secrets.PROD_SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.PROD_SERVICE_ROLE_KEY }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          OUT_DIR: backup-out
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SERVICE_ROLE_KEY" ]; then
+            echo "::warning::PROD_SUPABASE_URL / PROD_SERVICE_ROLE_KEY not set: stored files were NOT backed up."
+            exit 0
+          fi
+          bash scripts/backup/files.sh
+
+      - name: Keep the encrypted backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: dms-db-${{ github.run_id }}
+          path: backup-out/
+          retention-days: 35
+          if-no-files-found: error
