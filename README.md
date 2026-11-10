@@ -202,6 +202,20 @@ names its tenant with `set_config('app.tenant_id', …)`. Anonymous calls never 
 `supabase/rollback/20261110000023_to_0021_down.sql`, then
 `supabase/rollback/20261110000021_to_0018_down.sql`. Tested: schema identical to 0018 (`pg_dump`), data unchanged.
 
+## Hosting (Vercel, free Hobby plan during testing)
+
+Project `apex-dms` (team `jaysnwns-projects`), linked to this repository.
+
+| Environment | Branch | Database |
+| --- | --- | --- |
+| Production | `main` | production Supabase (`uiczjglzsnjxxqvxlheh`) |
+| Preview | every other branch, e.g. `multi-tenant` | staging Supabase `dms-staging` (`dkaknvrjoigsjbjxrcqr`) |
+
+Server code runs in one region, next to the database (`vercel.json`, Tokyo `hnd1`; Mumbai `bom1` after the
+database moves). Previews are behind Vercel sign-in. `SUPABASE_SERVICE_ROLE_KEY` is set in the Vercel dashboard
+per environment (each environment's own project key), never in the repository.
+The Hobby plan is for non-commercial use: move to Pro before the business uses the app for real.
+
 ## Tests
 
 Database tests (roles, RLS, audit, numbering, invoice immutability, expenses, tenant foundation and isolation)
