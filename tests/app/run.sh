@@ -11,4 +11,5 @@ sed -i 's#^import { createBrowserClient } from "@supabase/ssr";#const createBrow
 npx esbuild@0.25 ../../src/lib/search-words.ts --format=esm --outfile=build/search-words.mjs --log-level=error
 npx esbuild@0.25 ../../src/lib/password-policy.ts --format=esm --outfile=build/password-policy.mjs --log-level=error
 npx esbuild@0.25 ../../src/lib/offline-reset.ts --format=esm --outfile=build/offline-reset.mjs --log-level=error
+python3 client-imports.check.py
 for t in *.test.mjs; do echo "== $t"; node "$t"; done

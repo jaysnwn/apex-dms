@@ -13,7 +13,8 @@ import { todayIST, addDays } from "@/lib/gst";
 import { ROLE_LABELS } from "@/lib/roles";
 import { Alert, Badge, Card, PageHeader } from "@/components/ui";
 import { StatCard } from "@/components/stat-card";
-import { ColumnChart, RankBars, SERIES } from "@/components/charts";
+import { ColumnChart, RankBars } from "@/components/charts";
+import { SERIES } from "@/lib/chart-colors";
 
 export const metadata: Metadata = { title: "Dashboard" };
 

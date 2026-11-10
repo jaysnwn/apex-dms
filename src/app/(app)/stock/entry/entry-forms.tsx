@@ -11,7 +11,8 @@ import { qty as fmtQty } from "@/lib/format";
 import { adjustStock, recordMovement, systemStock, transferStock } from "../actions";
 
 type Warehouse = { id: string; name: string };
-export type EntryType = "stock_in" | "stock_out" | "adjustment" | "damage" | "transfer" | "opening";
+import type { EntryType } from "./entry-types";
+export type { EntryType };
 
 export const ENTRY_TYPES: { key: EntryType; label: string; help: string; icon: typeof ArrowDownToLine; tone: string }[] = [
   { key: "stock_in", label: "Stock inward", help: "Goods received without a purchase order. Goods bought on a purchase order are added automatically when you receive the purchase.", icon: ArrowDownToLine, tone: "emerald" },
