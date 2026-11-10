@@ -15,6 +15,8 @@ export function searchWords(q: string | null | undefined): string[] {
 // The rows to list: a search function's results when there are words,
 // otherwise the table or view itself. Both are filtered, sorted and cut the
 // same way by the caller (.select().eq().order().limit()).
+// NOTE (PostgREST): on a function's results, .order() works only on columns
+// that are also in .select(); ordering by any other column fails with 42703.
 export function searchSource(sb: SupabaseClient, table: string, fn: string, words: string[], args: Record<string, unknown> = {}) {
   return (words.length ? sb.rpc(fn, { p_words: words, ...args }) : sb.from(table)) as unknown as ReturnType<SupabaseClient["from"]>;
 }
