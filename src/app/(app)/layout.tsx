@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { ErrorListener } from "@/components/error-listener";
 import { Shell } from "@/components/shell";
 import { requireRole } from "@/lib/auth";
 import { getBrandContext } from "@/lib/brand";
@@ -21,6 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       currentBrandId={current?.id ?? null}
       canSeeAllBrands={canSeeAll}
     >
+      <ErrorListener />
       {children}
     </Shell>
   );

@@ -8,6 +8,7 @@ import { createClient, tenantStoragePath } from "@/lib/supabase/client";
 import { todayIST } from "@/lib/gst";
 import { EXPENSE_PAYMENT_METHOD, type ExpenseCategory, type ExpenseRow } from "@/lib/expense-labels";
 import { saveExpense } from "./actions";
+import { shrinkImage } from "@/lib/image";
 
 export type FormOptions = {
   categories: ExpenseCategory[];
@@ -18,9 +19,10 @@ export type FormOptions = {
 
 const MAX_FILE = 10 * 1024 * 1024;
 
-export async function uploadReceipt(userId: string, file: File, prefix = "") {
+export async function uploadReceipt(userId: string, original: File, prefix = "") {
+  if (!/^image\/|^application\/pdf$/.test(original.type)) throw new Error("Upload a photo or a PDF");
+  const file = await shrinkImage(original);
   if (file.size > MAX_FILE) throw new Error("The file is larger than 10 MB");
-  if (!/^image\/|^application\/pdf$/.test(file.type)) throw new Error("Upload a photo or a PDF");
   const path = tenantStoragePath(`${userId}/${prefix}${crypto.randomUUID()}-${file.name.replace(/[^\w.]+/g, "_").slice(-60)}`);
   const { error } = await createClient().storage.from("expense-receipts").upload(path, file, { contentType: file.type });
   if (error) throw new Error(`Upload failed: ${error.message}`);

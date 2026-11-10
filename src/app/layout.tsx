@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import "./globals.css";
+import { NavProgress } from "@/components/nav-progress";
 import { PLATFORM_NAME, PLATFORM_TAGLINE } from "@/lib/tenant-shared";
 
 export const metadata: Metadata = {
@@ -16,7 +18,12 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <Suspense fallback={null}>
+          <NavProgress />
+        </Suspense>
+        {children}
+      </body>
     </html>
   );
 }

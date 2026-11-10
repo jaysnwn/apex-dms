@@ -10,11 +10,12 @@ import { Dialog } from "@/components/dialog";
 import { date, inr } from "@/lib/format";
 import { GEO_STATUS, VISIT_STATUS } from "@/lib/status";
 import { addDays } from "@/lib/gst";
-import { createClient, currentTenantId, tenantKey, tenantStoragePath } from "@/lib/supabase/client";
+import { createClient, currentTenantId, currentUserId, tenantKey, tenantStoragePath } from "@/lib/supabase/client";
 import { APEX_TENANT_ID } from "@/lib/tenant-shared";
 import { fieldToday, pingLocation, saveShopLocation, saveVisit, setLocationSharing, type FieldDay, type FieldVisit, type VisitUpdate } from "../actions";
 import { recordPayment } from "../../payments/actions";
 import { setupServiceWorker } from "@/lib/sw";
+import { shrinkImage } from "@/lib/image";
 
 // ---------------------------------------------------------------------------
 // Offline support: today's route is cached on the phone; visit updates and
@@ -532,11 +533,13 @@ function CloseDialog({ visit, mode, today, online, onClose, onSave }: {
             setBusy(true);
             let photoPath: string | null = null;
             if (photo) {
-              if (photo.size > 8 * 1024 * 1024) { setBusy(false); return setError("Photo is larger than 8 MB."); }
+              const small = await shrinkImage(photo);
+              if (small.size > 8 * 1024 * 1024) { setBusy(false); return setError("Photo is larger than 8 MB."); }
               const sb = createClient();
-              const { data: u } = await sb.auth.getUser();
-              const path = tenantStoragePath(`${u.user?.id}/${crypto.randomUUID()}.jpg`);
-              const { error: upErr } = await sb.storage.from("visit-photos").upload(path, photo, { contentType: photo.type });
+              const me = currentUserId();
+              if (!me) { setBusy(false); return setError("Your session has ended. Sign in again."); }
+              const path = tenantStoragePath(`${me}/${crypto.randomUUID()}.jpg`);
+              const { error: upErr } = await sb.storage.from("visit-photos").upload(path, small, { contentType: small.type });
               if (upErr) { setBusy(false); return setError(`Photo upload failed: ${upErr.message}`); }
               photoPath = path;
             }

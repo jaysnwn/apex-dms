@@ -40,3 +40,31 @@ body {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Loading placeholders: a soft highlight moving across a grey block. */
+.skeleton {
+  background: linear-gradient(90deg, #eef1f5 0%, #e2e7ee 40%, #eef1f5 80%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* Thin bar at the top of the screen while a page is on its way. */
+.nav-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 100;
+  height: 3px;
+  pointer-events: none;
+  transform-origin: left;
+  background: var(--color-accent-500, #f59e0b);
+  transition: transform 0.2s ease-out, opacity 0.3s ease 0.1s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+  .nav-progress { transition: none; }
+}

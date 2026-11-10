@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   BarChart3, Boxes, LayoutDashboard, LogOut, Menu, Package, PackagePlus, Receipt, Route,
-  ScrollText, Settings, ShoppingCart, Store, Truck, Upload, Users, Wallet, X, type LucideIcon,
+  Activity, ScrollText, Settings, ShoppingCart, Store, Truck, Upload, Users, Wallet, X, type LucideIcon,
 } from "lucide-react";
 import type { ModuleDef, ModuleKey } from "@/lib/roles";
 import { cn } from "@/components/ui";
@@ -31,6 +31,7 @@ const COLORS: Record<ModuleKey, { icon: string; tile: string }> = {
   users: { icon: "text-gray-200", tile: "bg-white/10" },
   audit: { icon: "text-gray-200", tile: "bg-white/10" },
   settings: { icon: "text-gray-200", tile: "bg-white/10" },
+  health: { icon: "text-emerald-300", tile: "bg-emerald-400/15" },
 };
 
 const ICONS: Record<ModuleKey, LucideIcon> = {
@@ -49,6 +50,7 @@ const ICONS: Record<ModuleKey, LucideIcon> = {
   users: Users,
   audit: ScrollText,
   settings: Settings,
+  health: Activity,
 };
 
 type Props = {

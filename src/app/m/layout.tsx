@@ -4,6 +4,7 @@ import type { Metadata, Viewport } from "next";
 import { requireRole } from "@/lib/auth";
 import { ROLE_LABELS } from "@/lib/roles";
 import { MobileShell } from "./mobile-shell";
+import { ErrorListener } from "@/components/error-listener";
 
 export const metadata: Metadata = { title: { default: "DMS Sales", template: "%s · DMS Sales" } };
 export const viewport: Viewport = { themeColor: "#ffffff", width: "device-width", initialScale: 1, viewportFit: "cover" };
@@ -13,6 +14,7 @@ export default async function FieldLayout({ children }: { children: React.ReactN
   const { profile, tenant } = await requireRole("salesman", "manager", "super_admin");
   return (
     <MobileShell name={profile.full_name || "Salesman"} roleLabel={ROLE_LABELS[profile.role]} orgName={tenant.display_name} tenantId={tenant.id}>
+      <ErrorListener />
       {children}
     </MobileShell>
   );

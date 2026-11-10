@@ -9,6 +9,7 @@ import { Dialog } from "../sales/order-builder";
 import { createClient, tenantStoragePath } from "@/lib/supabase/client";
 import { date, dateTime, inr, qty } from "@/lib/format";
 import { confirmDelivery, dispatchInvoice } from "./actions";
+import { shrinkImage } from "@/lib/image";
 
 export type PendingInvoice = {
   id: string;
@@ -219,7 +220,8 @@ function DeliveryDialog({ row, onClose }: { row: DispatchedRow; onClose: () => v
           let path: string | null = null;
           if (file) {
             path = tenantStoragePath(`${row.id}/${crypto.randomUUID()}-${file.name.replace(/[^\w.]+/g, "_")}`);
-            const { error: upErr } = await createClient().storage.from("delivery-proofs").upload(path, file);
+            const small = await shrinkImage(file);
+            const { error: upErr } = await createClient().storage.from("delivery-proofs").upload(path, small, { contentType: small.type });
             if (upErr) { setError(`Photo upload failed: ${upErr.message}`); return; }
           }
           const res = await confirmDelivery(row.id, remarks, path);
