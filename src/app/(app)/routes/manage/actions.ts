@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { safeSearch } from "@/lib/format";
+import { searchSource, searchWords } from "@/lib/search-words";
 
 // Thin wrappers: every rule (who may do what, no duplicates, history, warnings)
 // lives in the database functions of migration 0018.
@@ -209,10 +209,10 @@ export type PickRetailer = { id: string; shop_name: string; owner_name: string |
 export async function searchRetailers(q: string, locationId?: string | null): Promise<PickRetailer[]> {
   await requireRole("super_admin", "manager");
   const sb = await createClient();
-  let query = sb.from("retailers").select("id, shop_name, owner_name, mobile, billing_city, location_id, route_id, status, routes(name)")
+  const words = searchWords(q);
+  let query = searchSource(sb, "retailers", "search_retailers", words)
+    .select("id, shop_name, owner_name, mobile, billing_city, location_id, route_id, status, routes(name)")
     .neq("status", "inactive").order("shop_name").limit(60);
-  const s = safeSearch(q);
-  if (s) query = query.or(`shop_name.ilike.%${s}%,owner_name.ilike.%${s}%,mobile.ilike.%${s}%,billing_city.ilike.%${s}%`);
   if (locationId) query = query.eq("location_id", locationId);
   const { data } = await query;
   return (data ?? []).map((r) => ({

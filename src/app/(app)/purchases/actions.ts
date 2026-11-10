@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { dbError, formObject, zodMessage } from "@/lib/actions";
 import type { FormResult } from "@/components/action-form";
+import { searchSource, searchWords } from "@/lib/search-words";
 
 const OFFICE = ["super_admin", "manager", "billing"] as const;
 
@@ -42,14 +43,12 @@ export type PurchaseProduct = {
 export async function searchPurchaseProducts(q: string, brandId?: string, listAll = false): Promise<PurchaseProduct[]> {
   await requireRole(...OFFICE);
   const supabase = await createClient();
-  const term = q.replace(/[,()*%\\]/g, " ").trim().slice(0, 60);
-  let query = supabase
-    .from("products")
+  const words = searchWords(q);
+  let query = searchSource(supabase, "products", "search_products", words)
     .select("id, name, sku, unit_code, gst_rate, purchase_cost, purchase_cost_mode, brand_id, brands(name)")
     .eq("is_active", true)
     .order("name")
     .limit(listAll ? 300 : 15);
-  if (term) query = query.or(`name.ilike.%${term}%,sku.ilike.%${term}%,barcode.eq.${term}`);
   if (brandId) query = query.eq("brand_id", brandId);
   const { data } = await query;
   const rows = data ?? [];

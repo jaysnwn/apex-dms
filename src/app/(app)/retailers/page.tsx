@@ -3,12 +3,13 @@ import type { Metadata } from "next";
 import { Plus, Route as RouteIcon, Upload } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { inr, RETAILER_STATUS_LABELS, safeSearch } from "@/lib/format";
+import { inr, RETAILER_STATUS_LABELS } from "@/lib/format";
 import { Badge, Button, Card, PageHeader, Select } from "@/components/ui";
 import { LinkButton } from "@/components/chip";
 import { SearchBar } from "@/components/search-bar";
 import { RETAILER_CLASS } from "@/lib/status";
 import { ClassifyButton } from "./[id]/classify-button";
+import { searchSource, searchWords } from "@/lib/search-words";
 
 export const metadata: Metadata = { title: "Retailers" };
 
@@ -26,13 +27,11 @@ export default async function RetailersPage({
   const canCreate = role !== "warehouse";
   const isOffice = role === "super_admin" || role === "manager" || role === "billing";
 
-  let query = supabase
-    .from("retailer_directory")
+  const words = searchWords(sp.q);
+  let query = searchSource(supabase, "retailer_directory", "search_retailer_directory", words)
     .select("id, code, shop_name, owner_name, mobile, billing_city, gstin, route_name, salesman_name, status, classification, credit_days, credit_limit")
     .order("shop_name")
     .limit(500);
-  const term = safeSearch(sp.q);
-  if (term) query = query.or(`shop_name.ilike.%${term}%,owner_name.ilike.%${term}%,mobile.ilike.%${term}%,code.ilike.%${term}%,gstin.ilike.%${term}%,billing_city.ilike.%${term}%`);
   if (sp.route) query = query.eq("route_id", sp.route);
   if (sp.salesman) query = query.eq("salesman_id", sp.salesman);
   if (sp.status) query = query.eq("status", sp.status);

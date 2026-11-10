@@ -5,12 +5,13 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { brandScope, getBrandContext } from "@/lib/brand";
 import { signProductImages } from "@/lib/images";
-import { inr, qty, safeSearch } from "@/lib/format";
+import { inr, qty } from "@/lib/format";
 import { Badge, Card, PageHeader, cn } from "@/components/ui";
 import { SearchBar } from "@/components/search-bar";
 import { Chip } from "@/components/chip";
 import { BrandStrip } from "@/components/brand-badge";
 import { ArchiveButton } from "./archive-button";
+import { searchWords } from "@/lib/search-words";
 
 export const metadata: Metadata = { title: "Products" };
 
@@ -33,16 +34,12 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const seesCost = canEdit || profile.role === "billing";
   const archivedView = canEdit && sp.archived === "1";
 
-  let query = supabase
-    .from("catalog")
-    .select("id, name, sku, barcode, brand_id, brand_name, category_name, unit_code, retailer_price, retailer_price_mode, mrp, gst_rate, is_active, image_path, created_at")
-    .in("brand_id", scope)
-    .eq("is_active", !archivedView)
-    .order("name")
-    .limit(1000);
-  const term = safeSearch(sp.q);
-  if (term) query = query.or(`name.ilike.%${term}%,sku.ilike.%${term}%,barcode.eq.${term}`);
-  const { data: rows } = await query;
+  const COLS = "id, name, sku, barcode, brand_id, brand_name, category_name, unit_code, retailer_price, retailer_price_mode, mrp, gst_rate, is_active, image_path, created_at";
+  const words = searchWords(sp.q);
+  const { data: rows } = await (words.length
+    ? supabase.rpc("search_catalog", { p_words: words, p_limit: 1000, p_active: !archivedView }).select(COLS)
+    : supabase.from("catalog").select(COLS).eq("is_active", !archivedView).order("name").limit(1000))
+    .in("brand_id", scope);
   const all = (rows ?? []) as CatalogRow[];
 
   const ids = all.map((p) => p.id);

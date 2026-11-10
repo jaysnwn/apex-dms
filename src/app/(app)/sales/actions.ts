@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { dbError } from "@/lib/actions";
 import { normaliseMobile } from "@/lib/format";
 import { signProductImages } from "@/lib/images";
+import { searchSource, searchWords } from "@/lib/search-words";
 
 export type SaveResult = { ok?: boolean; error?: string; hint?: string; orderId?: string; invoiceId?: string; invoiceNo?: string; paid?: number };
 
@@ -160,10 +161,14 @@ async function toPicker(supabase: Awaited<ReturnType<typeof createClient>>, rows
 export async function searchProducts(q: string, brandId?: string, withImages = false): Promise<PickerProduct[]> {
   await requireRole();
   const supabase = await createClient();
-  const words = q.replace(/[,()*%\\]/g, " ").trim().slice(0, 60).split(/[\s-]+/).filter(Boolean).slice(0, 5);
-  let query = supabase.from("catalog").select(PRODUCT_COLS).eq("is_active", true).order("name").limit(withImages ? 120 : 15);
-  for (const w of words) query = query.or(`name.ilike.%${w}%,sku.ilike.%${w}%,barcode.eq.${w},category_name.ilike.%${w}%,description.ilike.%${w}%`);
-  if (brandId) query = query.eq("brand_id", brandId);
+  const words = searchWords(q);
+  const limit = withImages ? 120 : 15;
+  // With words: the database finds the matches through its search index first
+  // (search_catalog), then sorts and cuts. Without: the first products by name.
+  let query = words.length
+    ? supabase.rpc("search_catalog", { p_words: words, p_limit: limit, p_active: true, p_brand: brandId ?? null }).select(PRODUCT_COLS)
+    : supabase.from("catalog").select(PRODUCT_COLS).eq("is_active", true).order("name").limit(limit);
+  if (brandId && !words.length) query = query.eq("brand_id", brandId);
   const { data } = await query;
   return toPicker(supabase, (data ?? []) as Record<string, unknown>[], withImages);
 }
@@ -227,15 +232,12 @@ const RETAILER_COLS = "id, code, shop_name, owner_name, mobile, gstin, billing_a
 export async function searchRetailers(q: string): Promise<PickerRetailer[]> {
   await requireRole();
   const supabase = await createClient();
-  const term = q.replace(/[,()*%\\]/g, " ").trim().slice(0, 60);
-  let query = supabase
-    .from("retailer_directory")
+  const words = searchWords(q);
+  const { data } = await searchSource(supabase, "retailer_directory", "search_retailer_directory", words)
     .select(RETAILER_COLS)
     .neq("status", "inactive")
     .order("shop_name")
     .limit(15);
-  if (term) query = query.or(`shop_name.ilike.%${term}%,owner_name.ilike.%${term}%,mobile.ilike.%${term}%,code.ilike.%${term}%,billing_city.ilike.%${term}%,gstin.ilike.%${term}%`);
-  const { data } = await query;
   const rows = data ?? [];
   const ids = rows.map((r) => r.id);
   const { data: bal } = ids.length

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { safeSearch } from "@/lib/format";
 import { BarcodeScanButton } from "./barcode-scanner";
 import { Input } from "./ui";
+import { searchWords } from "@/lib/search-words";
 
 export type PickedProduct = { id: string; name: string; sku: string; brand_name: string; unit_code: string };
 
@@ -48,14 +49,9 @@ export function ProductPicker({
     clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
       const supabase = createClient();
-      let query = supabase
-        .from("catalog")
-        .select("id, name, sku, brand_name, unit_code")
-        .eq("is_active", true)
-        .or(`name.ilike.%${term}%,sku.ilike.%${term}%,barcode.eq.${term}`)
-        .order("name")
-        .limit(12);
-      if (brandId) query = query.eq("brand_id", brandId);
+      const query = supabase
+        .rpc("search_catalog", { p_words: searchWords(term), p_limit: 12, p_active: true, p_brand: brandId ?? null })
+        .select("id, name, sku, brand_name, unit_code");
       const { data } = await query;
       setResults((data ?? []) as PickedProduct[]);
       setOpen(true);
