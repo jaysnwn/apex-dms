@@ -6,10 +6,15 @@ import { requireRole } from "@/lib/auth";
 import { getBrandContext } from "@/lib/brand";
 import { modulesFor, ROLE_LABELS } from "@/lib/roles";
 import { getTenantContext } from "@/lib/tenant";
+import { stopwatch } from "@/lib/timing";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const sw = stopwatch("layout.app");
   const { profile, tenant } = await requireRole();
+  sw.mark("auth");
   const [{ brands, current, canSeeAll }, { open }] = await Promise.all([getBrandContext(), getTenantContext()]);
+  sw.mark("brands");
+  sw.done();
 
   return (
     <Shell
