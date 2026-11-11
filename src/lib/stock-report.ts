@@ -8,6 +8,7 @@ import { registerFonts } from "@/pdf/base";
 import { StockReportPdf, type StockReportData } from "@/pdf/stock-report";
 import { brandTone } from "@/lib/brand-style";
 import { fetchAll } from "@/lib/reports";
+import { getCompanyLogoFile } from "@/lib/branding";
 
 type Opts = { brandId: string; warehouseId?: string | null; withValue: boolean; userName: string };
 type Item = { id: string; name: string; sku: string; unit: string; category: string; qty: number; avgCost: number | null; value: number | null };
@@ -60,7 +61,7 @@ export async function stockReportPdf(o: Opts) {
     .map(([category, items]) => ({ category, items: [...items].sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true, sensitivity: "base" })).map((i) => ({ name: i.name, sku: i.sku, unit: i.unit, qty: i.qty, value: i.value, avgCost: i.avgCost })) }));
   const data: StockReportData = {
     brand: { name: d.brand.name, color: brandTone(d.brand.code).hex, logo },
-    company: d.company, warehouse: d.warehouseName, generatedAt: nowIST(), generatedBy: o.userName, withValue: o.withValue, groups,
+    company: d.company, companyLogo: await getCompanyLogoFile(), warehouse: d.warehouseName, generatedAt: nowIST(), generatedBy: o.userName, withValue: o.withValue, groups,
   };
   const buffer = await renderToBuffer(createElement(StockReportPdf, { data }) as Parameters<typeof renderToBuffer>[0]);
   return { buffer, filename: `${safe(d.brand.name)}-Stock-Report-${todayStamp()}${o.withValue ? "-with-value" : ""}.pdf` };

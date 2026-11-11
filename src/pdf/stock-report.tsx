@@ -4,6 +4,7 @@ import { LINE, MUTED, num, money, s } from "./base";
 export type StockReportData = {
   brand: { name: string; color: string; logo: { data: Buffer; format: "png" | "jpg" } | null };
   company: string;
+  companyLogo?: { data: Buffer; format: "png" | "jpg" } | null;
   warehouse: string;
   generatedAt: string;
   generatedBy: string;
@@ -38,6 +39,10 @@ export function StockReportPdf({ data }: { data: StockReportData }) {
             </View>
           </View>
           <View style={{ alignItems: "flex-end" }}>
+            {data.companyLogo && (
+              // eslint-disable-next-line jsx-a11y/alt-text
+              <Image src={data.companyLogo} style={{ height: 22, maxWidth: 110, objectFit: "contain", objectPosition: "right", marginBottom: 3 }} />
+            )}
             <Text style={s.muted}>Generated</Text>
             <Text style={s.bold}>{data.generatedAt}</Text>
           </View>

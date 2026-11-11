@@ -77,6 +77,15 @@ export function DispatchBoard({
           >
             <ClipboardList className="size-4" /> Picking list ({selected.length})
           </a>
+          <a
+            href={selected.length ? `/api/pdf/delivery-note/${selected.join(",")}` : undefined}
+            target="_blank"
+            rel="noopener"
+            aria-disabled={!selected.length}
+            className={cn("inline-flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium", selected.length ? "border-slate-300 bg-white hover:bg-slate-50" : "pointer-events-none border-slate-200 text-slate-400")}
+          >
+            <Truck className="size-4" /> Delivery notes ({selected.length})
+          </a>
           {pending.length > 0 && (
             <button className="text-sm text-accent-700 hover:underline" onClick={() => setSelected(selected.length === pending.length ? [] : pending.map((p) => p.id))}>
               {selected.length === pending.length ? "Clear selection" : "Select all"}
@@ -153,7 +162,10 @@ export function DispatchBoard({
                   {d.status === "delivered" ? (<><Badge tone="green">Delivered</Badge><div className="text-xs text-slate-500">{dateTime(d.delivered_at)}</div></>) : <Badge tone="teal">On the way</Badge>}
                   {d.remarks && <div className="text-xs text-slate-500">{d.remarks}</div>}
                 </td>
-                <td className="px-4 py-2.5 text-right">
+                <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                  <a href={`/api/pdf/delivery-note/${d.invoice_id}`} target="_blank" rel="noopener" className="mr-2 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-medium hover:bg-slate-50" title="Delivery note">
+                    <Truck className="size-3.5" /> Note
+                  </a>
                   {d.status === "dispatched" && (
                     <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setDelivering(d)}><PackageCheck className="size-4" /> Delivered</Button>
                   )}

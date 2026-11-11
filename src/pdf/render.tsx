@@ -4,9 +4,10 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { createClient } from "@/lib/supabase/server";
 import { registerFonts, type Company } from "./base";
 import { InvoicePdf, type InvoicePdfData } from "./invoice";
-import { PickingPdf, PurchasePdf, ReceiptPdf, StatementPdf, type PurchasePdfData } from "./documents";
+import { DeliveryNotePdf, PickingPdf, PurchasePdf, ReceiptPdf, StatementPdf, type PurchasePdfData } from "./documents";
 
 import type { PdfKind } from "./kinds";
+import { getCompanyLogoFile } from "@/lib/branding";
 import { brandTone } from "@/lib/brand-style";
 export type { PdfKind };
 
@@ -16,12 +17,15 @@ const safe = (s: string) => s.replace(/[^A-Za-z0-9-]+/g, "_");
 
 async function company(): Promise<Company> {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("company_settings")
-    .select("legal_name, gstin, state_code, address, phone, email, bank_details, invoice_terms")
-    .eq("id", 1)
-    .single();
-  return data as Company;
+  const [{ data }, logo] = await Promise.all([
+    supabase
+      .from("company_settings")
+      .select("legal_name, gstin, state_code, address, phone, email, bank_details, invoice_terms")
+      .eq("id", 1)
+      .single(),
+    getCompanyLogoFile(),
+  ]);
+  return { ...(data as Company), logo };
 }
 
 // Brand shown on sales documents (name, colour, logo). The seller stays APEX TRADING CO.
@@ -170,6 +174,46 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
       filename: `Statement_${safe(r.code)}_${to}.pdf`,
       phone: r.mobile,
       shareText: `Dear ${r.shop_name}, your account statement up to ${to}: outstanding ₹${Number(bal?.outstanding ?? 0).toLocaleString("en-IN")}. — ${co.legal_name}`,
+    };
+  }
+
+  if (kind === "delivery-note") {
+    const ids = id.split(",").filter(Boolean).slice(0, 50);
+    const { data: invs } = await supabase.from("invoices").select("id, invoice_no, invoice_date, retailer_snapshot, brand_id, status").in("id", ids);
+    const open = (invs ?? []).filter((i) => i.status !== "cancelled");
+    if (!open.length) return null;
+    const [{ data: lines }, { data: brands }] = await Promise.all([
+      supabase.from("invoice_lines").select("invoice_id, line_no, product_name, sku, hsn_code, unit_code, qty").in("invoice_id", open.map((i) => i.id)).order("line_no"),
+      supabase.from("brands").select("id, name"),
+    ]);
+    const brandName = new Map((brands ?? []).map((b) => [b.id as string, b.name as string]));
+    const order = new Map(ids.map((x, i) => [x, i]));
+    const notes = [...open].sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)).map((i) => {
+      const r = i.retailer_snapshot as { shop_name: string; owner_name: string | null; mobile: string | null; code: string | null;
+        billing_address: string | null; billing_city: string | null; billing_pincode: string | null;
+        delivery_address: string | null; delivery_city: string | null; delivery_pincode: string | null };
+      return {
+        invoice_no: i.invoice_no as string,
+        invoice_date: i.invoice_date as string,
+        brand: i.brand_id ? brandName.get(i.brand_id) ?? null : null,
+        shop: {
+          shop_name: r.shop_name, owner_name: r.owner_name, mobile: r.mobile, code: r.code,
+          address: r.delivery_address ?? r.billing_address, city: r.delivery_city ?? r.billing_city, pincode: r.delivery_pincode ?? r.billing_pincode,
+        },
+        lines: (lines ?? []).filter((l) => l.invoice_id === i.id).map((l) => ({
+          product_name: l.product_name as string, sku: l.sku as string, hsn_code: l.hsn_code as string | null, unit_code: l.unit_code as string, qty: Number(l.qty),
+        })),
+      };
+    });
+    const buffer = await renderToBuffer(<DeliveryNotePdf data={{ company: co, notes }} />);
+    const first = notes[0];
+    const one = notes.length === 1;
+    const snap = open[0].retailer_snapshot as { mobile?: string };
+    return {
+      buffer,
+      filename: one ? `Delivery_note_${safe(first.invoice_no)}.pdf` : `Delivery_notes_${new Date().toISOString().slice(0, 10)}.pdf`,
+      phone: one ? snap.mobile ?? undefined : undefined,
+      shareText: one ? `Dear ${first.shop.shop_name}, delivery note for invoice ${first.invoice_no}. — ${co.legal_name}` : "Delivery notes",
     };
   }
 

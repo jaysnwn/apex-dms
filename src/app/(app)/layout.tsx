@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/auth";
 import { getBrandContext } from "@/lib/brand";
 import { modulesFor, ROLE_LABELS } from "@/lib/roles";
 import { getTenantContext } from "@/lib/tenant";
+import { getCompanyLogoUrl } from "@/lib/branding";
 import { headers } from "next/headers";
 import { REQUEST_START_HEADER, stopwatch } from "@/lib/timing";
 
@@ -13,7 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const sw = stopwatch("layout.app", (await headers()).get(REQUEST_START_HEADER));
   const { profile, tenant } = await requireRole();
   sw.mark("auth");
-  const [{ brands, current, canSeeAll }, { open }] = await Promise.all([getBrandContext(), getTenantContext()]);
+  const [{ brands, current, canSeeAll }, { open }, logoUrl] = await Promise.all([getBrandContext(), getTenantContext(), getCompanyLogoUrl()]);
   sw.mark("brands");
   sw.done();
 
@@ -23,6 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       userName={profile.full_name}
       roleLabel={ROLE_LABELS[profile.role]}
       orgName={tenant.display_name}
+      logoUrl={logoUrl}
       canSwitchOrg={open.length > 1}
       brands={brands.map((b) => ({ id: b.id, name: b.name, code: b.code }))}
       currentBrandId={current?.id ?? null}

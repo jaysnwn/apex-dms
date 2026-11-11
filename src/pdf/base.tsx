@@ -1,4 +1,4 @@
-import { Font, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { Font, Image, StyleSheet, Text, View } from "@react-pdf/renderer";
 import { NOTO_SANS_BOLD, NOTO_SANS_REGULAR } from "./font-data";
 import { GST_STATES } from "@/lib/states";
 
@@ -51,13 +51,19 @@ export type Company = {
   email: string | null;
   bank_details: string | null;
   invoice_terms: string | null;
+  // the business's own logo (Admin → Company), printed at the top of every document
+  logo?: { data: Buffer; format: "png" | "jpg" } | null;
 };
 
 export function CompanyHeader({ company, title, subtitle }: { company: Company; title: string; subtitle?: string }) {
   return (
-    <View style={[s.row, { justifyContent: "space-between", marginBottom: 12, borderBottomWidth: 2, borderBottomColor: ACCENT, paddingBottom: 8 }]}>
-      <View style={{ maxWidth: "60%" }}>
-        <Text style={s.h1}>{company.legal_name}</Text>
+    <View style={[s.row, { justifyContent: "space-between", alignItems: "flex-end", marginBottom: 12, borderBottomWidth: 2, borderBottomColor: ACCENT, paddingBottom: 8 }]}>
+      <View style={{ maxWidth: "62%" }}>
+        {company.logo && (
+          // eslint-disable-next-line jsx-a11y/alt-text
+          <Image src={company.logo} style={{ height: 38, maxWidth: 190, objectFit: "contain", objectPosition: "left", marginBottom: 5 }} />
+        )}
+        <Text style={company.logo ? [s.bold, { fontSize: 11 }] : s.h1}>{company.legal_name}</Text>
         {company.address && <Text style={s.muted}>{company.address}</Text>}
         <Text style={s.muted}>
           {[company.phone && `Ph: ${company.phone}`, company.email].filter(Boolean).join("  ·  ")}

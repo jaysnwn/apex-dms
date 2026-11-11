@@ -10,6 +10,7 @@ import { Avatar } from "./ui";
 import { onOutboxChange, readOutbox, writeOutbox, type OutboxItem } from "./outbox";
 import { submitQuotation } from "./actions";
 import { setupServiceWorker } from "@/lib/sw";
+import { CompanyLogo } from "@/components/company-logo";
 
 const TABS = [
   { href: "/m", label: "Home", icon: Home },
@@ -19,7 +20,7 @@ const TABS = [
   { href: "/m/more", label: "More", icon: LayoutGrid },
 ];
 
-export function MobileShell({ name, roleLabel, orgName, tenantId, children }: { name: string; roleLabel: string; orgName: string; tenantId: string; children: ReactNode }) {
+export function MobileShell({ name, roleLabel, orgName, logoUrl, tenantId, children }: { name: string; roleLabel: string; orgName: string; logoUrl?: string | null; tenantId: string; children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [online, setOnline] = useState(true);
@@ -70,16 +71,32 @@ export function MobileShell({ name, roleLabel, orgName, tenantId, children }: { 
       <div className="mx-auto flex min-h-dvh max-w-md flex-col bg-slate-50 shadow-xl sm:border-x sm:border-slate-200">
         {/* Top bar */}
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200/80 bg-white/95 px-4 py-2.5 backdrop-blur pt-[max(0.625rem,env(safe-area-inset-top))]">
-          <Link href="/m/more" className="flex min-w-0 flex-1 items-center gap-3">
-            <Avatar name={name} size={42} />
-            <span className="min-w-0 leading-tight">
-              <span className="block truncate text-base font-semibold text-slate-900">{firstName}</span>
-              <span className="block truncate text-xs text-slate-500">{roleLabel} · {orgName}</span>
-            </span>
-          </Link>
-          <span className={cn("flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium", online ? "bg-emerald-50 text-emerald-700" : "bg-amber-100 text-amber-800")}>
-            {online ? <Wifi className="size-3.5" /> : <CloudOff className="size-3.5" />} {online ? "Online" : "Offline"}
-          </span>
+          {logoUrl ? (
+            <>
+              <Link href="/m" className="flex min-w-0 flex-1 items-center" aria-label={`${orgName} home`}>
+                <CompanyLogo src={logoUrl} name={orgName} className="h-8 w-auto max-w-[60%] object-contain" fallbackClassName="truncate text-base font-semibold text-slate-900" />
+              </Link>
+              <span className={cn("flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium", online ? "bg-emerald-50 text-emerald-700" : "bg-amber-100 text-amber-800")}>
+                {online ? <Wifi className="size-3.5" /> : <CloudOff className="size-3.5" />} {online ? "Online" : "Offline"}
+              </span>
+              <Link href="/m/more" aria-label={`${firstName}, ${roleLabel}: account and more`} title={`${name} · ${roleLabel}`}>
+                <Avatar name={name} size={36} />
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link href="/m/more" className="flex min-w-0 flex-1 items-center gap-3">
+                <Avatar name={name} size={42} />
+                <span className="min-w-0 leading-tight">
+                  <span className="block truncate text-base font-semibold text-slate-900">{firstName}</span>
+                  <span className="block truncate text-xs text-slate-500">{roleLabel} · {orgName}</span>
+                </span>
+              </Link>
+              <span className={cn("flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium", online ? "bg-emerald-50 text-emerald-700" : "bg-amber-100 text-amber-800")}>
+                {online ? <Wifi className="size-3.5" /> : <CloudOff className="size-3.5" />} {online ? "Online" : "Offline"}
+              </span>
+            </>
+          )}
         </header>
 
         {outbox.length > 0 && (

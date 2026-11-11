@@ -184,6 +184,84 @@ export function PickingPdf({ data }: { data: PickingPdfData }) {
 }
 
 // ---------------------------------------------------------------------------
+// Delivery note: goods and quantities for one or more invoices, one page each,
+// without prices, signed by whoever receives the goods
+// ---------------------------------------------------------------------------
+export type DeliveryNotePdfData = {
+  company: Company;
+  notes: {
+    invoice_no: string;
+    invoice_date: string;
+    brand: string | null;
+    shop: { shop_name: string; owner_name: string | null; mobile: string | null; code: string | null; address: string | null; city: string | null; pincode: string | null };
+    lines: { product_name: string; sku: string; hsn_code: string | null; unit_code: string; qty: number }[];
+  }[];
+};
+
+export function DeliveryNotePdf({ data }: { data: DeliveryNotePdfData }) {
+  const cols: Col[] = [
+    { label: "#", w: 0.4 }, { label: "Product", w: 3.6 }, { label: "Model", w: 1.4 }, { label: "HSN", w: 0.9 },
+    { label: "Qty", w: 0.9, right: true }, { label: "Received", w: 0.9 },
+  ];
+  return (
+    <Document title="Delivery note" author={data.company.legal_name}>
+      {data.notes.map((n) => {
+        const totalQty = n.lines.reduce((t, l) => t + Number(l.qty), 0);
+        return (
+          <Page key={n.invoice_no} size="A4" style={s.page}>
+            <CompanyHeader company={data.company} title="DELIVERY NOTE" subtitle={`Against invoice ${n.invoice_no}`} />
+            <View style={[s.row, { gap: 8, marginBottom: 10 }]}>
+              <View style={[s.box, { flex: 1.5 }]}>
+                <Text style={[s.small, s.muted]}>DELIVER TO</Text>
+                <Text style={s.h2}>{n.shop.shop_name}</Text>
+                {n.shop.owner_name && <Text>{n.shop.owner_name}</Text>}
+                {n.shop.address && <Text>{n.shop.address}</Text>}
+                <Text>{[n.shop.city, n.shop.pincode].filter(Boolean).join(" - ")}</Text>
+                {n.shop.mobile && <Text>Mobile: {n.shop.mobile}</Text>}
+                {n.shop.code && <Text style={s.muted}>Retailer ID: {n.shop.code}</Text>}
+              </View>
+              <View style={[s.box, { flex: 1 }]}>
+                <Text style={[s.small, s.muted]}>DETAILS</Text>
+                <Text>Invoice: <Text style={s.bold}>{n.invoice_no}</Text></Text>
+                <Text>Invoice date: {d(n.invoice_date)}</Text>
+                {n.brand && <Text>Brand: {n.brand}</Text>}
+                <Text style={{ marginTop: 6 }}>Vehicle no.: __________________</Text>
+                <Text style={{ marginTop: 4 }}>Driver / delivered by: _________</Text>
+                <Text style={{ marginTop: 4 }}>Packages / boxes: ______________</Text>
+              </View>
+            </View>
+            <TableHead cols={cols} />
+            {n.lines.map((l, i) => (
+              <TableRow key={i} cols={cols} shade={i % 2 === 1}
+                cells={[i + 1, l.product_name, l.sku, l.hsn_code ?? "—", `${num(l.qty)} ${l.unit_code}`, "[   ]"]} />
+            ))}
+            <View style={[s.row, { justifyContent: "flex-end", marginTop: 6 }]}>
+              <Text style={s.bold}>Total quantity: {num(totalQty)} ({n.lines.length} item{n.lines.length === 1 ? "" : "s"})</Text>
+            </View>
+            <Text style={[s.muted, { marginTop: 10 }]}>
+              Prices and taxes are on the tax invoice {n.invoice_no}. Please check the goods on delivery; any shortage or damage must be written below before signing.
+            </Text>
+            <Text style={{ marginTop: 8 }}>Remarks: ______________________________________________________________________________</Text>
+            <View style={[s.row, { justifyContent: "space-between", marginTop: 34, gap: 16 }]}>
+              <View style={[s.box, { flex: 1, minHeight: 70 }]}>
+                <Text style={[s.small, s.muted]}>RECEIVED THE ABOVE GOODS IN GOOD CONDITION</Text>
+                <Text style={{ marginTop: 26 }}>Name: ____________________  Date: __________</Text>
+                <Text style={[s.small, s.muted, { marginTop: 4 }]}>{"Receiver's signature and shop stamp"}</Text>
+              </View>
+              <View style={[s.box, { flex: 1, minHeight: 70, alignItems: "flex-end" }]}>
+                <Text style={[s.small, s.muted]}>FOR {data.company.legal_name.toUpperCase()}</Text>
+                <Text style={{ marginTop: 34 }}>Authorised signatory</Text>
+              </View>
+            </View>
+            <Footer />
+          </Page>
+        );
+      })}
+    </Document>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Purchase order (to the supplier) / purchase record once received
 // ---------------------------------------------------------------------------
 export type PurchasePdfData = {

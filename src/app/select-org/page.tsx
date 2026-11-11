@@ -10,6 +10,7 @@ import { ROLE_LABELS } from "@/lib/roles";
 import { PLATFORM_NAME, safeNext } from "@/lib/tenant-shared";
 import { Alert } from "@/components/ui";
 import { SignOutButton } from "@/components/sign-out-button";
+import { logoUrl } from "@/lib/branding";
 
 export const metadata: Metadata = { title: "Choose organization" };
 
@@ -24,6 +25,13 @@ export default async function SelectOrgPage({ searchParams }: { searchParams: Pr
   if (!user) redirect("/login");
 
   const { tenants, chosen } = await getTenantContext();
+  // each business's logo, as on its own sign-in page
+  const logos = new Map(
+    await Promise.all(tenants.map(async (t) => {
+      const { data } = await supabase.rpc("tenant_public_profile", { p_slug: t.slug });
+      return [t.id, logoUrl((data as { logo_path: string | null }[] | null)?.[0]?.logo_path)] as const;
+    })),
+  );
   const goto = safeNext(next);
   const problem =
     error === "denied" ? "You do not have access to that organization."
@@ -46,7 +54,14 @@ export default async function SelectOrgPage({ searchParams }: { searchParams: Pr
               const open = isOpenTenant(t);
               const body = (
                 <>
-                  <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-600"><Building2 className="size-5" /></span>
+                  {logos.get(t.id) ? (
+                    <span className="grid h-10 w-24 shrink-0 place-items-center rounded-lg bg-white ring-1 ring-slate-200">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={logos.get(t.id)!} alt="" className="max-h-8 max-w-20 object-contain" />
+                    </span>
+                  ) : (
+                    <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-600"><Building2 className="size-5" /></span>
+                  )}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium text-slate-900">{t.display_name}</span>
                     <span className="block truncate text-xs text-slate-500">

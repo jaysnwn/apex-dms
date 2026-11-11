@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { LOGO_BUCKET, LOGO_PATH_RE } from "@/lib/branding";
 
 export type SettingsState = { ok?: string; error?: string };
 
@@ -50,4 +51,18 @@ export async function saveSettings(_prev: SettingsState, formData: FormData): Pr
 
   revalidatePath("/admin/settings");
   return { ok: "Company details saved." };
+}
+
+// The business's logo (uploaded from the browser to branding/<business>/logo-….png).
+// Shown in the app, on the business's sign-in page and on every document.
+export async function setCompanyLogo(path: string | null): Promise<SettingsState> {
+  const { tenant } = await requireRole("super_admin");
+  if (path && !(path.startsWith(`${tenant.id}/`) && LOGO_PATH_RE.test(path))) return { error: "Wrong file location." };
+  const supabase = await createClient();
+  const { data: old } = await supabase.from("company_settings").select("logo_path").eq("id", 1).single();
+  const { error } = await supabase.from("company_settings").update({ logo_path: path }).eq("id", 1);
+  if (error) return { error: error.message };
+  if (old?.logo_path && old.logo_path !== path) await supabase.storage.from(LOGO_BUCKET).remove([old.logo_path as string]);
+  revalidatePath("/", "layout");
+  return { ok: path ? "Logo saved." : "Logo removed." };
 }
