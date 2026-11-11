@@ -16,4 +16,8 @@ python3 client-imports.check.py
 # so forms silently refused those records. Use .guid() for database ids.
 if grep -rn "\.uuid(" ../../src; then echo "FAIL  use .guid() for ids, not .uuid()"; exit 1; fi
 echo "ok  id checks accept every id the database accepts (.guid, not .uuid)"
+# Clock times must go through time()/dateTime() in src/lib/format.ts (India time):
+# the server runs in UTC, so a bare toLocaleTimeString shows times 5.5 h off.
+if grep -rn "toLocaleTimeString(" ../../src | grep -v "src/lib/format.ts"; then echo "FAIL  use time() from @/lib/format for clock times"; exit 1; fi
+echo "ok  clock times are shown in India time"
 for t in *.test.mjs; do echo "== $t"; node "$t"; done
