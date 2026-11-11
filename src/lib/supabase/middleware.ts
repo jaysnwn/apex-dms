@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { IDLE_COOKIE, IDLE_LIMIT_MS, OWNER_COOKIE, TENANT_COOKIE, UUID_RE, tenantCookieOptions } from "@/lib/tenant-shared";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
+import { REQUEST_START_HEADER } from "@/lib/timing";
 
 const PUBLIC_PATHS = ["/login", "/auth", "/d", "/sw.js", "/manifest.webmanifest", "/icons"];
 // Pages that decide or change the business themselves.
@@ -15,6 +16,8 @@ const under = (path: string, prefixes: string[]) => prefixes.some((p) => path ==
 // /login, signs out browsers idle for 12 hours, and makes sure a signed-in
 // browser has a business chosen.
 export async function updateSession(request: NextRequest) {
+  // When the request arrived, for the step timings (src/lib/timing.ts).
+  request.headers.set(REQUEST_START_HEADER, String(Date.now()));
   let response = NextResponse.next({ request });
 
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return response;
