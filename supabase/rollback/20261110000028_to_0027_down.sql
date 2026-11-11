@@ -23,10 +23,14 @@ $$;
 revoke all on function public.tenant_public_profile(text) from public;
 grant execute on function public.tenant_public_profile(text) to anon, authenticated;
 
+-- Supabase refuses SQL deletes from its storage tables unless asked for this
+-- transaction only; the checks above ensure the bucket is empty.
+select set_config('storage.allow_delete_query', 'true', true);
 drop policy "branding read own business" on storage.objects;
 drop policy "branding write super admin" on storage.objects;
 drop policy "branding delete super admin" on storage.objects;
 delete from storage.buckets where id = 'branding';
+select set_config('storage.allow_delete_query', 'false', true);
 
 alter table public.company_settings drop constraint company_settings_logo_path_own_folder;
 alter table public.company_settings drop column logo_path;

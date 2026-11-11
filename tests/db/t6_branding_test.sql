@@ -47,9 +47,11 @@ begin
     raise exception 'billing staff added a logo file';
   exception when insufficient_privilege then null;
   end;
+  perform set_config('storage.allow_delete_query', 'true', true);   -- let the access rules decide, as the Storage API does
   delete from storage.objects where bucket_id = 'branding';
   get diagnostics n = row_count;
   assert n = 0, 'billing staff removed a logo file';
+  perform set_config('storage.allow_delete_query', 'false', true);
 end $$;
 reset role;
 
@@ -60,9 +62,11 @@ do $$
 declare n int;
 begin
   assert not exists (select 1 from storage.objects where bucket_id = 'branding'), 'ISO owner listed Apex logo files';
+  perform set_config('storage.allow_delete_query', 'true', true);
   delete from storage.objects where bucket_id = 'branding';
   get diagnostics n = row_count;
   assert n = 0, 'ISO owner removed an Apex logo file';
+  perform set_config('storage.allow_delete_query', 'false', true);
   insert into storage.objects (bucket_id, name) values ('branding', 'c0000000-0000-4000-8000-00000000000c/logo-7.png');
   update public.company_settings set logo_path = 'c0000000-0000-4000-8000-00000000000c/logo-7.png';
   assert (select logo_path from public.company_settings) = 'c0000000-0000-4000-8000-00000000000c/logo-7.png', 'ISO logo set';
@@ -91,5 +95,7 @@ reset role;
 
 -- ---------- clean up (so the rollback test starts with no logos) ----------
 update public.company_settings set logo_path = null;
+select set_config('storage.allow_delete_query', 'true', false);
 delete from storage.objects where bucket_id = 'branding';
+select set_config('storage.allow_delete_query', 'false', false);
 select 'ALL BRANDING TESTS PASSED';
