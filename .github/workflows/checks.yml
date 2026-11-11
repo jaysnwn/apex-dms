@@ -1,0 +1,64 @@
+# Checks every push and pull request before anything is merged or deployed:
+# types, lint, app logic checks, and all database migrations + the 15 database
+# test suites (business separation attacks included) on a throwaway Postgres.
+# A red check on GitHub means: do not merge or promote this commit.
+name: Checks
+
+on:
+  push:
+    branches: [main, multi-tenant]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: Types, lint, app checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Lint
+        run: npx eslint src --max-warnings 0
+      - name: App checks
+        run: bash tests/app/run.sh
+
+  database:
+    name: Migrations and database tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install the Postgres client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
+      - name: All migrations, then every database test suite
+        run: bash tests/db/run.sh
