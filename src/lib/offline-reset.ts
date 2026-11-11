@@ -7,11 +7,14 @@
 // Unsent orders, visits and payments stay: they are kept under their author
 // (see tenantKey) and are only sent when that person signs in again.
 const KEEP = ["dms-m-outbox:", "dms-field-queue:", "apex-m-outbox", "apex-field-queue"];
+// Everything this app stores starts with one of these (billing's recent
+// products are "apex.recentProducts.…").
+const OURS = ["dms", "apex-", "apex."];
 
 export async function clearOfflineCopies() {
   try {
     for (const k of Object.keys(localStorage)) {
-      if ((k.startsWith("dms") || k.startsWith("apex-")) && !KEEP.some((p) => k.startsWith(p))) localStorage.removeItem(k);
+      if (OURS.some((p) => k.startsWith(p)) && !KEEP.some((p) => k.startsWith(p))) localStorage.removeItem(k);
     }
   } catch {
     /* storage blocked */
