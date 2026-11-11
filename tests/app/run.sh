@@ -20,4 +20,7 @@ echo "ok  id checks accept every id the database accepts (.guid, not .uuid)"
 # the server runs in UTC, so a bare toLocaleTimeString shows times 5.5 h off.
 if grep -rn "toLocaleTimeString(" ../../src | grep -v "src/lib/format.ts"; then echo "FAIL  use time() from @/lib/format for clock times"; exit 1; fi
 echo "ok  clock times are shown in India time"
+# PDFs need pdfkit's built-in fonts in the deployed bundle (see next.config.ts).
+grep -q 'pdfkit/js/standard-fonts' ../../next.config.ts || { echo "FAIL  next.config.ts must include pdfkit's standard fonts"; exit 1; }
+echo "ok  PDF fonts are included in the deployment"
 for t in *.test.mjs; do echo "== $t"; node "$t"; done
