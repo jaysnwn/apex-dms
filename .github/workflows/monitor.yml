@@ -1,0 +1,44 @@
+# Live app health check every 15 minutes (scripts/monitor/check.sh): the app
+# answers, the database answers and has room, and no new errors in the error
+# log. A failed run e-mails the repository owner (GitHub's default for
+# scheduled workflows), so a red run here is the alert.
+# Scheduled workflows run only from the default branch (main).
+name: Live app check
+
+on:
+  schedule:
+    - cron: "7,22,37,52 * * * *"
+  workflow_dispatch:
+  push:
+    paths: [".github/workflows/monitor.yml", "scripts/monitor/**"]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: live-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install the Postgres client
+        run: sudo apt-get install -y -qq postgresql-client >/dev/null 2>&1 || (sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null)
+      - name: When did the previous check start?
+        id: since
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prev=$(gh api "repos/${{ github.repository }}/actions/workflows/monitor.yml/runs?per_page=5" \
+                   --jq "[.workflow_runs[] | select(.id != ${{ github.run_id }}) | .run_started_at][0] // empty" 2>/dev/null || true)
+          echo "since=${prev:-$(date -u -d '-30 min' +%Y-%m-%dT%H:%M:%SZ)}" >> "$GITHUB_OUTPUT"
+      - name: Check the live app
+        env:
+          LIVE_URL: https://apex-dms-livid.vercel.app
+          DB_URL: ${{ secrets.PROD_DB_URL }}
+          SINCE: ${{ steps.since.outputs.since }}
+        run: scripts/monitor/check.sh
