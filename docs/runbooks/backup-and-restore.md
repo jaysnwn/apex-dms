@@ -6,7 +6,7 @@ The free plan has no Supabase backups. These are ours.
 | --- | --- |
 | What | All tables in `public`, `auth` (users, identities), `storage`, `mt_rollback`, `supabase_migrations`; every stored file |
 | Not included | Login sessions and tokens (everyone signs in again after a restore) |
-| When | 02:47 and 14:47 India time, by `.github/workflows/backup.yml`, plus "Run workflow" by hand |
+| When | 02:47, 08:47, 14:47 and 20:47 India time, by `.github/workflows/backup.yml`, plus "Run workflow" by hand. GitHub can start a scheduled run hours late or skip one; four slots keep the gap under 12 hours |
 | Recovery point (RPO) | at most 12 hours of entries lost |
 | Recovery time (RTO) | target 2 hours; **not yet measured on Supabase**, see "Drill" below |
 | Kept | 35 days, as GitHub Actions artifacts. The dump and files are encrypted with AES-256; next to them are the table names, row counts and checksums, which contain no business data |

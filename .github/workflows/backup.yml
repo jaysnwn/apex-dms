@@ -1,5 +1,7 @@
 # Production database backup with an automatic restore check.
-# Runs twice a day (02:47 and 14:47 India time) and on demand (Actions → "Database backup" → Run workflow).
+# Runs four times a day (02:47, 08:47, 14:47, 20:47 India time) and on demand (Actions → "Database backup" → Run workflow).
+# GitHub may start scheduled runs hours late or skip one when busy; four slots keep the
+# gap between good backups under 12 hours even when one is skipped.
 # Needs two repository secrets (Settings → Secrets and variables → Actions):
 #   PROD_DB_URL        production "Session pooler" connection string, port 5432
 #   BACKUP_PASSPHRASE  long random passphrase; keep a copy OUTSIDE GitHub, it is needed to restore
@@ -12,7 +14,7 @@ name: Database backup
 
 on:
   schedule:
-    - cron: "17 21,9 * * *"
+    - cron: "17 3,9,15,21 * * *"
   workflow_dispatch:
 
 permissions:
