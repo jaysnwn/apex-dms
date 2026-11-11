@@ -34,7 +34,12 @@ export async function updateSession(request: NextRequest) {
 
   // Verifies the session token (locally when the project signs tokens with
   // asymmetric keys; otherwise via the auth server) and refreshes it if due.
+  const t0 = Date.now();
   const { data } = await supabase.auth.getClaims();
+  const claimsMs = Date.now() - t0;
+  if (claimsMs > 1500 || (process.env.VERCEL_ENV === "preview" && request.method === "POST")) {
+    console.log(JSON.stringify({ level: claimsMs > 1500 ? "warning" : "info", timing: "middleware.getClaims", total: claimsMs, method: request.method }));
+  }
   const userId = (data?.claims?.sub as string | undefined) ?? null;
 
   const path = request.nextUrl.pathname;

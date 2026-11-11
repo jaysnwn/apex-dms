@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { dbError, formObject, zodMessage } from "@/lib/actions";
 import type { FormResult } from "@/components/action-form";
+import { stopwatch } from "@/lib/timing";
 
 const qtySchema = z.coerce.number({ message: "Enter a quantity" }).positive("Quantity must be more than zero");
 
@@ -26,7 +27,9 @@ const entrySchema = z.object({
 
 // Inward, outward, damage, opening. Every change is a new movement row: stock is never overwritten.
 export async function recordMovement(_prev: FormResult, formData: FormData): Promise<FormResult> {
+  const sw = stopwatch("stock.recordMovement");
   const { user, profile } = await requireRole("super_admin", "manager", "warehouse");
+  sw.mark("auth");
   const raw = formObject(formData);
   for (const k of Object.keys(raw)) if (raw[k] === "") delete raw[k];
   const parsed = entrySchema.safeParse(raw);
@@ -52,10 +55,13 @@ export async function recordMovement(_prev: FormResult, formData: FormData): Pro
     client_uuid: v.client_uuid ?? null,
     created_by: user.id,
   });
+  sw.mark("insert");
   // Same form submitted twice: the first one already counted.
   if (error && !(error.code === "23505" && error.message.includes("client_uuid"))) return { error: dbError(error) };
 
   revalidatePath("/stock");
+  sw.mark("revalidate");
+  sw.done();
   const label = { stock_in: "Stock inward", stock_out: "Stock outward", opening: "Opening stock", damage: "Damaged stock" }[v.type];
   return { ok: `${label} of ${v.qty} recorded.`, resetForm: true };
 }
