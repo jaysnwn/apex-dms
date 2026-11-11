@@ -47,7 +47,7 @@ const nextConfig: NextConfig = {
   // "Cannot find module …/standard-fonts/Helvetica.cjs". PDFs are also made by
   // share buttons (server actions) on many pages, hence every route.
   outputFileTracingIncludes: {
-    "/**": ["./node_modules/pdfkit/js/standard-fonts/*.cjs"],
+    "/**": ["./node_modules/pdfkit/js/standard-fonts/**/*.cjs"],
   },
   experimental: {
     serverActions: { bodySizeLimit: "5mb" }, // Excel imports
