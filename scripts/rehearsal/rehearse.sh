@@ -122,19 +122,26 @@ if [ "$FAILS" = 0 ]; then
   done
   if [ "$FAILS" = 0 ]; then
     Q -f "$ROOT/tests/db/schema_fingerprint.sql" > "$WORK/schema2.txt"
+    Q -f "$HERE/functions.sql" > "$WORK/fn2.txt"
     Q -f "$ROOT/tests/db/snapshot.sql" > "$WORK/biz2.json"
     Q -c "truncate rh.after" -c "drop table rh.after" >/dev/null
     Q -F '|' -f "$HERE/rows_after.sql" > "$WORK/rows2.txt"
-    if diff -q "$WORK/schema0.txt" "$WORK/schema2.txt" >/dev/null && cmp -s "$WORK/biz0.json" "$WORK/biz2.json" \
-       && [ -z "$(awk -F'|' '$4 > 0 || $5 > 0' "$WORK/rows2.txt")" ]; then
-      pass "Rollback to 0018 returns schema, totals and every row exactly to the starting state"
+    # Functions are compared on their logic: production's copies were stored
+    # without comments (stripped by the tool that applied 0001-0018), while a
+    # rollback restores some from the migration files, comments included.
+    FN_CODE=$(join -t'|' -a1 -a2 -e MISSING -o 0,1.3,2.3 "$WORK/fn0.txt" "$WORK/fn2.txt" | awk -F'|' '$2 != $3 {print $1}' | paste -sd, -)
+    FN_NOTE=$(join -t'|' -a1 -a2 -e MISSING -o 0,1.2,1.3,2.2,2.3 "$WORK/fn0.txt" "$WORK/fn2.txt" | awk -F'|' '$2 != $4 && $3 == $5 {print $1}' | paste -sd, -)
+    OTHER=$(diff "$WORK/schema0.txt" "$WORK/schema2.txt" | grep '^[<>]' | cut -d'|' -f1 | sed 's/^[<>] //' | grep -v '^functions$' | sort -u | paste -sd, - || true)
+    ROWDIFF=$(awk -F'|' '$4 > 0 || $5 > 0 {print $1}' "$WORK/rows2.txt" | paste -sd, -)
+    if [ -z "$FN_CODE" ] && [ -z "$OTHER" ] && [ -z "$ROWDIFF" ] && cmp -s "$WORK/biz0.json" "$WORK/biz2.json"; then
+      pass "Rollback to 0018 returns schema, function logic, totals and every row exactly to the starting state"
+      [ -z "$FN_NOTE" ] || { log "  note: comments differ in $FN_NOTE (logic identical)"; echo "| Note: only comments differ in $FN_NOTE after rollback | info |" >> "$SUMMARY"; }
     else
       fail "Rollback returns exactly to the starting state"
-      diff "$WORK/schema0.txt" "$WORK/schema2.txt" | cut -d'|' -f1 || true
-      Q -f "$HERE/functions.sql" > "$WORK/fn2.txt"
-      join -t'|' -a1 -a2 -e MISSING -o 0,1.2,1.3,2.2,2.3 "$WORK/fn0.txt" "$WORK/fn2.txt" | awk -F'|' '$2 != $4 {
-        print "  function differs after rollback: " $1 (($3 == $5) ? " (comments or spacing only)" : " (CODE differs)") }'
-      awk -F'|' '$4 > 0 || $5 > 0 {print "  " $1}' "$WORK/rows2.txt"
+      [ -z "$FN_CODE" ] || echo "  function logic differs: $FN_CODE"
+      [ -z "$OTHER" ] || echo "  schema differs in: $OTHER"
+      [ -z "$ROWDIFF" ] || echo "  rows differ in: $ROWDIFF"
+      cmp -s "$WORK/biz0.json" "$WORK/biz2.json" || echo "  business totals differ"
     fi
   fi
 fi
