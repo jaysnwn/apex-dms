@@ -10,7 +10,7 @@ import { searchSource, searchWords } from "@/lib/search-words";
 // lives in the database functions of migration 0018.
 
 type R<T = object> = ({ ok: true } & T) | { ok?: false; error: string; hint?: string; detail?: string };
-const uuid = z.string().uuid();
+const uuid = z.string().guid();
 const fail = (e: { message: string; hint?: string | null; details?: string | null }) => ({ error: e.message, hint: e.hint ?? undefined, detail: e.details ?? undefined });
 
 function refresh(routeId?: string) {

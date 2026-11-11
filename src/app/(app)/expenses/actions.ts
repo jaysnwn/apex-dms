@@ -20,8 +20,8 @@ function refresh() {
   revalidatePath("/m");
 }
 
-const uuid = z.string().uuid();
-const optUuid = z.string().uuid().nullish().or(z.literal("").transform(() => null));
+const uuid = z.string().guid();
+const optUuid = z.string().guid().nullish().or(z.literal("").transform(() => null));
 
 const SaveInput = z.object({
   id: optUuid,

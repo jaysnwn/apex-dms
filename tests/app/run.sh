@@ -12,4 +12,8 @@ npx esbuild@0.25 ../../src/lib/search-words.ts --format=esm --outfile=build/sear
 npx esbuild@0.25 ../../src/lib/password-policy.ts --format=esm --outfile=build/password-policy.mjs --log-level=error
 npx esbuild@0.25 ../../src/lib/offline-reset.ts --format=esm --outfile=build/offline-reset.mjs --log-level=error
 python3 client-imports.check.py
+# zod's .uuid() rejects ids Postgres accepts (e.g. 31000000-0000-0000-0000-000000000001),
+# so forms silently refused those records. Use .guid() for database ids.
+if grep -rn "\.uuid(" ../../src; then echo "FAIL  use .guid() for ids, not .uuid()"; exit 1; fi
+echo "ok  id checks accept every id the database accepts (.guid, not .uuid)"
 for t in *.test.mjs; do echo "== $t"; node "$t"; done

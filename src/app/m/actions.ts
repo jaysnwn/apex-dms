@@ -96,7 +96,7 @@ const outletSchema = z.object({
   address: z.string().trim().optional(),
   pincode: z.string().regex(/^([1-9][0-9]{5})?$/, "PIN code must be 6 digits").optional(),
   gstin: z.string().regex(/^([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z])?$/, "GSTIN format is not valid").optional(),
-  route_id: z.string().uuid().optional().or(z.literal("")),
+  route_id: z.string().guid().optional().or(z.literal("")),
   latitude: z.number().min(-90).max(90).nullable().optional(),
   longitude: z.number().min(-180).max(180).nullable().optional(),
   force: z.boolean().optional(),
