@@ -26,7 +26,7 @@ export async function checkDuplicates(input: { mobile?: string; gstin?: string; 
 const optional = z.string().max(500).optional();
 
 const retailerSchema = z.object({
-  id: z.string().uuid().optional(),
+  id: z.string().guid().optional(),
   shop_name: z.string().min(2, "Enter the shop name").max(120),
   owner_name: optional,
   mobile: z.string().regex(/^[6-9][0-9]{9}$/, "Mobile must be a 10-digit Indian number"),
@@ -43,8 +43,8 @@ const retailerSchema = z.object({
   delivery_address: optional,
   delivery_city: z.string().max(80).optional(),
   delivery_pincode: z.string().regex(/^([1-9][0-9]{5})?$/, "Delivery PIN code is 6 digits").optional(),
-  salesman_id: z.string().uuid().optional(),
-  route_id: z.string().uuid().optional(),
+  salesman_id: z.string().guid().optional(),
+  route_id: z.string().guid().optional(),
   credit_days: z.coerce.number().int().min(0, "Credit period cannot be negative").max(365),
   credit_limit: z.coerce.number().min(0, "Credit limit cannot be negative"),
   status: z.enum(["active", "on_hold", "blocked", "inactive"]).optional(),

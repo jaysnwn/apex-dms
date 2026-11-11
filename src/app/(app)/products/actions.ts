@@ -12,11 +12,11 @@ const mode = z.enum(["inclusive", "exclusive"]);
 
 const productSchema = z
   .object({
-    id: z.string().uuid().optional(),
+    id: z.string().guid().optional(),
     name: z.string().min(2, "Enter the product name"),
-    brand_id: z.string().uuid("Choose a brand"),
+    brand_id: z.string().guid("Choose a brand"),
     sku: z.string().min(1, "Enter the model number / SKU").max(60),
-    category_id: z.string({ message: "Choose a category" }).uuid("Choose a category"),
+    category_id: z.string({ message: "Choose a category" }).guid("Choose a category"),
     barcode: z.string().max(64).optional(),
     hsn_code: z.string().regex(/^([0-9]{4,8})?$/, "HSN code is 4–8 digits").optional(),
     unit_code: z.string().min(1),
@@ -30,7 +30,7 @@ const productSchema = z
     mrp_mode: mode,
     gst_rate: z.coerce.number().min(0).max(40),
     min_stock_qty: z.coerce.number().min(0, "Cannot be negative"),
-    default_warehouse_id: z.string().uuid().optional(),
+    default_warehouse_id: z.string().guid().optional(),
     rack_code: z.string().max(30).optional(),
     description: z.string().max(2000).optional(),
     is_active: z.enum(["true", "false"]).optional(),
@@ -188,10 +188,10 @@ export async function removeProductImage(productId: string, imageId: string) {
 
 const masterSchema = z.object({
   kind: z.enum(["brands", "categories"]),
-  id: z.string().uuid().optional(),
+  id: z.string().guid().optional(),
   name: z.string().trim().min(2, "Enter a name").max(60),
   code: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{2}$/, "Short code is exactly 2 letters or digits, e.g. CQ").optional(),
-  brand_id: z.string().uuid().optional(),
+  brand_id: z.string().guid().optional(),
   is_active: z.enum(["true", "false"]).optional(),
 });
 

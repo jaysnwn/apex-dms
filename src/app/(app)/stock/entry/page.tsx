@@ -6,7 +6,8 @@ import { todayIST } from "@/lib/gst";
 import { Card } from "@/components/ui";
 import { BrandStrip } from "@/components/brand-badge";
 import { BrandSwitcher } from "@/components/brand-switcher";
-import { EntryForms, ENTRY_TYPES, type EntryType } from "./entry-forms";
+import { EntryForms } from "./entry-forms";
+import { ENTRY_TYPE_KEYS, type EntryType } from "./entry-types";
 
 export const metadata: Metadata = { title: "Stock entry" };
 
@@ -29,7 +30,7 @@ export default async function StockEntryPage({ searchParams }: { searchParams: P
   const supabase = await createClient();
   const { data: warehouses } = await supabase.from("warehouses").select("id, name").eq("is_active", true).eq("brand_id", ctx.current.id).order("name");
   const isMgr = profile.role === "super_admin" || profile.role === "manager";
-  const allowed = ENTRY_TYPES.filter((t) => isMgr || t.key !== "adjustment").map((t) => t.key);
+  const allowed = ENTRY_TYPE_KEYS.filter((k) => isMgr || k !== "adjustment");
   const initial = (allowed as string[]).includes(type ?? "") ? (type as EntryType) : "stock_in";
 
   return (

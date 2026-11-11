@@ -29,6 +29,14 @@ export function dateTime(value: string | null | undefined) {
   });
 }
 
+// Clock time in India time ("10:02 pm"). Always pass the time zone: the
+// server runs in UTC, so without it times printed on the server are 5½ h
+// off, and a page built on the server no longer matches the phone's copy.
+export function time(value: string | number | Date | null | undefined) {
+  if (value === null || value === undefined || value === "") return "—";
+  return new Date(value).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" });
+}
+
 export function date(value: string | null | undefined) {
   if (!value) return "—";
   return new Date(value).toLocaleDateString("en-IN", {

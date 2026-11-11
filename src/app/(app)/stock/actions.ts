@@ -12,8 +12,8 @@ const qtySchema = z.coerce.number({ message: "Enter a quantity" }).positive("Qua
 
 const entrySchema = z.object({
   type: z.enum(["stock_in", "stock_out", "opening", "damage"]),
-  product_id: z.string().uuid("Choose a product"),
-  warehouse_id: z.string().uuid("Choose a warehouse"),
+  product_id: z.string().guid("Choose a product"),
+  warehouse_id: z.string().guid("Choose a warehouse"),
   qty: qtySchema,
   movement_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   unit_cost: z.coerce.number().min(0).optional(),
@@ -21,7 +21,7 @@ const entrySchema = z.object({
   reference_no: z.string().max(80).optional(),
   bill_no: z.string().max(60).optional(),
   notes: z.string().max(500).optional(),
-  client_uuid: z.string().uuid().optional(),
+  client_uuid: z.string().guid().optional(),
 });
 
 // Inward, outward, damage, opening. Every change is a new movement row: stock is never overwritten.
@@ -84,9 +84,9 @@ export async function systemStock(productId: string, warehouseId: string) {
 }
 
 const transferSchema = z.object({
-  product_id: z.string().uuid("Choose a product"),
-  from_warehouse: z.string().uuid("Choose the source warehouse"),
-  to_warehouse: z.string().uuid("Choose the destination warehouse"),
+  product_id: z.string().guid("Choose a product"),
+  from_warehouse: z.string().guid("Choose the source warehouse"),
+  to_warehouse: z.string().guid("Choose the destination warehouse"),
   qty: qtySchema,
   reason: z.string().max(300).optional(),
 });
@@ -165,8 +165,8 @@ export async function reviewCount(countId: string, decision: "approve" | "reopen
 // ---------- Warehouses & racks ----------
 
 const warehouseSchema = z.object({
-  id: z.string().uuid().optional(),
-  brand_id: z.string().uuid().optional(),
+  id: z.string().guid().optional(),
+  brand_id: z.string().guid().optional(),
   name: z.string().min(2, "Enter a warehouse name").max(80),
   address: z.string().max(300).optional(),
   is_active: z.enum(["true", "false"]).optional(),

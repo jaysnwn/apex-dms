@@ -56,7 +56,7 @@ export async function createUser(_prev: ActionState, formData: FormData): Promis
 }
 
 const updateSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   full_name: z.string().trim().min(2, "Enter the full name"),
   phone: z
     .string()
@@ -114,7 +114,7 @@ export async function updateUser(_prev: ActionState, formData: FormData): Promis
 }
 
 const passwordSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 

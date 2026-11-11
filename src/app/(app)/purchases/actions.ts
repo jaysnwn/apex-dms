@@ -201,7 +201,7 @@ export async function cancelSupplierPayment(paymentId: string, reason: string): 
 // Suppliers (form action)
 // ---------------------------------------------------------------------------
 const supplierSchema = z.object({
-  id: z.string().uuid().optional(),
+  id: z.string().guid().optional(),
   name: z.string().min(2, "Enter the supplier name"),
   gstin: z
     .string()
@@ -217,7 +217,7 @@ const supplierSchema = z.object({
   pincode: z.string().optional(),
   credit_days: z.coerce.number().int().min(0).max(365),
   lead_days: z.coerce.number().int().min(0, "Delivery time cannot be negative").max(180).optional(),
-  brand_id: z.string().uuid().optional().or(z.literal("")),
+  brand_id: z.string().guid().optional().or(z.literal("")),
   bank_details: z.string().optional(),
   notes: z.string().optional(),
   is_active: z.string().optional(),

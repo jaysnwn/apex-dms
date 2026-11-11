@@ -3,7 +3,8 @@
 import { useState } from "react";
 
 // Reference categorical palette (validated, fixed order — never cycled).
-export const SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"];
+import { SERIES } from "@/lib/chart-colors";
+export { SERIES };
 
 const compact = (n: number) =>
   n >= 1e7 ? `${(n / 1e7).toFixed(1)}Cr` : n >= 1e5 ? `${(n / 1e5).toFixed(1)}L` : n >= 1e3 ? `${(n / 1e3).toFixed(0)}K` : String(Math.round(n));

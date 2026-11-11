@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { CheckCircle2, Clock, IndianRupee, MapPin, Radio, ShoppingCart, XCircle } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { dateTime, inr } from "@/lib/format";
+import { dateTime, inr, time } from "@/lib/format";
 import { GEO_STATUS, VISIT_STATUS } from "@/lib/status";
 import { addDays, todayIST } from "@/lib/gst";
 import { Badge, Button, Card, Input, PageHeader, cn } from "@/components/ui";
@@ -112,7 +112,7 @@ export default async function RoutesMonitor({ searchParams }: { searchParams: Pr
                     <div className="font-semibold">{p.name}</div>
                     <div className="text-sm text-slate-500">{p.routes.length ? p.routes.join(" + ") : "No route today"}</div>
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-slate-500">
-                      {p.lastCheckin && <span>Last check-in {new Date(p.lastCheckin).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</span>}
+                      {p.lastCheckin && <span>Last check-in {time(p.lastCheckin)}</span>}
                       {p.loc && day === today ? (
                         <a href={`https://maps.google.com/?q=${p.loc.latitude},${p.loc.longitude}`} target="_blank" rel="noopener" className={cn("inline-flex items-center gap-1 hover:underline", p.live ? "font-medium text-violet-700" : "text-slate-500")}>
                           {p.live ? <Radio className="size-3" /> : <MapPin className="size-3" />}
@@ -144,7 +144,7 @@ export default async function RoutesMonitor({ searchParams }: { searchParams: Pr
                         {v.source === "unplanned" && <Badge tone="violet">Not planned</Badge>}
                         <Badge tone={VISIT_STATUS[v.status]?.tone ?? "slate"}>{VISIT_STATUS[v.status]?.label ?? v.status}</Badge>
                         {v.geo_status && <Badge tone={GEO_STATUS[v.geo_status].tone}>{GEO_STATUS[v.geo_status].label}{v.distance_m != null ? ` · ${Math.round(Number(v.distance_m))} m` : ""}</Badge>}
-                        {v.checkin_at && <span className="text-xs text-slate-500">{new Date(v.checkin_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}{v.checkout_at ? `–${new Date(v.checkout_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}` : ""}</span>}
+                        {v.checkin_at && <span className="text-xs text-slate-500">{time(v.checkin_at)}{v.checkout_at ? `–${time(v.checkout_at)}` : ""}</span>}
                         {v.latitude != null && <a href={`https://maps.google.com/?q=${v.latitude},${v.longitude}`} target="_blank" rel="noopener" className="text-accent-700" aria-label="Check-in location"><MapPin className="size-4" /></a>}
                         {(v.missed_reason || v.remarks) && <span className="w-full pl-8 text-xs text-slate-500">{v.status === "missed" ? `Reason: ${v.missed_reason}` : v.remarks}</span>}
                       </li>

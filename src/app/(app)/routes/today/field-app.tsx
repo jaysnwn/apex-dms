@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { Alert, Badge, Button, Card, Input, Label, Select, Textarea, cn } from "@/components/ui";
 import { Dialog } from "@/components/dialog";
-import { date, inr } from "@/lib/format";
+import { date, inr, time } from "@/lib/format";
 import { GEO_STATUS, VISIT_STATUS } from "@/lib/status";
 import { addDays } from "@/lib/gst";
 import { createClient } from "@/lib/supabase/client";
@@ -58,7 +58,7 @@ function getPosition(): Promise<Pos | null> {
   });
 }
 const istHour = () => Number(new Date().toLocaleString("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", hour12: false }));
-const hhmm = (iso: string) => new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+const hhmm = (iso: string) => time(iso);
 const directions = (v: FieldVisit) =>
   v.lat != null && v.lng != null
     ? `https://www.google.com/maps/dir/?api=1&destination=${v.lat},${v.lng}`
@@ -289,7 +289,7 @@ export function FieldApp({ initial, mobile = false }: { initial: FieldDay | null
           <button onClick={() => setFilter("todo")} className={cn("rounded-full border px-3 py-1 text-sm", filter === "todo" ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300 bg-white")}>To visit ({total - done - missed})</button>
           <button onClick={() => setFilter("all")} className={cn("rounded-full border px-3 py-1 text-sm", filter === "all" ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300 bg-white")}>All ({total})</button>
         </div>
-        <span className="text-xs text-slate-400">Updated {new Date(day.loadedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</span>
+        <span className="text-xs text-slate-400">Updated {time(day.loadedAt)}</span>
       </div>
 
       {visits.length === 0 && (
