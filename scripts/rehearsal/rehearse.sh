@@ -63,6 +63,7 @@ log "schema version before: $VERSION"
 
 # 3. before
 Q -f "$ROOT/tests/db/schema_fingerprint.sql" > "$WORK/schema0.txt"
+Q -f "$HERE/functions.sql" > "$WORK/fn0.txt"
 Q -f "$ROOT/tests/db/snapshot.sql" > "$WORK/biz0.json"
 Q -f "$HERE/rows_before.sql"
 Q -v phase=before -f "$HERE/visible.sql"
@@ -130,6 +131,9 @@ if [ "$FAILS" = 0 ]; then
     else
       fail "Rollback returns exactly to the starting state"
       diff "$WORK/schema0.txt" "$WORK/schema2.txt" | cut -d'|' -f1 || true
+      Q -f "$HERE/functions.sql" > "$WORK/fn2.txt"
+      join -t'|' -a1 -a2 -e MISSING -o 0,1.2,1.3,2.2,2.3 "$WORK/fn0.txt" "$WORK/fn2.txt" | awk -F'|' '$2 != $4 {
+        print "  function differs after rollback: " $1 (($3 == $5) ? " (comments or spacing only)" : " (CODE differs)") }'
       awk -F'|' '$4 > 0 || $5 > 0 {print "  " $1}' "$WORK/rows2.txt"
     fi
   fi
