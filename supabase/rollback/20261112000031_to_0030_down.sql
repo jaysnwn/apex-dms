@@ -27,7 +27,11 @@ begin
   return new;
 end $function$;
 
--- CREATE OR REPLACE VIEW cannot drop a column, so the view is rebuilt.
+-- CREATE OR REPLACE VIEW cannot drop a column, so the view is rebuilt. Its
+-- composite type is the return type of search_retailer_directory (migration
+-- 0026), which therefore has to go first and is put back below. Not CASCADE:
+-- that would drop the function quietly and leave retailer search broken.
+drop function public.search_retailer_directory(text[]);
 drop view public.retailer_directory;
 create view public.retailer_directory
 with (security_invoker = true) as
@@ -45,3 +49,12 @@ revoke all on public.retailer_directory from anon;
 
 comment on table public.number_series is null;
 comment on table public.share_links is null;
+
+-- search_retailer_directory again, exactly as 0026 states it.
+create or replace function public.search_retailer_directory(p_words text[])
+returns setof public.retailer_directory language plpgsql stable set search_path = public as $$
+begin
+  return query execute 'select * from public.retailer_directory where ' || public.search_condition(p_words);
+end $$;
+revoke all on function public.search_retailer_directory(text[]) from public, anon;
+grant execute on function public.search_retailer_directory(text[]) to authenticated, service_role;
