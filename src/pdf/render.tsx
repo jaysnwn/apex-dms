@@ -4,10 +4,13 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { createClient } from "@/lib/supabase/server";
 import { registerFonts, type Company } from "./base";
 import { InvoicePdf, type InvoicePdfData } from "./invoice";
-import { PickingPdf, PurchasePdf, ReceiptPdf, StatementPdf, type PurchasePdfData } from "./documents";
+import { DeliveryNotePdf, PickingPdf, PurchasePdf, ReceiptPdf, StatementPdf, type PurchasePdfData } from "./documents";
 
 import type { PdfKind } from "./kinds";
+import { getCompanyLogoFile } from "@/lib/branding";
 import { brandTone } from "@/lib/brand-style";
+import { allRows } from "@/lib/all-rows";
+import { required } from "@/lib/required";
 export type { PdfKind };
 
 export type RenderedPdf = { buffer: Buffer; filename: string; phone?: string; shareText: string };
@@ -16,12 +19,14 @@ const safe = (s: string) => s.replace(/[^A-Za-z0-9-]+/g, "_");
 
 async function company(): Promise<Company> {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("company_settings")
-    .select("legal_name, gstin, state_code, address, phone, email, bank_details, invoice_terms")
-    .eq("id", 1)
-    .single();
-  return data as Company;
+  const [{ data }, logo] = await Promise.all([
+    supabase
+      .from("company_settings")
+      .select("legal_name, gstin, state_code, address, phone, email, bank_details, invoice_terms")
+      .single(),
+    getCompanyLogoFile(),
+  ]);
+  return { ...(data as Company), logo };
 }
 
 // Brand shown on sales documents (name, colour, logo). The seller stays APEX TRADING CO.
@@ -71,6 +76,10 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
       supabase.from("invoices").select("*").eq("id", cn.invoice_id).single(),
       supabase.from("credit_note_lines").select("invoice_line_id, qty, taxable_value, cgst, sgst, igst, line_total").eq("credit_note_id", id),
     ]);
+    // The credit note names its invoice, so this row should always be there.
+    // If it is not (the invoice was hidden from this user, or removed), stop
+    // instead of printing a credit note with gaps where the invoice goes.
+    if (!inv) return null;
     const lineIds = (cls ?? []).map((c) => c.invoice_line_id);
     const { data: ils } = lineIds.length ? await supabase.from("invoice_lines").select(INV_LINE_COLS).in("id", lineIds) : { data: [] };
     const ilMap = new Map((ils ?? []).map((l) => [l.id as string, l]));
@@ -110,7 +119,7 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
     const [{ data: r }, { data: allocs }, { data: who }] = await Promise.all([
       supabase.from("retailers").select("shop_name, code, mobile, billing_city").eq("id", p.retailer_id).single(),
       supabase.from("payment_allocations").select("amount, invoices(invoice_no, invoice_date)").eq("payment_id", id),
-      p.collected_by ? supabase.from("profiles").select("full_name").eq("id", p.collected_by).maybeSingle() : Promise.resolve({ data: null }),
+      p.collected_by ? supabase.from("tenant_people").select("full_name").eq("id", p.collected_by).maybeSingle() : Promise.resolve({ data: null }),
     ]);
     const allocations = (allocs ?? []).map((a) => {
       const inv = a.invoices as unknown as { invoice_no: string; invoice_date: string };
@@ -151,8 +160,8 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
           from,
           to,
           opening,
-          entries: (entries ?? []).map((e) => ({ ...e, debit: Number(e.debit), credit: Number(e.credit) })),
-          openInvoices: (open ?? []).map((o) => ({ ...o, balance: Number(o.balance), days_past_due: Number(o.days_past_due) })),
+          entries: (entries ?? []).map((e) => ({ ...e, debit: Number(e.debit), credit: Number(e.credit), entry_date: e.entry_date ?? "", doc_no: e.doc_no ?? "", narration: e.narration ?? "", created_at: e.created_at ?? "" })),
+          openInvoices: (open ?? []).map((o) => ({ ...o, balance: Number(o.balance), days_past_due: Number(o.days_past_due), invoice_no: required(o.invoice_no, "Invoice number"), invoice_date: required(o.invoice_date, "Invoice date"), due_date: required(o.due_date, "Invoice due date") })),
           summary: {
             outstanding: Number(bal?.outstanding ?? 0),
             not_yet_due: Number(bal?.not_yet_due ?? 0),
@@ -173,11 +182,51 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
     };
   }
 
+  if (kind === "delivery-note") {
+    const ids = id.split(",").filter(Boolean).slice(0, 50);
+    const { data: invs } = await supabase.from("invoices").select("id, invoice_no, invoice_date, retailer_snapshot, brand_id, status").in("id", ids);
+    const open = (invs ?? []).filter((i) => i.status !== "cancelled");
+    if (!open.length) return null;
+    const [{ data: lines }, { data: brands }] = await Promise.all([
+      allRows(() => supabase.from("invoice_lines").select("invoice_id, line_no, product_name, sku, hsn_code, unit_code, qty").in("invoice_id", open.map((i) => i.id)).order("line_no").order("id")),
+      supabase.from("brands").select("id, name"),
+    ]);
+    const brandName = new Map((brands ?? []).map((b) => [b.id as string, b.name as string]));
+    const order = new Map(ids.map((x, i) => [x, i]));
+    const notes = [...open].sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)).map((i) => {
+      const r = i.retailer_snapshot as { shop_name: string; owner_name: string | null; mobile: string | null; code: string | null;
+        billing_address: string | null; billing_city: string | null; billing_pincode: string | null;
+        delivery_address: string | null; delivery_city: string | null; delivery_pincode: string | null };
+      return {
+        invoice_no: i.invoice_no as string,
+        invoice_date: i.invoice_date as string,
+        brand: i.brand_id ? brandName.get(i.brand_id) ?? null : null,
+        shop: {
+          shop_name: r.shop_name, owner_name: r.owner_name, mobile: r.mobile, code: r.code,
+          address: r.delivery_address ?? r.billing_address, city: r.delivery_city ?? r.billing_city, pincode: r.delivery_pincode ?? r.billing_pincode,
+        },
+        lines: (lines ?? []).filter((l) => l.invoice_id === i.id).map((l) => ({
+          product_name: l.product_name as string, sku: l.sku as string, hsn_code: l.hsn_code as string | null, unit_code: l.unit_code as string, qty: Number(l.qty),
+        })),
+      };
+    });
+    const buffer = await renderToBuffer(<DeliveryNotePdf data={{ company: co, notes }} />);
+    const first = notes[0];
+    const one = notes.length === 1;
+    const snap = open[0].retailer_snapshot as { mobile?: string };
+    return {
+      buffer,
+      filename: one ? `Delivery_note_${safe(first.invoice_no)}.pdf` : `Delivery_notes_${new Date().toISOString().slice(0, 10)}.pdf`,
+      phone: one ? snap.mobile ?? undefined : undefined,
+      shareText: one ? `Dear ${first.shop.shop_name}, delivery note for invoice ${first.invoice_no}. — ${co.legal_name}` : "Delivery notes",
+    };
+  }
+
   if (kind === "picking") {
     const ids = id.split(",").filter(Boolean).slice(0, 50);
     const { data: invs } = await supabase.from("invoices").select("id, invoice_no, retailer_snapshot").in("id", ids);
     if (!invs?.length) return null;
-    const { data: lines } = await supabase.from("invoice_lines").select("invoice_id, product_id, product_name, sku, unit_code, qty").in("invoice_id", ids);
+    const { data: lines } = await allRows(() => supabase.from("invoice_lines").select("invoice_id, product_id, product_name, sku, unit_code, qty").in("invoice_id", ids).order("id"));
     const pIds = [...new Set((lines ?? []).map((l) => l.product_id as string))];
     const { data: cat } = pIds.length ? await supabase.from("catalog").select("id, default_location_id").in("id", pIds) : { data: [] };
     const locIds = (cat ?? []).map((c) => c.default_location_id).filter(Boolean) as string[];
@@ -221,7 +270,7 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
     if (!o) return null;
     const [{ data: lines }, { data: sm }] = await Promise.all([
       supabase.from("order_lines").select("line_no, product_id, qty, unit_price, price_mode, discount_pct, taxable_value, gst_rate, tax_amount, line_total").eq("order_id", id).order("line_no"),
-      o.salesman_id ? supabase.from("profiles").select("full_name").eq("id", o.salesman_id).maybeSingle() : Promise.resolve({ data: null }),
+      o.salesman_id ? supabase.from("tenant_people").select("full_name").eq("id", o.salesman_id).maybeSingle() : Promise.resolve({ data: null }),
     ]);
     // Product details come from the catalogue view: salesmen cannot read the products table (it holds costs).
     const pids = [...new Set((lines ?? []).map((l) => l.product_id as string))];

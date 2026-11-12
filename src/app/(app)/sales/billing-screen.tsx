@@ -13,9 +13,10 @@ import { BarcodeScanButton } from "@/components/barcode-scanner";
 import { brandTone } from "@/lib/brand-style";
 import { addDays, calcLine, todayIST } from "@/lib/gst";
 import { date as fmtDate, inr, qty as fmtQty } from "@/lib/format";
-import { shareOnWhatsApp } from "../share-actions";
+import { shareOnWhatsApp } from "@/lib/share-actions";
 import { BillingDetailsDialog, RetailerSelect, missingTaxDetails, rememberRetailer } from "./retailer-select";
 import { loadBillingCatalogue, retailerUsuals, saveOrder, type PickerProduct, type PickerRetailer } from "./actions";
+import { tenantKey } from "@/lib/supabase/client";
 
 export type BuilderLine = { product: PickerProduct; qty: number; discount: number; price: number | null };
 type Brand = { id: string; name: string; code: string };
@@ -40,9 +41,10 @@ const METHODS: { k: Method; label: string }[] = [{ k: "cash", label: "Cash" }, {
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const norm = (s: string) => s.toLowerCase().replace(/[-_/.,()]+/g, " ");
 const newKey = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
+// drafts kept on this device, per business (tenant)
 const ls = {
-  get<T>(k: string, d: T): T { try { return JSON.parse(localStorage.getItem(k) ?? "") as T; } catch { return d; } },
-  set(k: string, v: unknown) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } },
+  get<T>(k: string, d: T): T { try { return JSON.parse(localStorage.getItem(tenantKey(k)) ?? "") as T; } catch { return d; } },
+  set(k: string, v: unknown) { try { localStorage.setItem(tenantKey(k), JSON.stringify(v)); } catch { /* private mode */ } },
 };
 
 // "type c" matches "Type-C Cable", "65w" matches every 65W product; SKU / barcode exact hits come first.

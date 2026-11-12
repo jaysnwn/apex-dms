@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ImagePlus, Trash2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, tenantStoragePath } from "@/lib/supabase/client";
 import { setBrandLogo } from "../actions";
 
 export function LogoUpload({ brandId, url, canEdit }: { brandId: string; url: string | null; canEdit: boolean }) {
@@ -18,7 +18,7 @@ export function LogoUpload({ brandId, url, canEdit }: { brandId: string; url: st
     if (!/^image\/(png|jpeg)$/.test(file.type)) return setError("Use a PNG or JPG logo.");
     if (file.size > 2 * 1024 * 1024) return setError("Logo must be under 2 MB.");
     setBusy(true); setError(null);
-    const path = `brands/${brandId}/logo-${Date.now()}.${file.type === "image/png" ? "png" : "jpg"}`;
+    const path = tenantStoragePath(`brands/${brandId}/logo-${Date.now()}.${file.type === "image/png" ? "png" : "jpg"}`);
     const { error: up } = await createClient().storage.from("product-images").upload(path, file, { contentType: file.type });
     if (up) { setBusy(false); return setError(up.message); }
     const r = await setBrandLogo(brandId, path);

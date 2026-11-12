@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { dbError, formObject, zodMessage } from "@/lib/actions";
 import type { FormResult } from "@/components/action-form";
+import { stopwatch } from "@/lib/timing";
 
 const qtySchema = z.coerce.number({ message: "Enter a quantity" }).positive("Quantity must be more than zero");
 
@@ -26,7 +27,9 @@ const entrySchema = z.object({
 
 // Inward, outward, damage, opening. Every change is a new movement row: stock is never overwritten.
 export async function recordMovement(_prev: FormResult, formData: FormData): Promise<FormResult> {
+  const sw = stopwatch("stock.recordMovement");
   const { user, profile } = await requireRole("super_admin", "manager", "warehouse");
+  sw.mark("auth");
   const raw = formObject(formData);
   for (const k of Object.keys(raw)) if (raw[k] === "") delete raw[k];
   const parsed = entrySchema.safeParse(raw);
@@ -52,10 +55,13 @@ export async function recordMovement(_prev: FormResult, formData: FormData): Pro
     client_uuid: v.client_uuid ?? null,
     created_by: user.id,
   });
+  sw.mark("insert");
   // Same form submitted twice: the first one already counted.
   if (error && !(error.code === "23505" && error.message.includes("client_uuid"))) return { error: dbError(error) };
 
   revalidatePath("/stock");
+  sw.mark("revalidate");
+  sw.done();
   const label = { stock_in: "Stock inward", stock_out: "Stock outward", opening: "Opening stock", damage: "Damaged stock" }[v.type];
   return { ok: `${label} of ${v.qty} recorded.`, resetForm: true };
 }
@@ -179,13 +185,18 @@ export async function saveWarehouse(_prev: FormResult, formData: FormData): Prom
   const parsed = warehouseSchema.safeParse(raw);
   if (!parsed.success) return { error: zodMessage(parsed.error) };
   const { id, ...v } = parsed.data;
-  const row: Record<string, unknown> = { name: v.name, address: v.address ?? null, is_active: v.is_active !== "false" };
-  if (!id) {
-    if (!v.brand_id) return { error: "Choose the brand this warehouse belongs to." };
-    row.brand_id = v.brand_id;
-  }
+  // The fields a warehouse always has. A new warehouse also needs its brand,
+  // which is added on the insert itself so that the database contract can
+  // check it; an existing warehouse does not change brand.
+  const row = { name: v.name, address: v.address ?? null, is_active: v.is_active !== "false" };
   const supabase = await createClient();
-  const { error } = id ? await supabase.from("warehouses").update(row).eq("id", id) : await supabase.from("warehouses").insert(row);
+  let error;
+  if (id) {
+    ({ error } = await supabase.from("warehouses").update(row).eq("id", id));
+  } else {
+    if (!v.brand_id) return { error: "Choose the brand this warehouse belongs to." };
+    ({ error } = await supabase.from("warehouses").insert({ ...row, brand_id: v.brand_id }));
+  }
   if (error) return { error: dbError(error) };
   revalidatePath("/stock/warehouses");
   return { ok: id ? "Saved." : `${v.name} added.`, resetForm: !id };

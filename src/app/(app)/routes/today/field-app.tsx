@@ -10,18 +10,43 @@ import { Dialog } from "@/components/dialog";
 import { date, inr, time } from "@/lib/format";
 import { GEO_STATUS, VISIT_STATUS } from "@/lib/status";
 import { addDays } from "@/lib/gst";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, currentTenantId, currentUserId, tenantKey, tenantStoragePath } from "@/lib/supabase/client";
+import { APEX_TENANT_ID } from "@/lib/tenant-shared";
 import { fieldToday, pingLocation, saveShopLocation, saveVisit, setLocationSharing, type FieldDay, type FieldVisit, type VisitUpdate } from "../actions";
 import { recordPayment } from "../../payments/actions";
 import { setupServiceWorker } from "@/lib/sw";
+import { shrinkImage } from "@/lib/image";
 
 // ---------------------------------------------------------------------------
 // Offline support: today's route is cached on the phone; visit updates and
 // payments made without network are queued and sent when the phone is back
 // online. Every queued item has a one-time id, so a resend never duplicates.
 // ---------------------------------------------------------------------------
-const CACHE_KEY = "apex-field-day";
-const QUEUE_KEY = "apex-field-queue";
+// kept per business (tenant): see src/app/m/outbox.ts
+const CACHE_BASE = "dms-field-day";
+const QUEUE_BASE = "dms-field-queue";
+let CACHE_KEY = CACHE_BASE;
+let QUEUE_KEY = QUEUE_BASE;
+function bindKeysToTenant() {
+  CACHE_KEY = tenantKey(CACHE_BASE);
+  QUEUE_KEY = tenantKey(QUEUE_BASE);
+  // Before multi-tenancy everything on the phone was APEX TRADING CO.'s:
+  // move anything still unsent into Apex's own space, once.
+  try {
+    if (currentTenantId() === APEX_TENANT_ID) {
+      const old = localStorage.getItem("apex-field-queue");
+      if (old) {
+        const now = JSON.parse(localStorage.getItem(QUEUE_KEY) ?? "[]") as { id: string }[];
+        const moved = JSON.parse(old) as { id: string }[];
+        localStorage.setItem(QUEUE_KEY, JSON.stringify([...now.filter((n) => !moved.some((m) => m.id === n.id)), ...moved]));
+        localStorage.removeItem("apex-field-queue");
+      }
+    }
+    localStorage.removeItem("apex-field-day");
+  } catch {
+    /* storage blocked */
+  }
+}
 const PING_MS = 5 * 60 * 1000;
 
 type Queued =
@@ -78,6 +103,7 @@ export function FieldApp({ initial, mobile = false }: { initial: FieldDay | null
 
   // boot: cache / queue / service worker
   useEffect(() => {
+    bindKeysToTenant();
     if (initial) store(CACHE_KEY, initial);
     else setDay(load<FieldDay | null>(CACHE_KEY, null));
     setQueue(load<Queued[]>(QUEUE_KEY, []));
@@ -507,11 +533,13 @@ function CloseDialog({ visit, mode, today, online, onClose, onSave }: {
             setBusy(true);
             let photoPath: string | null = null;
             if (photo) {
-              if (photo.size > 8 * 1024 * 1024) { setBusy(false); return setError("Photo is larger than 8 MB."); }
+              const small = await shrinkImage(photo);
+              if (small.size > 8 * 1024 * 1024) { setBusy(false); return setError("Photo is larger than 8 MB."); }
               const sb = createClient();
-              const { data: u } = await sb.auth.getUser();
-              const path = `${u.user?.id}/${crypto.randomUUID()}.jpg`;
-              const { error: upErr } = await sb.storage.from("visit-photos").upload(path, photo, { contentType: photo.type });
+              const me = currentUserId();
+              if (!me) { setBusy(false); return setError("Your session has ended. Sign in again."); }
+              const path = tenantStoragePath(`${me}/${crypto.randomUUID()}.jpg`);
+              const { error: upErr } = await sb.storage.from("visit-photos").upload(path, small, { contentType: small.type });
               if (upErr) { setBusy(false); return setError(`Photo upload failed: ${upErr.message}`); }
               photoPath = path;
             }

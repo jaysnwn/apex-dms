@@ -6,8 +6,11 @@ import { Plus, Trash2 } from "lucide-react";
 import { Alert, Button, Input, Label, Textarea } from "@/components/ui";
 import { inr } from "@/lib/format";
 import { saveScheme } from "../actions";
+import type { Tables } from "@/lib/supabase/database";
 
-type Row = Record<string, string | number | null>;
+// The scheme row as the database defines it, rather than a bag of strings:
+// collection_slabs is jsonb and does not fit a string/number record.
+type Row = Tables<"incentive_schemes">;
 const F = [
   ["sales_target", "Monthly sales target before GST (₹)"], ["sales_amount", "Incentive for sales (₹)"],
   ["billed_target", "Shops to bill in the month"], ["billed_amount", "Incentive for shops billed (₹)"],
@@ -17,7 +20,7 @@ const F = [
 
 type Slab = { min_pct: string; amount: string };
 
-export function SchemeForm({ current, defaultMonth }: { current: Row & { collection_slabs?: unknown }; defaultMonth: string }) {
+export function SchemeForm({ current, defaultMonth }: { current: Row; defaultMonth: string }) {
   const router = useRouter();
   const [month, setMonth] = useState(defaultMonth);
   const [v, setV] = useState<Record<string, string>>(Object.fromEntries(F.map(([k]) => [k, String(Number(current[k]))])));

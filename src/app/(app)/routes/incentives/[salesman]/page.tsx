@@ -17,7 +17,7 @@ export default async function SalesmanIncentivePage({ params, searchParams }: { 
   const { salesman } = await params;
   const month = monthParam((await searchParams).month, todayIST());
   const supabase = await createClient();
-  const { data: sm } = await supabase.from("profiles").select("id, full_name").eq("id", salesman).maybeSingle();
+  const { data: sm } = await supabase.from("tenant_people").select("id, full_name").eq("id", salesman).maybeSingle();
   if (!sm) notFound();
   const { data: payout } = await supabase.from("incentive_payouts").select("detail, status, approved_at").eq("salesman_id", salesman).eq("month", month).maybeSingle();
 

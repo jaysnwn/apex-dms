@@ -8,6 +8,8 @@ import { todayIST } from "@/lib/gst";
 import { safeSearch } from "@/lib/format";
 import { Badge, Button, Card, Input, PageHeader, Select } from "@/components/ui";
 import { RouteTabs } from "../manager-tabs";
+import { allRows } from "@/lib/all-rows";
+import { required } from "@/lib/required";
 
 export const metadata: Metadata = { title: "Routes" };
 
@@ -31,8 +33,8 @@ export default async function ManageRoutesPage({ searchParams }: { searchParams:
   const [{ data: routes }, { data: territories }, { data: salesmen }, { data: outlets }, { data: towns }, { data: assigns }] = await Promise.all([
     q,
     sb.from("territories").select("id, name").order("name"),
-    sb.from("profiles").select("id, full_name").eq("role", "salesman").order("full_name"),
-    sb.from("route_outlets").select("route_id").eq("is_active", true),
+    sb.from("tenant_people").select("id, full_name").eq("role", "salesman").order("full_name"),
+    allRows(() => sb.from("route_outlets").select("route_id").eq("is_active", true).order("id")),
     sb.from("route_locations").select("route_id, sequence, locations(name)").order("sequence"),
     sb.from("route_assignments").select("route_id, salesman_id, status, start_date").is("end_date", null),
   ]);
@@ -62,7 +64,7 @@ export default async function ManageRoutesPage({ searchParams }: { searchParams:
           </Select>
           <Select name="salesman" defaultValue={sp.salesman ?? ""} className="w-44" aria-label="Salesman">
             <option value="">All salesmen</option>
-            {(salesmen ?? []).map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+            {(salesmen ?? []).map((p) => <option key={required(p.id, "Salesman id")} value={required(p.id, "Salesman id")}>{p.full_name}</option>)}
           </Select>
           <Select name="show" defaultValue={show} className="w-40" aria-label="Show">
             <option value="current">Current routes</option>

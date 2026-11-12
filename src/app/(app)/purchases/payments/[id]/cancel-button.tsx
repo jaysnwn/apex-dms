@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Ban } from "lucide-react";
 import { Alert, Button, Label, Textarea } from "@/components/ui";
-import { Dialog } from "../../../sales/order-builder";
+import { Dialog } from "@/components/dialog";
 import { cancelSupplierPayment } from "../../actions";
 
 export function CancelSupplierPaymentButton({ id }: { id: string }) {

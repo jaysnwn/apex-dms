@@ -9,6 +9,7 @@ import { BrandBadge } from "@/components/brand-badge";
 import { saveMaster } from "../actions";
 import { LogoUpload } from "./logo-upload";
 import { CategoryControls } from "./category-controls";
+import { allRows } from "@/lib/all-rows";
 
 export const metadata: Metadata = { title: "Brands and categories" };
 
@@ -22,7 +23,7 @@ export default async function ProductSettingsPage() {
   const [{ data: brands }, { data: categories }, { data: used }] = await Promise.all([
     supabase.from("brands").select("id, name, code, logo_path, is_active").order("name"),
     supabase.from("categories").select("id, name, is_active, brand_id").in("brand_id", ctx.brands.map((b) => b.id)).order("sort_order").order("name"),
-    supabase.from("products").select("category_id").in("brand_id", ctx.brands.map((b) => b.id)),
+    allRows(() => supabase.from("products").select("category_id").in("brand_id", ctx.brands.map((b) => b.id)).order("id")),
   ]);
   const useCount = new Map<string, number>();
   for (const u of used ?? []) if (u.category_id) useCount.set(u.category_id, (useCount.get(u.category_id) ?? 0) + 1);

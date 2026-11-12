@@ -22,7 +22,7 @@ export default async function IncentivesPage({ searchParams }: { searchParams: P
   const month = monthParam((await searchParams).month, today);
   const supabase = await createClient();
   const [{ data: salesmen }, { data: payouts }] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, is_active").eq("role", "salesman").order("full_name"),
+    supabase.from("tenant_people").select("id, full_name, is_active").eq("role", "salesman").order("full_name"),
     supabase.from("incentive_payouts").select("*").eq("month", month),
   ]);
   const pMap = new Map(((payouts ?? []) as Payout[]).map((p) => [p.salesman_id, p]));

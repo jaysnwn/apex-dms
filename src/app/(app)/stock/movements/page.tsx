@@ -6,6 +6,7 @@ import { brandScope, getBrandContext } from "@/lib/brand";
 import { dateTime, MOVEMENT_LABELS, qty, txnLabel } from "@/lib/format";
 import { Button, Card, Input, Select, cn } from "@/components/ui";
 import { BrandStrip } from "@/components/brand-badge";
+import { enumParam } from "@/lib/enum-param";
 
 export const metadata: Metadata = { title: "Stock movement history" };
 
@@ -38,7 +39,8 @@ export default async function MovementsPage({
     .range((page - 1) * PAGE, page * PAGE - 1);
   if (sp.product) query = query.eq("product_id", sp.product);
   if (sp.warehouse) query = query.eq("warehouse_id", sp.warehouse);
-  if (sp.type && MOVEMENT_LABELS[sp.type]) query = query.eq("movement_type", sp.type);
+  const movementType = enumParam("stock_movement_type", sp.type);
+  if (movementType) query = query.eq("movement_type", movementType);
   if (sp.from) query = query.gte("created_at", `${sp.from}T00:00:00+05:30`);
   if (sp.to) query = query.lte("created_at", `${sp.to}T23:59:59+05:30`);
 

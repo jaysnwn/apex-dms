@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { addDays, todayIST } from "@/lib/gst";
 import { signProductImages } from "@/lib/images";
 import { toShops, toSummary, type IncentiveShop, type IncentiveSummary } from "@/lib/incentive";
+import { allRows } from "@/lib/all-rows";
 
 export type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
 
@@ -165,7 +166,7 @@ export async function getOutlets(supabase: SupabaseServer, userId: string): Prom
       .neq("status", "inactive")
       .order("shop_name")
       .limit(2000),
-    supabase.from("retailer_balances").select("retailer_id, outstanding, overdue"),
+    allRows(() => supabase.from("retailer_balances").select("retailer_id, outstanding, overdue").order("retailer_id")),
     supabase.from("visits").select("retailer_id").eq("salesman_id", userId).eq("planned_date", today),
   ]);
   const bMap = new Map((bal ?? []).map((b) => [b.retailer_id as string, b]));
@@ -196,7 +197,7 @@ export async function getCatalogue(supabase: SupabaseServer): Promise<{ items: C
       .order("brand_name").order("name")
       .limit(3000),
     supabase.from("product_stock").select("product_id, available"),
-    supabase.from("company_settings").select("salesman_max_discount").eq("id", 1).maybeSingle(),
+    supabase.from("company_settings").select("salesman_max_discount").maybeSingle(),
   ]);
   const sMap = new Map((stock ?? []).map((s) => [s.product_id as string, Number(s.available)]));
   const urls = await signProductImages(supabase, (rows ?? []).map((r) => r.image_path));

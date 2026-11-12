@@ -9,6 +9,7 @@ import { DUE_STATUS, PURCHASE_STATUS } from "@/lib/status";
 import { Badge, Button, Card, Input, Select } from "@/components/ui";
 import { StatCard } from "@/components/stat-card";
 import { billStatus } from "../data";
+import { allRows } from "@/lib/all-rows";
 
 export const metadata: Metadata = { title: "Supplier bills" };
 
@@ -32,13 +33,13 @@ export default async function BillsPage({ searchParams }: { searchParams: Promis
   if (sp.q) q = q.ilike("supplier_bill_no", `%${sp.q.replace(/[%,()]/g, "")}%`);
   const [{ data: rows }, { data: bal }, { data: suppliers }] = await Promise.all([
     q,
-    supabase.from("purchase_balances").select("purchase_id, balance, days_overdue, due_date"),
+    allRows(() => supabase.from("purchase_balances").select("purchase_id, balance, days_overdue, due_date").order("purchase_id")),
     supabase.from("suppliers").select("id, name").order("name"),
   ]);
   const bMap = new Map((bal ?? []).map((b) => [b.purchase_id as string, b]));
   const open = (bal ?? []).filter((b) => Number(b.balance) > 0);
   const totalOpen = open.reduce((t, b) => t + Number(b.balance), 0);
-  const overdue = open.filter((b) => b.due_date < today).reduce((t, b) => t + Number(b.balance), 0);
+  const overdue = open.filter((b) => b.due_date !== null && b.due_date < today).reduce((t, b) => t + Number(b.balance), 0);
   const purchased = (rows ?? []).filter((r) => r.status === "received").reduce((t, r) => t + Number(r.grand_total), 0);
 
   return (

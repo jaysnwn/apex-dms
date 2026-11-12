@@ -4,10 +4,11 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, FileText, X } from "lucide-react";
 import { Alert, Button, Card, Input, Label, Select, Textarea, cn } from "@/components/ui";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, tenantStoragePath } from "@/lib/supabase/client";
 import { todayIST } from "@/lib/gst";
 import { EXPENSE_PAYMENT_METHOD, type ExpenseCategory, type ExpenseRow } from "@/lib/expense-labels";
 import { saveExpense } from "./actions";
+import { shrinkImage } from "@/lib/image";
 
 export type FormOptions = {
   categories: ExpenseCategory[];
@@ -18,10 +19,11 @@ export type FormOptions = {
 
 const MAX_FILE = 10 * 1024 * 1024;
 
-export async function uploadReceipt(userId: string, file: File, prefix = "") {
+export async function uploadReceipt(userId: string, original: File, prefix = "") {
+  if (!/^image\/|^application\/pdf$/.test(original.type)) throw new Error("Upload a photo or a PDF");
+  const file = await shrinkImage(original);
   if (file.size > MAX_FILE) throw new Error("The file is larger than 10 MB");
-  if (!/^image\/|^application\/pdf$/.test(file.type)) throw new Error("Upload a photo or a PDF");
-  const path = `${userId}/${prefix}${crypto.randomUUID()}-${file.name.replace(/[^\w.]+/g, "_").slice(-60)}`;
+  const path = tenantStoragePath(`${userId}/${prefix}${crypto.randomUUID()}-${file.name.replace(/[^\w.]+/g, "_").slice(-60)}`);
   const { error } = await createClient().storage.from("expense-receipts").upload(path, file, { contentType: file.type });
   if (error) throw new Error(`Upload failed: ${error.message}`);
   return path;
@@ -154,7 +156,7 @@ export function ExpenseForm({ me, office, options, initial, onDone, compact }: {
             ))}
           </div>
         </div>
-        <div className="sm:col-span-2"><Label hint="optional">Description</Label><Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Petrol, Sangamner–Akole route" maxLength={500} /></div>
+        <div className="sm:col-span-2"><Label hint="optional">Description</Label><Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Petrol, city route" maxLength={500} /></div>
         <div className="sm:col-span-2">
           <Label hint={cat?.receipt_required ? "required for this category" : "photo or PDF"}>Receipt</Label>
           {keepReceipt && !file ? (

@@ -24,7 +24,7 @@ export default async function CountsPage() {
   const [{ data: counts }, { data: warehouses }, { data: people }] = await Promise.all([
     supabase.from("stock_counts").select("id, warehouse_id, status, notes, counted_by, approved_by, created_at, approved_at").in("brand_id", scope).order("created_at", { ascending: false }).limit(50),
     supabase.from("warehouses").select("id, name").eq("is_active", true).in("brand_id", scope).order("name"),
-    supabase.from("profiles").select("id, full_name"),
+    supabase.from("tenant_people").select("id, full_name"),
   ]);
   const wMap = new Map((warehouses ?? []).map((w) => [w.id as string, w.name as string]));
   const uMap = new Map((people ?? []).map((u) => [u.id as string, u.full_name as string]));

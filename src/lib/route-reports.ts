@@ -47,7 +47,7 @@ function routePerformance(dim: Dim): ReportDef["run"] {
       pageAll<{ route_id: string; retailer_id: string }>(() => sb.from("route_outlets").select("route_id, retailer_id").eq("is_active", true)),
       sb.from("routes").select("id, name, code"),
       sb.from("locations").select("id, name"),
-      sb.from("profiles").select("id, full_name"),
+      sb.from("tenant_people").select("id, full_name"),
     ]);
     const rt = new Map(retailers.map((r) => [r.id, r]));
     const rName = new Map((routes.data ?? []).map((r) => [r.id as string, `${r.name}${r.code ? ` (${r.code})` : ""}`]));

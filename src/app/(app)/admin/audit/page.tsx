@@ -70,7 +70,7 @@ export default async function AuditPage({
 
   const [{ data, count }, { data: people }] = await Promise.all([
     query,
-    supabase.from("profiles").select("id, full_name, email").order("full_name"),
+    supabase.from("tenant_people").select("id, full_name, email").order("full_name"),
   ]);
   const rows = (data ?? []) as AuditRow[];
   const names = new Map((people ?? []).map((p) => [p.id as string, (p.full_name || p.email) as string]));

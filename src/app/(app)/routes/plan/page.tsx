@@ -8,6 +8,7 @@ import { loadSchedule } from "@/lib/route-data";
 import { Card, PageHeader, cn } from "@/components/ui";
 import { RouteTabs } from "../manager-tabs";
 import { PlanForm } from "./plan-form";
+import { required } from "@/lib/required";
 
 export const metadata: Metadata = { title: "Visit schedule" };
 
@@ -28,7 +29,7 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
   const [schedule, { data: routes }, { data: salesmen }] = await Promise.all([
     loadSchedule(sb, from, 14),
     sb.from("routes").select("id, name, code, default_salesman_id").eq("is_active", true).is("archived_at", null).order("sort_order").order("name"),
-    sb.from("profiles").select("id, full_name").eq("role", "salesman").eq("is_active", true).order("full_name"),
+    sb.from("tenant_people").select("id, full_name").eq("role", "salesman").eq("is_active", true).order("full_name"),
   ]);
   const days = Array.from({ length: 14 }, (_, i) => addDays(from, i));
   const rMap = new Map((routes ?? []).map((r) => [r.id as string, r]));
@@ -89,7 +90,7 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
         </div>
       </Card>
       <div className="max-w-xl">
-        <PlanForm routes={(routes ?? []).map((r) => ({ id: r.id, name: `${r.name} (${r.code})`, default_salesman_id: r.default_salesman_id }))} salesmen={(salesmen ?? []).map((s) => ({ id: s.id, name: s.full_name }))} today={today} />
+        <PlanForm routes={(routes ?? []).map((r) => ({ id: r.id, name: `${r.name} (${r.code})`, default_salesman_id: r.default_salesman_id }))} salesmen={(salesmen ?? []).map((s) => ({ id: required(s.id, "Salesman id"), name: required(s.full_name, "Salesman name") }))} today={today} />
       </div>
     </>
   );

@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { BadgeCheck, Undo2, Wallet } from "lucide-react";
 import { Alert, Button, Input, Label, cn } from "@/components/ui";
-import { Dialog } from "../../sales/order-builder";
+import { Dialog } from "@/components/dialog";
 import { inr } from "@/lib/format";
 import { approveMonth, markPaid, reopenPayout } from "./actions";
 

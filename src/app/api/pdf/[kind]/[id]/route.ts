@@ -5,7 +5,7 @@ import { renderPdf, type PdfKind } from "@/pdf/render";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const KINDS: PdfKind[] = ["invoice", "credit-note", "receipt", "statement", "picking", "purchase-order", "quotation"];
+const KINDS: PdfKind[] = ["invoice", "credit-note", "receipt", "statement", "picking", "purchase-order", "quotation", "delivery-note"];
 
 // GET /api/pdf/invoice/<id>  (add ?download=1 to download instead of view)
 export async function GET(request: NextRequest, { params }: { params: Promise<{ kind: string; id: string }> }) {

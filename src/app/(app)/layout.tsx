@@ -1,23 +1,36 @@
 export const dynamic = "force-dynamic";
 
+import { ErrorListener } from "@/components/error-listener";
 import { Shell } from "@/components/shell";
 import { requireRole } from "@/lib/auth";
 import { getBrandContext } from "@/lib/brand";
 import { modulesFor, ROLE_LABELS } from "@/lib/roles";
+import { getTenantContext } from "@/lib/tenant";
+import { getCompanyLogoUrl } from "@/lib/branding";
+import { headers } from "next/headers";
+import { REQUEST_START_HEADER, stopwatch } from "@/lib/timing";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const { profile } = await requireRole();
-  const { brands, current, canSeeAll } = await getBrandContext();
+  const sw = stopwatch("layout.app", (await headers()).get(REQUEST_START_HEADER));
+  const { profile, tenant } = await requireRole();
+  sw.mark("auth");
+  const [{ brands, current, canSeeAll }, { open }, logoUrl] = await Promise.all([getBrandContext(), getTenantContext(), getCompanyLogoUrl()]);
+  sw.mark("brands");
+  sw.done();
 
   return (
     <Shell
       modules={modulesFor(profile.role)}
       userName={profile.full_name}
       roleLabel={ROLE_LABELS[profile.role]}
+      orgName={tenant.display_name}
+      logoUrl={logoUrl}
+      canSwitchOrg={open.length > 1}
       brands={brands.map((b) => ({ id: b.id, name: b.name, code: b.code }))}
       currentBrandId={current?.id ?? null}
       canSeeAllBrands={canSeeAll}
     >
+      <ErrorListener />
       {children}
     </Shell>
   );

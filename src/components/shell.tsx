@@ -5,11 +5,14 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   BarChart3, Boxes, LayoutDashboard, LogOut, Menu, Package, PackagePlus, Receipt, Route,
-  ScrollText, Settings, ShoppingCart, Store, Truck, Upload, Users, Wallet, X, type LucideIcon,
+  Activity, ScrollText, Settings, ShoppingCart, Store, Truck, Upload, Users, Wallet, X, type LucideIcon,
 } from "lucide-react";
 import type { ModuleDef, ModuleKey } from "@/lib/roles";
 import { cn } from "@/components/ui";
 import { BrandSwitcher, type SwitcherBrand } from "@/components/brand-switcher";
+import { PLATFORM_NAME } from "@/lib/tenant-shared";
+import { SignOutButton } from "@/components/sign-out-button";
+import { CompanyLogo } from "@/components/company-logo";
 
 // Each module keeps one colour everywhere, so people find it at a glance.
 // icon = icon colour, tile = soft background behind the icon.
@@ -29,6 +32,7 @@ const COLORS: Record<ModuleKey, { icon: string; tile: string }> = {
   users: { icon: "text-gray-200", tile: "bg-white/10" },
   audit: { icon: "text-gray-200", tile: "bg-white/10" },
   settings: { icon: "text-gray-200", tile: "bg-white/10" },
+  health: { icon: "text-emerald-300", tile: "bg-emerald-400/15" },
 };
 
 const ICONS: Record<ModuleKey, LucideIcon> = {
@@ -47,12 +51,16 @@ const ICONS: Record<ModuleKey, LucideIcon> = {
   users: Users,
   audit: ScrollText,
   settings: Settings,
+  health: Activity,
 };
 
 type Props = {
   modules: ModuleDef[];
   userName: string;
   roleLabel: string;
+  orgName: string;
+  logoUrl?: string | null;
+  canSwitchOrg: boolean;
   brands: SwitcherBrand[];
   currentBrandId: string | null;
   canSeeAllBrands: boolean;
@@ -71,7 +79,7 @@ function isActive(href: string, pathname: string) {
   return pathname === base || pathname.startsWith(base + "/");
 }
 
-export function Shell({ modules, userName, roleLabel, brands, currentBrandId, canSeeAllBrands, children }: Props) {
+export function Shell({ modules, userName, roleLabel, orgName, logoUrl, canSwitchOrg, brands, currentBrandId, canSeeAllBrands, children }: Props) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -82,17 +90,32 @@ export function Shell({ modules, userName, roleLabel, brands, currentBrandId, ca
 
   const nav = (
     <nav className="flex h-full flex-col">
-      {/* Brand */}
-      <div className="flex h-16 shrink-0 items-center gap-3 border-b border-white/10 px-5">
-        <svg width="34" height="34" viewBox="0 0 32 32" aria-hidden className="drop-shadow">
-          <rect width="32" height="32" rx="9" fill="#f28c18" />
-          <path d="M9 23 16 8l7 15h-4l-3-7-3 7z" fill="#1f2937" />
-        </svg>
-        <div className="leading-tight">
-          <div className="text-[15px] font-bold tracking-wide text-white">APEX DMS</div>
-          <div className="text-[11px] font-medium tracking-wider text-gray-300/80">APEX TRADING CO.</div>
+      {/* The business: its logo (Admin → Company) or its name */}
+      {logoUrl ? (
+        <div className="shrink-0 border-b border-white/10 px-4 pt-3 pb-2.5">
+          <Link href="/dashboard" className="flex h-12 items-center justify-center rounded-xl bg-white px-3 shadow-sm ring-1 ring-white/20" title={orgName}>
+            <CompanyLogo src={logoUrl} name={orgName} className="max-h-9 w-auto max-w-full object-contain" fallbackClassName="truncate text-sm font-bold tracking-wide text-slate-900" />
+          </Link>
+          <div className="mt-1.5 text-center text-[11px] font-medium tracking-wider text-gray-300/80">
+            {PLATFORM_NAME}
+            {canSwitchOrg && <> · <Link href="/select-org" className="underline-offset-2 hover:text-white hover:underline">switch</Link></>}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex h-16 shrink-0 items-center gap-3 border-b border-white/10 px-5">
+          <svg width="34" height="34" viewBox="0 0 32 32" aria-hidden className="drop-shadow">
+            <rect width="32" height="32" rx="9" fill="#f28c18" />
+            <path d="M9 23 16 8l7 15h-4l-3-7-3 7z" fill="#1f2937" />
+          </svg>
+          <div className="min-w-0 leading-tight">
+            <div className="truncate text-[15px] font-bold tracking-wide text-white">{orgName}</div>
+            <div className="text-[11px] font-medium tracking-wider text-gray-300/80">
+              {PLATFORM_NAME}
+              {canSwitchOrg && <> · <Link href="/select-org" className="underline-offset-2 hover:text-white hover:underline">switch</Link></>}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Brand switcher: every inventory screen follows it */}
       {brands.length > 0 && (
@@ -128,15 +151,9 @@ export function Shell({ modules, userName, roleLabel, brands, currentBrandId, ca
               <span className="block truncate text-[11px] text-gray-300">{roleLabel}</span>
             </span>
           </Link>
-          <form action="/auth/signout" method="post">
-            <button
-              title="Sign out"
-              aria-label="Sign out"
-              className="grid size-9 place-items-center rounded-lg text-gray-300 transition hover:bg-red-500/20 hover:text-red-200"
-            >
-              <LogOut className="size-[18px]" />
-            </button>
-          </form>
+          <SignOutButton className="grid size-9 place-items-center rounded-lg text-gray-300 transition hover:bg-red-500/20 hover:text-red-200">
+            <LogOut className="size-[18px]" aria-label="Sign out" />
+          </SignOutButton>
         </div>
       </div>
     </nav>
@@ -171,7 +188,11 @@ export function Shell({ modules, userName, roleLabel, brands, currentBrandId, ca
           <button aria-label="Open menu" onClick={() => setOpen(true)} className="rounded-md p-1.5 text-slate-700 hover:bg-slate-100">
             <Menu className="size-5" />
           </button>
-          <span className="text-sm font-semibold tracking-wide">APEX DMS</span>
+          {logoUrl ? (
+            <CompanyLogo src={logoUrl} name={orgName} className="h-7 w-auto max-w-[55%] object-contain" />
+          ) : (
+            <span className="truncate text-sm font-semibold tracking-wide">{orgName}</span>
+          )}
           {brands.length > 1 && <div className="ml-auto w-48"><BrandSwitcher brands={brands} currentId={currentBrandId} canSeeAll={false} /></div>}
         </header>
         <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>

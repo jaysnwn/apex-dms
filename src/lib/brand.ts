@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth";
 
 export type Brand = { id: string; name: string; code: string; logo_path: string | null };
-export const BRAND_COOKIE = "apex_brand";
+export const BRAND_COOKIE = "dms_brand";
 export const ALL = "all";
 
 // Brands this user may work with (the database decides: Super Admin = all,
@@ -22,7 +22,7 @@ export const getBrandContext = cache(async () => {
   const allowed = new Set((ids as string[] | null) ?? []);
   const brands: Brand[] = (all ?? [])
     .filter((b) => b.is_active && allowed.has(b.id))
-    .sort((a, b) => (a.code === "CQ" ? -1 : b.code === "CQ" ? 1 : a.name.localeCompare(b.name)))
+    .sort((a, b) => a.name.localeCompare(b.name))
     .map((b) => ({ id: b.id, name: b.name, code: b.code, logo_path: b.logo_path }));
   const role = session?.profile?.role;
   const canSeeAll = brands.length > 1 && (role === "super_admin" || role === "manager");

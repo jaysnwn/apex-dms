@@ -3,7 +3,30 @@
 
 export type Mode = "inclusive" | "exclusive";
 
-const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+// Rounding to paise, decided on the decimal value rather than on the binary
+// one (audit finding 16). The database rounds exact decimals: 199.90 at 5% is
+// 9.995, which becomes 10.00. In binary, 199.9 * 5 / 100 lands on
+// 9.99499999999999921..., so rounding that gives 9.99, and the salesman is
+// shown a paisa less than the invoice will say. toFixed asks for the decimal
+// expansion of the number, which puts the half-paisa boundary back where the
+// database has it; the digits are then carried up in whole paise.
+const r2 = (n: number) => {
+  if (!Number.isFinite(n)) return n;
+  const negative = n < 0;
+  const value = Math.abs(n);
+  // As many decimal places as this number can still state truthfully: a double
+  // carries about 15 reliable digits in all, so a large amount gets fewer
+  // places after the point. Asking for more would read back digits that are an
+  // artefact of binary, and round on them.
+  const whole = value < 1 ? 1 : Math.floor(Math.log10(value)) + 1;
+  const places = Math.max(3, Math.min(10, 15 - whole));
+  const text = value.toFixed(places);
+  const dot = text.indexOf(".");
+  const paise = Number(text.slice(0, dot) + text.slice(dot + 1, dot + 3));
+  const next = text.charCodeAt(dot + 3) - 48;          // the first digit dropped
+  const rounded = (paise + (next >= 5 ? 1 : 0)) / 100; // half away from zero, as in SQL
+  return negative ? -rounded : rounded;
+};
 
 export function calcLine(qty: number, price: number, mode: Mode, discountPct: number, rate: number) {
   const unit = mode === "inclusive" ? price / (1 + rate / 100) : price;

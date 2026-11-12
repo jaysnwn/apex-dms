@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { required } from "@/lib/required";
 
 export type OpenInvoice = {
   invoice_id: string;
@@ -26,15 +27,18 @@ export async function openInvoices(retailerId: string): Promise<OpenInvoice[]> {
     .gt("balance", 0)
     .order("due_date")
     .order("invoice_no");
+  // invoice_balances reads FROM invoices and adds only LEFT JOINs to two
+  // aggregate subqueries, so each field below is the invoice's own NOT NULL
+  // column, or an expression over them. The view's type cannot say so.
   return (data ?? []).map((r) => ({
-    invoice_id: r.invoice_id,
-    invoice_no: r.invoice_no,
-    invoice_date: r.invoice_date,
-    due_date: r.due_date,
+    invoice_id: required(r.invoice_id, "Invoice id"),
+    invoice_no: required(r.invoice_no, "Invoice number"),
+    invoice_date: required(r.invoice_date, "Invoice date"),
+    due_date: required(r.due_date, "Invoice due date"),
     grand_total: Number(r.grand_total),
     balance: Number(r.balance),
     open: Math.max(0, Number(r.balance) - Number(r.cheque_pending)),
-    due_status: r.due_status,
+    due_status: required(r.due_status, "Invoice due status"),
     days_past_due: Number(r.days_past_due),
   }));
 }

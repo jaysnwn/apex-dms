@@ -6,6 +6,9 @@
 \set ON_ERROR_STOP 1
 create temp table v (k text primary key, id uuid);
 grant all on v to authenticated;
+-- invoice_open_amount() is for database functions only since 0030: the tests read it through a helper
+create function pg_temp.open_amt(p uuid) returns numeric language sql security definer as 'select public.invoice_open_amount(p)';
+grant execute on function pg_temp.open_amt(uuid) to authenticated;
 
 -- A manager makes a fresh bill (price 1000 set by hand) for Inc Shop A (salesman 1's route) and records one payment...
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', false);
@@ -29,7 +32,7 @@ begin
   insert into v values ('upi', public.record_payment('40000000-0000-0000-0000-00000000000a', 500, 'upi', null, 'UPI-9'));
   assert (select count(*) from public.payments where id in (select id from v where k in ('cash', 'upi')) and verified_at is null) = 2, 'salesman entries wait for verification';
   -- the shop's balance already reflects the payment
-  assert public.invoice_open_amount((select id from v where k = 'inv')) = 2360 - 100 - 1000 - 500, 'balance reduced';
+  assert pg_temp.open_amt((select id from v where k = 'inv')) = 2360 - 100 - 1000 - 500, 'balance reduced';
   -- not counted for incentive yet
   assert (select due_collected from public.incentive_shops(auth.uid(), current_date) where shop_name = 'Inc Shop A') is not null, 'shop listed';
   begin perform public.verify_payments(array[(select id from v where k = 'cash')]); raise exception 'salesman verified own payment';
@@ -59,7 +62,7 @@ begin
   perform public.reject_payment((select id from v where k = 'upi'), 'not received in bank');
   assert (select status from public.payments where id = (select id from v where k = 'upi')) = 'cancelled', 'rejected → cancelled';
   assert (select count(*) from public.payment_allocations where payment_id = (select id from v where k = 'upi')) = 0, 'allocations released';
-  assert public.invoice_open_amount((select id from v where k = 'inv')) = 2360 - 100 - 1000, 'bill due again';
+  assert pg_temp.open_amt((select id from v where k = 'inv')) = 2360 - 100 - 1000, 'bill due again';
   begin perform public.reject_payment((select id from v where k = 'cash'), 'late'); raise exception 'rejected a verified payment';
   exception when raise_exception then if sqlerrm not like '%already verified%' then raise; end if; end;
 end $$;

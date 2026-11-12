@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Camera, ClipboardList, PackageCheck, Truck } from "lucide-react";
 import { Alert, Badge, Button, Card, Input, Label, Select, cn } from "@/components/ui";
-import { Dialog } from "../sales/order-builder";
-import { createClient } from "@/lib/supabase/client";
+import { Dialog } from "@/components/dialog";
+import { createClient, tenantStoragePath } from "@/lib/supabase/client";
 import { date, dateTime, inr, qty } from "@/lib/format";
 import { confirmDelivery, dispatchInvoice } from "./actions";
+import { shrinkImage } from "@/lib/image";
 
 export type PendingInvoice = {
   id: string;
@@ -18,7 +19,7 @@ export type PendingInvoice = {
   shop_name: string;
   city: string | null;
   mobile: string;
-  brand_id: string;
+  brand_id: string | null;
   brand_name: string;
   items: { product_name: string; qty: number; unit_code: string; shortIn: Record<string, boolean> }[];
 };
@@ -30,7 +31,7 @@ export type DispatchedRow = {
   shop_name: string;
   city: string | null;
   vehicle_no: string | null;
-  dispatched_at: string;
+  dispatched_at: string | null;
   delivered_at: string | null;
   status: string;
   remarks: string | null;
@@ -75,6 +76,15 @@ export function DispatchBoard({
             className={cn("inline-flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium", selected.length ? "border-slate-300 bg-white hover:bg-slate-50" : "pointer-events-none border-slate-200 text-slate-400")}
           >
             <ClipboardList className="size-4" /> Picking list ({selected.length})
+          </a>
+          <a
+            href={selected.length ? `/api/pdf/delivery-note/${selected.join(",")}` : undefined}
+            target="_blank"
+            rel="noopener"
+            aria-disabled={!selected.length}
+            className={cn("inline-flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium", selected.length ? "border-slate-300 bg-white hover:bg-slate-50" : "pointer-events-none border-slate-200 text-slate-400")}
+          >
+            <Truck className="size-4" /> Delivery notes ({selected.length})
           </a>
           {pending.length > 0 && (
             <button className="text-sm text-accent-700 hover:underline" onClick={() => setSelected(selected.length === pending.length ? [] : pending.map((p) => p.id))}>
@@ -152,7 +162,10 @@ export function DispatchBoard({
                   {d.status === "delivered" ? (<><Badge tone="green">Delivered</Badge><div className="text-xs text-slate-500">{dateTime(d.delivered_at)}</div></>) : <Badge tone="teal">On the way</Badge>}
                   {d.remarks && <div className="text-xs text-slate-500">{d.remarks}</div>}
                 </td>
-                <td className="px-4 py-2.5 text-right">
+                <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                  <a href={`/api/pdf/delivery-note/${d.invoice_id}`} target="_blank" rel="noopener" className="mr-2 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-medium hover:bg-slate-50" title="Delivery note">
+                    <Truck className="size-3.5" /> Note
+                  </a>
                   {d.status === "dispatched" && (
                     <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setDelivering(d)}><PackageCheck className="size-4" /> Delivered</Button>
                   )}
@@ -218,8 +231,9 @@ function DeliveryDialog({ row, onClose }: { row: DispatchedRow; onClose: () => v
         <Button className="bg-emerald-600 hover:bg-emerald-700" disabled={pending} onClick={() => start(async () => {
           let path: string | null = null;
           if (file) {
-            path = `${row.id}/${crypto.randomUUID()}-${file.name.replace(/[^\w.]+/g, "_")}`;
-            const { error: upErr } = await createClient().storage.from("delivery-proofs").upload(path, file);
+            path = tenantStoragePath(`${row.id}/${crypto.randomUUID()}-${file.name.replace(/[^\w.]+/g, "_")}`);
+            const small = await shrinkImage(file);
+            const { error: upErr } = await createClient().storage.from("delivery-proofs").upload(path, small, { contentType: small.type });
             if (upErr) { setError(`Photo upload failed: ${upErr.message}`); return; }
           }
           const res = await confirmDelivery(row.id, remarks, path);

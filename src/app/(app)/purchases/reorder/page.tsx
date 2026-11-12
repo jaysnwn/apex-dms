@@ -17,7 +17,7 @@ export default async function ReorderPage() {
   const ctx = await getBrandContext();
   const supabase = await createClient();
   const brands = ctx.current ? [ctx.current] : ctx.brands;
-  const { data: co } = await supabase.from("company_settings").select("reorder_lead_days, reorder_cover_days").eq("id", 1).single();
+  const { data: co } = await supabase.from("company_settings").select("reorder_lead_days, reorder_cover_days").single();
   const lead = Number(co?.reorder_lead_days ?? 8), cover = Number(co?.reorder_cover_days ?? 30);
   const today = todayIST();
   const lists = await Promise.all(brands.map(async (b) => {

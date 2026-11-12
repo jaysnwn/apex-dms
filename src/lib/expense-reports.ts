@@ -82,7 +82,7 @@ const F: ReportDef["filters"] = ["employee", "route", "category"];
 export const EXPENSE_REPORTS: ReportDef[] = [
   { key: "expense-employee", title: "Employee-wise expenses", description: "Approved, waiting, reimbursed and still owed per employee.", group: "Expenses", roles: OFFICE, filters: F, run: by("Employee", (r) => r.employee_name) },
   { key: "expense-route", title: "Route-wise expenses", description: "Expenses per route (no route = office / general).", group: "Expenses", roles: OFFICE, filters: F, run: by("Route", (r) => r.route_name ?? "No route") },
-  { key: "expense-brand", title: "Brand-wise expenses", description: "CONQRETE, BLUEI and expenses for all brands.", group: "Expenses", roles: OFFICE, filters: F, run: by("Brand", (r) => r.brand_name ?? "All brands (shared)") },
+  { key: "expense-brand", title: "Brand-wise expenses", description: "Expenses per brand, and those shared by all brands.", group: "Expenses", roles: OFFICE, filters: F, run: by("Brand", (r) => r.brand_name ?? "All brands (shared)") },
   { key: "expense-category", title: "Category-wise expenses", description: "Fuel, food, stay, travel… with totals.", group: "Expenses", roles: OFFICE, filters: F, run: by("Category", (r) => r.category_name) },
   { key: "expense-monthly", title: "Monthly expenses", description: "Expense totals month by month.", group: "Expenses", roles: OFFICE, filters: F, run: by("Month", (r) => r.expense_date.slice(0, 7)) },
   { key: "expense-paid-by", title: "Company-paid vs employee-paid", description: "What the company paid directly and what employees paid and claimed.", group: "Expenses", roles: OFFICE, filters: F, run: by("Paid by", (r) => (r.paid_by === "company" ? "Company" : "Employee")) },
@@ -120,7 +120,7 @@ export const EXPENSE_REPORTS: ReportDef[] = [
       type J = { entry_date: string; source_type: string; event: string; narration: string | null; journal_lines: { account: string; debit: number; credit: number; employee_id: string | null }[] };
       const [list, people] = await Promise.all([
         pageAll<J>(() => sb.from("journal_entries").select("entry_date, source_type, event, narration, created_at, journal_lines(account, debit, credit, employee_id)").gte("entry_date", f.from).lte("entry_date", f.to).order("entry_date").order("created_at")),
-        sb.from("profiles").select("id, full_name"),
+        sb.from("tenant_people").select("id, full_name"),
       ]);
       const nm = new Map((people.data ?? []).map((p) => [p.id as string, p.full_name as string]));
       const EV: Record<string, string> = { "expense:approved": "Expense approved", "expense:cancelled": "Expense cancelled (reversal)", "reimbursement:paid": "Reimbursement paid", "reimbursement:cancelled": "Reimbursement reversed" };

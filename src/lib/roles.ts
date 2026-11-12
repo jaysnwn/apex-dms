@@ -28,7 +28,8 @@ export type ModuleKey =
   | "import"
   | "users"
   | "audit"
-  | "settings";
+  | "settings"
+  | "health";
 
 export type ModuleDef = {
   key: ModuleKey;
@@ -53,7 +54,7 @@ export const MODULES: ModuleDef[] = [
     description: "Stock in/out, transfers, adjustments, damage, reconciliation, valuation." },
   { key: "purchases", label: "Purchases", href: "/purchases", milestone: "M1", ready: true,
     roles: ["super_admin", "manager", "billing", "warehouse"], group: "main",
-    description: "Purchase orders to CONQRETE / BlueI, goods receipt, supplier bills and payments." },
+    description: "Purchase orders to suppliers, goods receipt, supplier bills and payments." },
   { key: "retailers", label: "Retailers", href: "/retailers", milestone: "M1", ready: true, roles: ALL, group: "main",
     description: "Retailer profiles, duplicate detection, credit terms." },
   { key: "sales", label: "Sales", href: "/sales/new", milestone: "M2", ready: true,
@@ -81,6 +82,8 @@ export const MODULES: ModuleDef[] = [
     description: "Who changed what, and when." },
   { key: "settings", label: "Company", href: "/admin/settings", milestone: "M0", ready: true, roles: ["super_admin"],
     group: "admin", description: "Company details, GSTIN, document prefix." },
+  { key: "health", label: "System health", href: "/admin/health", milestone: "M0", ready: true, roles: ["super_admin"],
+    group: "admin", description: "Errors, data size and storage use against the plan's limits." },
 ];
 
 export function modulesFor(role: AppRole) {

@@ -1,0 +1,49 @@
+# Upgrade rehearsal on a copy of production data (scripts/rehearsal/rehearse.sh).
+# Production is only read: one pg_dump, the same way the backup job reads it.
+# Everything else happens in a throwaway Postgres 17 inside this job, which is
+# deleted when the job ends. Nothing is uploaded; the log shows only PASS/FAIL,
+# table names and counts.
+# Run: push a branch named rehearsal/<anything>, or Actions -> Upgrade rehearsal -> Run workflow.
+name: Upgrade rehearsal
+
+on:
+  push:
+    branches: ["rehearsal/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: upgrade-rehearsal
+  cancel-in-progress: false
+
+jobs:
+  rehearse:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      scratch:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: scratch
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common gnupg jq
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+      - name: Rehearse the upgrade on a copy of production
+        env:
+          SOURCE_URL: ${{ secrets.PROD_DB_URL }}
+          RESTORE_URL: postgresql://postgres:scratch@localhost:5432/postgres
+        run: scripts/rehearsal/rehearse.sh

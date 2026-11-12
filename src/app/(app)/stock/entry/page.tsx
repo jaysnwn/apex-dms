@@ -21,7 +21,7 @@ export default async function StockEntryPage({ searchParams }: { searchParams: P
     return (
       <Card className="max-w-xl p-6">
         <h2 className="font-semibold">Which brand is this stock for?</h2>
-        <p className="mb-4 text-sm text-slate-500">CONQRETE and BLUEI stock are kept completely separate. Pick the brand first.</p>
+        <p className="mb-4 text-sm text-slate-500">Each brand&apos;s stock is kept completely separate. Pick the brand first.</p>
         <BrandSwitcher brands={ctx.brands} currentId={null} canSeeAll={false} />
       </Card>
     );

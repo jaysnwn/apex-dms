@@ -7,13 +7,14 @@ import {
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { brandScope, getBrandContext } from "@/lib/brand";
-import { inr, qty, safeSearch } from "@/lib/format";
+import { inr, qty } from "@/lib/format";
 import { Card, cn } from "@/components/ui";
 import { SearchBar } from "@/components/search-bar";
 import { Chip } from "@/components/chip";
 import { StatCard } from "@/components/stat-card";
 import { BrandBadge, BrandStrip } from "@/components/brand-badge";
 import { signProductImages } from "@/lib/images";
+import { searchWords } from "@/lib/search-words";
 
 export const metadata: Metadata = { title: "Inventory" };
 
@@ -29,15 +30,12 @@ export default async function InventoryDashboard({ searchParams }: { searchParam
   const isMgr = profile.role === "super_admin" || profile.role === "manager";
   const canMove = profile.role !== "billing";
 
-  let query = supabase
-    .from("catalog")
-    .select("id, name, sku, brand_id, brand_name, category_name, unit_code, min_stock_qty, image_path")
-    .eq("is_active", true)
-    .in("brand_id", scope)
-    .order("name")
-    .limit(1000);
-  const term = safeSearch(sp.q);
-  if (term) query = query.or(`name.ilike.%${term}%,sku.ilike.%${term}%,barcode.eq.${term}`);
+  const COLS = "id, name, sku, brand_id, brand_name, category_name, unit_code, min_stock_qty, image_path";
+  const words = searchWords(sp.q);
+  const query = (words.length
+    ? supabase.rpc("search_catalog", { p_words: words, p_limit: 1000, p_active: true }).select(COLS)
+    : supabase.from("catalog").select(COLS).eq("is_active", true).order("name").limit(1000))
+    .in("brand_id", scope);
 
   const [{ data: items }, { data: stock }, valuation, { count: pendingCounts }] = await Promise.all([
     query,

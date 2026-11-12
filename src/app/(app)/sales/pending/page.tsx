@@ -4,18 +4,20 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { date, inr } from "@/lib/format";
 import { Badge, Card } from "@/components/ui";
+import { allRows } from "@/lib/all-rows";
 
 export const metadata: Metadata = { title: "Pending for dispatch" };
 
 export default async function PendingPage() {
   const { profile } = await requireRole("super_admin", "manager", "billing", "salesman", "warehouse");
   const supabase = await createClient();
-  const { data: invoices } = await supabase
+  const { data: invoices } = await allRows(() => supabase
     .from("invoices")
     .select("id, invoice_no, invoice_date, grand_total, retailer_id, retailer_snapshot, order_id, orders!inner(status)")
     .eq("status", "issued")
     .eq("orders.status", "invoiced")
-    .order("invoice_date");
+    .order("invoice_date")
+    .order("id"));
   const rows = invoices ?? [];
   const canDispatch = ["super_admin", "manager"].includes(profile.role);
 

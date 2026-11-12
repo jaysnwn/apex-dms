@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ImagePlus, Star, Trash2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, tenantStoragePath } from "@/lib/supabase/client";
 import { Alert, Button, cn } from "@/components/ui";
 import { addProductImage, removeProductImage, setPrimaryImage } from "../actions";
 
@@ -43,7 +43,7 @@ export function PhotoManager({ productId, photos, canEdit }: { productId: string
       for (const file of Array.from(files)) {
         if (!file.type.startsWith("image/")) throw new Error(`${file.name} is not an image`);
         const blob = await shrink(file);
-        const path = `${productId}/${crypto.randomUUID()}.jpg`;
+        const path = tenantStoragePath(`${productId}/${crypto.randomUUID()}.jpg`);
         const { error: upErr } = await supabase.storage.from("product-images").upload(path, blob, { contentType: "image/jpeg" });
         if (upErr) throw new Error(upErr.message);
         const res = await addProductImage(productId, path);

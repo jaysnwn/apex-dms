@@ -107,7 +107,7 @@ export function EntryForms({
 
               {type === "stock_in" && (
                 <>
-                  <div><Label htmlFor="reference_no" hint="optional">Supplier / reference</Label><Input id="reference_no" name="reference_no" placeholder="e.g. CONQRETE Corp" /></div>
+                  <div><Label htmlFor="reference_no" hint="optional">Supplier / reference</Label><Input id="reference_no" name="reference_no" placeholder="e.g. supplier name" /></div>
                   <div><Label htmlFor="bill_no" hint="optional">Purchase bill number</Label><Input id="bill_no" name="bill_no" /></div>
                 </>
               )}

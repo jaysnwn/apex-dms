@@ -8,6 +8,8 @@ import { PAYMENT_METHOD, PAYMENT_STATUS } from "@/lib/status";
 import { todayIST } from "@/lib/gst";
 import { Badge, Button, Card, Input, Select } from "@/components/ui";
 import { StatCard } from "@/components/stat-card";
+import { allRows } from "@/lib/all-rows";
+import { enumParam } from "@/lib/enum-param";
 
 export const metadata: Metadata = { title: "Collections" };
 
@@ -27,12 +29,14 @@ export default async function CollectionsPage({ searchParams }: { searchParams: 
     .order("payment_date", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(500);
-  if (sp.method) q = q.eq("method", sp.method);
-  if (sp.status) q = q.eq("status", sp.status);
+  const method = enumParam("payment_method", sp.method);
+  const status = enumParam("payment_status", sp.status);
+  if (method) q = q.eq("method", method);
+  if (status) q = q.eq("status", status);
   const [{ data: rows }, { data: people }, { data: pendingCheques }] = await Promise.all([
     q,
-    supabase.from("profiles").select("id, full_name"),
-    supabase.from("payments").select("id, amount").eq("status", "cheque_pending"),
+    supabase.from("tenant_people").select("id, full_name"),
+    allRows(() => supabase.from("payments").select("id, amount").eq("status", "cheque_pending").order("id")),
   ]);
   const uMap = new Map((people ?? []).map((u) => [u.id as string, u.full_name as string]));
   const live = (rows ?? []).filter((r) => r.status === "received" || r.status === "cheque_pending");

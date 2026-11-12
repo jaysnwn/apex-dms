@@ -8,6 +8,8 @@ import { todayIST, addDays } from "@/lib/gst";
 import { Card, cn } from "@/components/ui";
 import { LinkButton } from "@/components/chip";
 import { StatCard } from "@/components/stat-card";
+import { allRows } from "@/lib/all-rows";
+import { required } from "@/lib/required";
 
 export const metadata: Metadata = { title: "Payables" };
 
@@ -19,19 +21,22 @@ export default async function PayablesPage() {
   const today = todayIST();
   const week = addDays(today, 7);
   const [{ data: bal }, { data: suppliers }] = await Promise.all([
-    supabase.from("purchase_balances").select("supplier_id, due_date, balance, days_overdue").gt("balance", 0),
+    allRows(() => supabase.from("purchase_balances").select("supplier_id, due_date, balance, days_overdue").gt("balance", 0).order("purchase_id")),
     supabase.from("suppliers").select("id, name"),
   ]);
   const names = new Map((suppliers ?? []).map((s) => [s.id as string, s.name as string]));
   const m = new Map<string, Agg>();
   for (const b of bal ?? []) {
-    const a = m.get(b.supplier_id) ?? { id: b.supplier_id, name: names.get(b.supplier_id) ?? "—", notDue: 0, dueWeek: 0, b0: 0, b16: 0, b31: 0, b45: 0, total: 0, bills: 0 };
+    const supplierId = required(b.supplier_id, "Supplier of a purchase");
+    const a = m.get(supplierId) ?? { id: supplierId, name: names.get(supplierId) ?? "—", notDue: 0, dueWeek: 0, b0: 0, b16: 0, b31: 0, b45: 0, total: 0, bills: 0 };
     const v = Number(b.balance);
     const d = Number(b.days_overdue);
-    if (b.due_date >= today) { a.notDue += v; if (b.due_date <= week) a.dueWeek += v; }
+    // A purchase with no agreed credit terms has no due date. It is not
+    // overdue, and it is not due this week either: it counts as not due.
+    if (b.due_date === null || b.due_date >= today) { a.notDue += v; if (b.due_date !== null && b.due_date <= week) a.dueWeek += v; }
     else if (d <= 15) a.b0 += v; else if (d <= 30) a.b16 += v; else if (d <= 45) a.b31 += v; else a.b45 += v;
     a.total += v; a.bills += 1;
-    m.set(b.supplier_id, a);
+    m.set(supplierId, a);
   }
   const rows = [...m.values()].sort((x, y) => y.total - x.total);
   const tot = rows.reduce((t, r) => ({ total: t.total + r.total, overdue: t.overdue + r.b0 + r.b16 + r.b31 + r.b45, week: t.week + r.dueWeek }), { total: 0, overdue: 0, week: 0 });

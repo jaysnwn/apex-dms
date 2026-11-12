@@ -43,7 +43,7 @@ export function RouteMapView({ stops, people = [], towns = [], height = 420 }: {
         pts.push([p.lat, p.lng]);
       }
       if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.15), { maxZoom: 15 });
-      else map.setView([19.57, 74.21], 9); // Sangamner area
+      else map.setView([20.59, 78.96], 5); // no stops yet: show India
     })();
     return () => { cancelled = true; map?.remove(); };
   }, [stops, people, towns]);

@@ -9,7 +9,8 @@ psql -q -d postgres -c "create database $DB" >/dev/null
 trap 'psql -q -d postgres -c "drop database if exists $DB" >/dev/null' EXIT
 P="psql -q -X -v ON_ERROR_STOP=1 -d $DB"
 $P -f tests/db/supabase_stubs.sql >/dev/null
-for f in supabase/migrations/*.sql; do $P -f "$f" >/dev/null 2>&1; done
+for f in supabase/migrations/*.sql; do $P -1 -f "$f" >/dev/null 2>&1; done
+psql -q -d postgres -c "alter database $DB set app.tenant_id = 'a9e70000-0000-4000-8000-000000000001'" >/dev/null
 $P >/dev/null <<'SQL'
 insert into auth.users (id, email, raw_app_meta_data, raw_user_meta_data) values
   ('00000000-0000-0000-0000-000000000001', 'a@t', '{"role":"super_admin"}', '{"full_name":"Admin"}'),

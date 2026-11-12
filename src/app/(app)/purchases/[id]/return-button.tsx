@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Undo2 } from "lucide-react";
 import { Alert, Button, Input, Label, Textarea } from "@/components/ui";
-import { Dialog } from "../../sales/order-builder";
+import { Dialog } from "@/components/dialog";
 import { inr, qty as fmtQty } from "@/lib/format";
 import { createPurchaseReturn } from "../actions";
 

@@ -2,10 +2,11 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { date, inr, safeSearch } from "@/lib/format";
+import { date, inr } from "@/lib/format";
 import { DUE_STATUS, ORDER_STATUS } from "@/lib/status";
 import { Badge, Button, Card, Input, cn } from "@/components/ui";
 import { Chip } from "@/components/chip";
+import { searchSource, searchWords } from "@/lib/search-words";
 
 export const metadata: Metadata = { title: "Invoices" };
 
@@ -23,14 +24,12 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
   const sp = await searchParams;
   const supabase = await createClient();
 
-  let query = supabase
-    .from("invoices")
+  const words = searchWords(sp.q);
+  let query = searchSource(supabase, "invoices", "search_invoices", words)
     .select("id, invoice_no, invoice_date, due_date, grand_total, status, retailer_snapshot, order_id, orders(status)")
     .order("invoice_date", { ascending: false })
     .order("invoice_no", { ascending: false })
     .limit(300);
-  const term = safeSearch(sp.q);
-  if (term) query = query.or(`invoice_no.ilike.%${term}%,retailer_snapshot->>shop_name.ilike.%${term}%`);
   if (sp.from) query = query.gte("invoice_date", sp.from);
   if (sp.to) query = query.lte("invoice_date", sp.to);
   if (sp.due === "cancelled") query = query.eq("status", "cancelled");

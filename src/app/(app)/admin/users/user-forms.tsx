@@ -7,7 +7,7 @@ import { Alert, Button, Input, Label, Select } from "@/components/ui";
 
 type BrandOpt = { id: string; name: string };
 
-// Brand access: a user ticked for CONQRETE only never sees BLUEI inventory.
+// Brand access: a user ticked for one brand only never sees the other brands' inventory.
 function BrandBoxes({ brands, selected, idPrefix }: { brands: BrandOpt[]; selected: string[]; idPrefix: string }) {
   return (
     <div className="sm:col-span-2">
@@ -57,12 +57,12 @@ export function CreateUserForm({ brands }: { brands: BrandOpt[] }) {
         <Input id="new-phone" name="phone" inputMode="numeric" maxLength={10} placeholder="10 digits" />
       </div>
       <div className="sm:col-span-2">
-        <Label htmlFor="new-password" hint="min. 8 characters">Temporary password</Label>
-        <Input id="new-password" name="password" type="text" required minLength={8} autoComplete="new-password" />
+        <Label htmlFor="new-password" hint="10+ characters, letters and numbers · not used if the email already has a login">Temporary password</Label>
+        <Input id="new-password" name="password" type="text" minLength={10} autoComplete="new-password" />
       </div>
       <BrandBoxes brands={brands} selected={brands.map((b) => b.id)} idPrefix="new-brand" />
       <div className="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:items-center">
-        <Button type="submit" disabled={pending}>{pending ? "Creating…" : "Create user"}</Button>
+        <Button type="submit" disabled={pending}>{pending ? "Adding…" : "Add user"}</Button>
         {state.error && <Alert>{state.error}</Alert>}
         {state.ok && <Alert tone="green">{state.ok}</Alert>}
       </div>
@@ -70,7 +70,7 @@ export function CreateUserForm({ brands }: { brands: BrandOpt[] }) {
   );
 }
 
-type UserRow = {
+export type UserRow = {
   id: string;
   full_name: string;
   email: string | null;
@@ -78,6 +78,7 @@ type UserRow = {
   role: AppRole;
   is_active: boolean;
   can_reimburse?: boolean;
+  shared?: boolean;   // also works for another organization
 };
 
 export function EditUserForm({ user, isSelf, brands, brandIds }: { user: UserRow; isSelf: boolean; brands: BrandOpt[]; brandIds: string[] }) {
@@ -90,15 +91,15 @@ export function EditUserForm({ user, isSelf, brands, brandIds }: { user: UserRow
       <form action={action} className="grid gap-3 sm:grid-cols-4">
         <input type="hidden" name="id" value={user.id} />
         <div className="sm:col-span-2">
-          <Label htmlFor={`name-${user.id}`}>Full name</Label>
-          <Input id={`name-${user.id}`} name="full_name" defaultValue={user.full_name} required />
+          <Label htmlFor={`name-${user.id}`} hint={user.shared ? "they change it themselves" : undefined}>Full name</Label>
+          <Input id={`name-${user.id}`} name="full_name" defaultValue={user.full_name} required readOnly={user.shared} />
         </div>
         <div className="sm:col-span-2">
-          <Label htmlFor={`phone-${user.id}`}>Mobile</Label>
-          <Input id={`phone-${user.id}`} name="phone" defaultValue={user.phone ?? ""} inputMode="numeric" maxLength={10} />
+          <Label htmlFor={`phone-${user.id}`} hint={user.shared ? "they change it themselves" : undefined}>Mobile</Label>
+          <Input id={`phone-${user.id}`} name="phone" defaultValue={user.phone ?? ""} inputMode="numeric" maxLength={10} readOnly={user.shared} />
         </div>
         <div className="sm:col-span-2">
-          <Label htmlFor={`role-${user.id}`}>Role</Label>
+          <Label htmlFor={`role-${user.id}`}>Role here</Label>
           <Select id={`role-${user.id}`} name="role" defaultValue={user.role}>
             {ROLES.map((r) => (
               <option key={r} value={r}>
@@ -108,10 +109,10 @@ export function EditUserForm({ user, isSelf, brands, brandIds }: { user: UserRow
           </Select>
         </div>
         <div className="sm:col-span-2">
-          <Label htmlFor={`active-${user.id}`}>Status</Label>
+          <Label htmlFor={`active-${user.id}`}>Status here</Label>
           <Select id={`active-${user.id}`} name="is_active" defaultValue={String(user.is_active)} disabled={isSelf}>
-            <option value="true">Active — can sign in</option>
-            <option value="false">Disabled — cannot sign in</option>
+            <option value="true">Active — can work in this organization</option>
+            <option value="false">Disabled — cannot work in this organization</option>
           </Select>
           {isSelf && <input type="hidden" name="is_active" value="true" />}
         </div>
@@ -122,20 +123,27 @@ export function EditUserForm({ user, isSelf, brands, brandIds }: { user: UserRow
         </label>
         <div className="flex flex-wrap items-center gap-3 sm:col-span-4">
           <Button type="submit" size="sm" disabled={pending}>{pending ? "Saving…" : "Save changes"}</Button>
-          <Button type="button" size="sm" variant="secondary" onClick={() => setShowPw((v) => !v)}>
-            Reset password
-          </Button>
+          {!user.shared && (
+            <Button type="button" size="sm" variant="secondary" onClick={() => setShowPw((v) => !v)}>
+              Reset password
+            </Button>
+          )}
           {state.error && <Alert>{state.error}</Alert>}
           {state.ok && <Alert tone="green">{state.ok}</Alert>}
         </div>
+        {user.shared && (
+          <p className="text-xs text-slate-500 sm:col-span-4">
+            This person also works for another organization: their name, mobile and password are theirs to change.
+          </p>
+        )}
       </form>
 
-      {showPw && (
+      {showPw && !user.shared && (
         <form action={pwAction} className="flex flex-col gap-3 rounded-lg bg-slate-50 p-3 sm:flex-row sm:items-end">
           <input type="hidden" name="id" value={user.id} />
           <div className="flex-1">
             <Label htmlFor={`pw-${user.id}`}>New password</Label>
-            <Input id={`pw-${user.id}`} name="password" type="text" minLength={8} required autoComplete="new-password" />
+            <Input id={`pw-${user.id}`} name="password" type="text" minLength={10} required autoComplete="new-password" placeholder="10+ characters, letters and numbers" />
           </div>
           <Button type="submit" size="sm" disabled={pwPending}>{pwPending ? "Saving…" : "Set password"}</Button>
           {pwState.error && <Alert>{pwState.error}</Alert>}

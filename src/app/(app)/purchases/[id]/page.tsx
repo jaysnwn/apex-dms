@@ -28,7 +28,7 @@ export default async function PurchasePage({ params, searchParams }: { params: P
     supabase.from("purchase_lines").select("*, products(name, sku, unit_code, hsn_code)").eq("purchase_id", id).order("line_no"),
     supabase.from("supplier_payment_allocations").select("amount, is_auto, supplier_payments(id, payment_no, payment_date, method, reference_no, status)").eq("purchase_id", id),
     supabase.from("purchase_balances").select("balance, days_overdue").eq("purchase_id", id).maybeSingle(),
-    supabase.from("profiles").select("id, full_name"),
+    supabase.from("tenant_people").select("id, full_name"),
     supabase.from("purchase_returns").select("id, return_no, return_date, reason, grand_total, purchase_return_lines(purchase_line_id, qty)").eq("purchase_id", id).order("created_at"),
   ]);
   const returnedQty = new Map<string, number>();

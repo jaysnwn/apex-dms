@@ -67,7 +67,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
     }
     groups = [...m.values()].sort((a, b) => b.rows.reduce((t, r) => t + Number(r.outstanding), 0) - a.rows.reduce((t, r) => t + Number(r.outstanding), 0));
     const nm = new Map(options.allPeople.map((p) => [p.id, p.full_name]));
-    payments = (pays ?? []).map((p) => ({ ...p, employee_name: nm.get(p.employee_id) ?? "", created_by_name: nm.get(p.created_by) ?? null })) as PaymentRow[];
+    payments = (pays ?? []).map((p) => ({ ...p, employee_name: nm.get(p.employee_id) ?? "", created_by_name: (p.created_by ? nm.get(p.created_by) : null) ?? null })) as PaymentRow[];
   }
 
   const qs = (over: Partial<SP>) => {

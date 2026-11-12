@@ -11,7 +11,7 @@ export async function builderOptions() {
   const [suppliers, { data: wh }, { data: co }] = await Promise.all([
     listSuppliers(),
     supabase.from("warehouses").select("id, name, brand_id").eq("is_active", true).in("brand_id", ids).order("name"),
-    supabase.from("company_settings").select("state_code").eq("id", 1).maybeSingle(),
+    supabase.from("company_settings").select("state_code").maybeSingle(),
   ]);
   return {
     suppliers,

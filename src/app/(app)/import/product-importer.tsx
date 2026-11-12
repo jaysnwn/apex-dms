@@ -34,7 +34,7 @@ export function ProductImporter({ brand, brands, canSeeAll }: { brand: Brand | n
     return (
       <Card className="max-w-xl p-6">
         <h2 className="font-semibold">Which brand are these products for?</h2>
-        <p className="mb-4 text-sm text-slate-500">CONQRETE and BLUEI have separate catalogues. Import one brand at a time.</p>
+        <p className="mb-4 text-sm text-slate-500">Each brand has its own catalogue. Import one brand at a time.</p>
         <BrandSwitcher brands={brands} currentId={null} canSeeAll={false} />
       </Card>
     );

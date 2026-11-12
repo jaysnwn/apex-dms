@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { CheckCircle2, Circle, Wallet } from "lucide-react";
+import { CheckCircle2, Circle, Truck, Wallet } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { date, dateTime, inr, qty } from "@/lib/format";
@@ -70,6 +70,11 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
         </div>
         <div className="flex flex-wrap gap-2">
           <DocButtons kind="invoice" id={id} />
+          {!cancelled && (
+            <a href={`/api/pdf/delivery-note/${id}`} target="_blank" rel="noopener" className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium hover:bg-slate-50">
+              <Truck className="size-4" /> Delivery note
+            </a>
+          )}
           {isOffice && !cancelled && Number(bal?.balance ?? 0) > 0 && (
             <Link href={`/payments/new?retailer=${inv.retailer_id}&invoice=${id}`} className="inline-flex h-10 items-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700">
               <Wallet className="size-4" /> Record payment

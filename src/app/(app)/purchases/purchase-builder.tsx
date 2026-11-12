@@ -70,7 +70,7 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, d
     setSupplierId(id);
     const s = suppliers.find((x) => x.id === id);
     if (s && !initial) setCreditDays(s.credit_days);
-    // CONQRETE supplier → CONQRETE warehouse (while nothing is on the purchase yet)
+    // a brand's supplier → that brand's warehouse (while nothing is on the purchase yet)
     if (s?.brand_id && !lines.length && s.brand_id !== brandId) {
       const w = warehouses.find((x) => x.brand_id === s.brand_id);
       if (w) setWarehouseId(w.id);

@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "APEX DMS",
-    short_name: "APEX",
-    description: "APEX TRADING CO. distribution app",
+    name: "DMS",
+    short_name: "DMS",
+    description: "Distribution Management System",
     start_url: "/dashboard",
     display: "standalone",
     background_color: "#f5f6f8",

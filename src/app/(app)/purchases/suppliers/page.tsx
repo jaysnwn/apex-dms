@@ -8,6 +8,8 @@ import { todayIST } from "@/lib/gst";
 import { GST_STATES } from "@/lib/states";
 import { Badge, Card } from "@/components/ui";
 import { LinkButton } from "@/components/chip";
+import { allRows } from "@/lib/all-rows";
+import { required } from "@/lib/required";
 
 export const metadata: Metadata = { title: "Suppliers" };
 
@@ -17,14 +19,16 @@ export default async function SuppliersPage() {
   const today = todayIST();
   const [{ data: rows }, { data: bal }] = await Promise.all([
     supabase.from("suppliers").select("id, code, name, gstin, state_code, city, mobile, contact_name, credit_days, is_active").order("is_active", { ascending: false }).order("name"),
-    supabase.from("purchase_balances").select("supplier_id, balance, due_date").gt("balance", 0),
+    allRows(() => supabase.from("purchase_balances").select("supplier_id, balance, due_date").gt("balance", 0).order("purchase_id")),
   ]);
   const owed = new Map<string, { total: number; overdue: number }>();
   for (const b of bal ?? []) {
-    const o = owed.get(b.supplier_id) ?? { total: 0, overdue: 0 };
+    const supplierId = required(b.supplier_id, "Supplier of a purchase");
+    const o = owed.get(supplierId) ?? { total: 0, overdue: 0 };
     o.total += Number(b.balance);
-    if (b.due_date < today) o.overdue += Number(b.balance);
-    owed.set(b.supplier_id, o);
+    // No due date means no agreed credit terms, so nothing is overdue yet.
+    if (b.due_date !== null && b.due_date < today) o.overdue += Number(b.balance);
+    owed.set(supplierId, o);
   }
   return (
     <>

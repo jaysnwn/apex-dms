@@ -46,7 +46,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
 
   const { data: whNames } = await supabase.from("warehouses").select("id, name");
   const whMap = new Map((whNames ?? []).map((w) => [w.id as string, w.name as string]));
-  const { data: people } = await supabase.from("profiles").select("id, full_name");
+  const { data: people } = await supabase.from("tenant_people").select("id, full_name");
   const nameMap = new Map((people ?? []).map((u) => [u.id as string, u.full_name as string]));
 
   const urls = await signProductImages(supabase, (images.data ?? []).map((i) => i.storage_path));

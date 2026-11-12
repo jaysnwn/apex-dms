@@ -1,21 +1,18 @@
 import type { Metadata } from "next";
-import { requireRole, type Profile } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { ROLE_LABELS, ROLES } from "@/lib/roles";
+import { ROLE_LABELS, ROLES, type AppRole } from "@/lib/roles";
 import { Badge, Card, PageHeader } from "@/components/ui";
-import { CreateUserForm, EditUserForm } from "./user-forms";
+import { CreateUserForm, EditUserForm, type UserRow } from "./user-forms";
 
 export const metadata: Metadata = { title: "Users" };
 
 export default async function UsersPage() {
-  const { profile: me } = await requireRole("super_admin");
+  const { profile: me, tenant } = await requireRole("super_admin");
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("profiles")
-    .select("id, full_name, email, phone, role, is_active, can_reimburse, created_at")
-    .order("is_active", { ascending: false })
-    .order("full_name");
-  const users = (data ?? []) as Profile[];
+  // People of this business only, with their role and status here.
+  const { data } = await supabase.rpc("list_members");
+  const users = ((data ?? []) as (UserRow & { role: AppRole })[]);
   const [{ data: brands }, { data: access }] = await Promise.all([
     supabase.from("brands").select("id, name").eq("is_active", true).order("name"),
     supabase.from("profile_brands").select("user_id, brand_id"),
@@ -30,7 +27,7 @@ export default async function UsersPage() {
     <>
       <PageHeader
         title="Users"
-        description="Every person gets their own login. Their role decides what they can see and change."
+        description={`People who work for ${tenant.display_name}. Each gets their own login; their role here decides what they can see and change.`}
       />
 
       <div className="mb-6 flex flex-wrap gap-2">
@@ -42,7 +39,10 @@ export default async function UsersPage() {
       </div>
 
       <Card className="mb-8 p-5">
-        <h2 className="mb-4 font-semibold text-slate-900">Add a user</h2>
+        <h2 className="mb-1 font-semibold text-slate-900">Add a user</h2>
+        <p className="mb-4 text-sm text-slate-500">
+          If the email already has a login (for another organization), that person is added here and keeps their password.
+        </p>
         <CreateUserForm brands={brandList} />
       </Card>
 
@@ -63,6 +63,7 @@ export default async function UsersPage() {
               <div className="hidden gap-1 sm:flex">
                 <Badge tone="blue">{ROLE_LABELS[u.role]}</Badge>
                 <Badge>{u.role === "super_admin" ? "All brands" : accessOf(u.id).map((b) => brandName.get(b)).filter(Boolean).join(" + ") || "No brand"}</Badge>
+                {u.shared && <Badge tone="amber">Also another organization</Badge>}
               </div>
               {u.is_active ? <Badge tone="green">Active</Badge> : <Badge tone="red">Disabled</Badge>}
             </summary>

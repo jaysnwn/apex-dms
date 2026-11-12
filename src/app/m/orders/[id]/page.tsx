@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { date, dateTime, inr, qty } from "@/lib/format";
 import { cn } from "@/components/ui";
 import { ShareQuote } from "../../share-quote";
+import { getCompanyName } from "@/lib/branding";
 
 export const metadata: Metadata = { title: "Order" };
 
@@ -34,7 +35,8 @@ export default async function MyOrderPage({ params }: { params: Promise<{ id: st
   const pMap = new Map((prods ?? []).map((p) => [p.id as string, p as { name: string; sku: string; unit_code: string }]));
   const prod = (pid: string) => pMap.get(pid) ?? { name: "Product", sku: "", unit_code: "PCS" };
   const reached = STEPS.findIndex((s) => s.k === o.status);
-  const text = `Order ${o.order_no} for ${r.shop_name}:\n${(lines ?? []).map((l) => `• ${prod(l.product_id).name} × ${qty(l.qty)}`).join("\n")}\nTotal ${inr(o.grand_total, { decimals: false })} incl. GST\n— APEX TRADING CO.`;
+  const companyName = await getCompanyName();
+  const text = `Order ${o.order_no} for ${r.shop_name}:\n${(lines ?? []).map((l) => `• ${prod(l.product_id).name} × ${qty(l.qty)}`).join("\n")}\nTotal ${inr(o.grand_total, { decimals: false })} incl. GST${companyName ? `\n— ${companyName}` : ""}`;
 
   return (
     <div className="space-y-4">

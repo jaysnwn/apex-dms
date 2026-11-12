@@ -12,6 +12,8 @@ import { Badge, Button, Card, Input, PageHeader, cn } from "@/components/ui";
 import { Chip, LinkButton } from "@/components/chip";
 import { DocButtons } from "@/components/doc-buttons";
 import { PromiseForm } from "./promise-form";
+import { allRows } from "@/lib/all-rows";
+import { required } from "@/lib/required";
 
 export const metadata: Metadata = { title: "Retailer" };
 
@@ -37,7 +39,7 @@ export default async function RetailerPage({ params, searchParams }: { params: P
   const role = profile.role;
   const canEdit = ["super_admin", "manager", "billing"].includes(role);
   const canSell = role !== "warehouse";
-  const status = RETAILER_STATUS[r.status];
+  const status = RETAILER_STATUS[required(r.status, "Retailer status")];
   const cls = r.classification ? RETAILER_CLASS[r.classification] : null;
 
   const summary = [
@@ -53,7 +55,7 @@ export default async function RetailerPage({ params, searchParams }: { params: P
   return (
     <>
       <PageHeader
-        title={r.shop_name}
+        title={required(r.shop_name, "Shop name")}
         description={`${r.code}${r.owner_name ? ` · ${r.owner_name}` : ""}${r.billing_city ? ` · ${r.billing_city}` : ""}`}
         actions={
           <>
@@ -106,7 +108,7 @@ export default async function RetailerPage({ params, searchParams }: { params: P
             <Row k="Mobile" v={<a href={`tel:${r.mobile}`} className="hover:underline">{r.mobile}</a>} />
             {r.alt_mobile && <Row k="Alternate mobile" v={r.alt_mobile} />}
             <Row k="GSTIN" v={r.gstin ?? "Unregistered"} />
-            <Row k="State" v={`${r.billing_state_code} · ${GST_STATES[r.billing_state_code] ?? ""}`} />
+            <Row k="State" v={`${r.billing_state_code} · ${GST_STATES[required(r.billing_state_code, "Retailer state code")] ?? ""}`} />
             <Row k="Billing address" v={[r.billing_address, r.billing_city, r.billing_pincode].filter(Boolean).join(", ") || "—"} />
             <Row k="Delivery address" v={r.delivery_address || r.delivery_city ? [r.delivery_address, r.delivery_city, r.delivery_pincode].filter(Boolean).join(", ") : "Same as billing"} />
             <Row k="Credit limit" v={Number(r.credit_limit) > 0 ? inr(r.credit_limit) : "No limit"} />
@@ -134,8 +136,8 @@ async function Statement({ id, from: f, to: t }: { id: string; from?: string; to
   const to = t || todayIST();
   const from = f || new Date(Date.parse(to) - 90 * 864e5).toISOString().slice(0, 10);
   const [{ data: before }, { data: entries }] = await Promise.all([
-    supabase.from("retailer_ledger").select("debit, credit").eq("retailer_id", id).lt("entry_date", from),
-    supabase.from("retailer_ledger").select("kind, doc_id, entry_date, doc_no, narration, debit, credit, created_at").eq("retailer_id", id).gte("entry_date", from).lte("entry_date", to).order("entry_date").order("created_at"),
+    allRows(() => supabase.from("retailer_ledger").select("debit, credit").eq("retailer_id", id).lt("entry_date", from).order("entry_date").order("created_at").order("doc_id")),
+    allRows(() => supabase.from("retailer_ledger").select("kind, doc_id, entry_date, doc_no, narration, debit, credit, created_at").eq("retailer_id", id).gte("entry_date", from).lte("entry_date", to).order("entry_date").order("created_at").order("doc_id")),
   ]);
   const opening = (before ?? []).reduce((s, e) => s + Number(e.debit) - Number(e.credit), 0);
   let running = opening;
@@ -163,7 +165,7 @@ async function Statement({ id, from: f, to: t }: { id: string; from?: string; to
               return (
                 <tr key={i}>
                   <td className="px-4 py-2 whitespace-nowrap text-slate-500">{date(e.entry_date)}</td>
-                  <td className="px-3 py-2"><Link href={href(e.kind, e.doc_id)} className="font-mono text-xs hover:underline">{e.doc_no}</Link></td>
+                  <td className="px-3 py-2"><Link href={href(required(e.kind, "Ledger entry kind"), required(e.doc_id, "Ledger entry document"))} className="font-mono text-xs hover:underline">{e.doc_no}</Link></td>
                   <td className="px-3 py-2 text-slate-600">{e.narration}</td>
                   <td className="tabular px-3 py-2 text-right">{Number(e.debit) ? inr(e.debit) : ""}</td>
                   <td className="tabular px-3 py-2 text-right text-emerald-700">{Number(e.credit) ? inr(e.credit) : ""}</td>
@@ -183,7 +185,7 @@ async function Invoices({ id }: { id: string }) {
   const supabase = await createClient();
   const [{ data: invs }, { data: bals }] = await Promise.all([
     supabase.from("invoices").select("id, invoice_no, invoice_date, due_date, grand_total, status").eq("retailer_id", id).order("invoice_date", { ascending: false }).limit(200),
-    supabase.from("invoice_balances").select("invoice_id, balance, due_status, days_past_due").eq("retailer_id", id),
+    allRows(() => supabase.from("invoice_balances").select("invoice_id, balance, due_status, days_past_due").eq("retailer_id", id).order("invoice_id")),
   ]);
   const b = new Map((bals ?? []).map((x) => [x.invoice_id as string, x]));
   return (
@@ -290,7 +292,7 @@ async function Visits({ id }: { id: string }) {
   const supabase = await createClient();
   const [{ data }, { data: people }] = await Promise.all([
     supabase.from("visits").select("id, planned_date, status, checkin_at, remarks, missed_reason, salesman_id, latitude, longitude").eq("retailer_id", id).order("planned_date", { ascending: false }).limit(100),
-    supabase.from("profiles").select("id, full_name"),
+    supabase.from("tenant_people").select("id, full_name"),
   ]);
   const u = new Map((people ?? []).map((p) => [p.id as string, p.full_name as string]));
   return (

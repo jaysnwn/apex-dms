@@ -75,8 +75,8 @@ export async function fieldToday(): Promise<FieldDay> {
     has ? supabase.from("visits").select("retailer_id, checkin_at").in("retailer_id", retailerIds).eq("status", "completed").lt("planned_date", today).order("checkin_at", { ascending: false }).limit(500) : Promise.resolve({ data: [] }),
     routeIds.length ? supabase.from("routes").select("id, name, code, sort_order").in("id", routeIds) : Promise.resolve({ data: [] }),
     routeIds.length ? supabase.from("route_locations").select("route_id, location_id, sequence, locations(name)").in("route_id", routeIds).order("sequence") : Promise.resolve({ data: [] }),
-    supabase.from("profiles").select("share_location").eq("id", user.id).maybeSingle(),
-    supabase.from("company_settings").select("geofence_radius_m").eq("id", 1).maybeSingle(),
+    supabase.from("tenant_people").select("share_location").eq("id", user.id).maybeSingle(),
+    supabase.from("company_settings").select("geofence_radius_m").maybeSingle(),
   ]);
   const rMap = new Map((rs ?? []).map((r) => [r.id as string, r]));
   const bMap = new Map((bal ?? []).map((b) => [b.retailer_id as string, b]));

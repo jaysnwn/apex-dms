@@ -2,6 +2,8 @@
 
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { allowAttempt, TOO_MANY } from "@/lib/rate-limit";
+import { passwordProblem } from "@/lib/password-policy";
 
 export type PasswordState = { ok?: string; error?: string };
 
@@ -11,8 +13,11 @@ export async function changePassword(_prev: PasswordState, formData: FormData): 
   const next = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirm") ?? "");
 
-  if (next.length < 8) return { error: "New password must be at least 8 characters." };
+  const problem = passwordProblem(next, { email: user.email });
+  if (problem) return { error: problem };
   if (next !== confirm) return { error: "The two new passwords do not match." };
+  if (next === current) return { error: "Choose a password different from the current one." };
+  if (!(await allowAttempt(`password:${user.id}`, 5, 900))) return { error: TOO_MANY };
 
   const supabase = await createClient();
   const { error: verifyError } = await supabase.auth.signInWithPassword({ email: user.email!, password: current });

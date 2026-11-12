@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { FileDown, Link2, MessageCircle } from "lucide-react";
-import { shareOnWhatsApp } from "../(app)/share-actions";
+import { shareOnWhatsApp } from "@/lib/share-actions";
 
 // Sends the quotation to the shop on WhatsApp:
 //  • "Send PDF on WhatsApp" (main, on phones that can share files): the shop gets the

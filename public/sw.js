@@ -1,11 +1,11 @@
-// APEX DMS service worker: keeps the salesman app usable with weak or no network.
+// DMS service worker: keeps the salesman app usable with weak or no network.
 // - App code (/_next/static) and icons are cached on first use.
 // - Salesman app pages (/m/...) and "Today's route" are network-first, falling
 //   back to the last copy seen on this phone. Data (catalogue, outlets, route)
 //   is also kept in the page's local storage, and orders/visits/payments made
 //   offline are queued and sent later.
-const STATIC = "apex-static-v2";
-const PAGES = "apex-pages-v2";
+const STATIC = "dms-static-v3";
+const PAGES = "dms-pages-v3";
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) =>

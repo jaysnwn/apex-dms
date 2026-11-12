@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import type { Insert } from "@/lib/supabase/database";
 import { dbError, formObject, zodMessage } from "@/lib/actions";
 import { normaliseMobile } from "@/lib/format";
 import type { FormResult } from "@/components/action-form";
@@ -83,7 +84,7 @@ export async function saveRetailer(_prev: FormResult, formData: FormData): Promi
     ? { delivery_address: v.billing_address ?? null, delivery_city: v.billing_city ?? null, delivery_pincode: v.billing_pincode ?? null }
     : { delivery_address: v.delivery_address ?? null, delivery_city: v.delivery_city ?? null, delivery_pincode: v.delivery_pincode ?? null };
 
-  const row: Record<string, unknown> = {
+  const row: Insert<"retailers"> = {
     shop_name: v.shop_name,
     owner_name: v.owner_name ?? null,
     mobile: v.mobile,

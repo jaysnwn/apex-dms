@@ -7,13 +7,15 @@ import { Dialog } from "@/components/dialog";
 import { inr } from "@/lib/format";
 import { GST_STATES } from "@/lib/states";
 import { quickCreateRetailer, searchRetailers, updateRetailerBilling, type PickerRetailer } from "./actions";
+import { tenantKey } from "@/lib/supabase/client";
 
-const RECENT_KEY = "apex.recentRetailers";
+// recent shops on this device, per business (tenant)
+const RECENT_KEY = "dms.recentRetailers";
 const readRecent = (): PickerRetailer[] => {
-  try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]"); } catch { return []; }
+  try { return JSON.parse(localStorage.getItem(tenantKey(RECENT_KEY)) ?? "[]"); } catch { return []; }
 };
 export function rememberRetailer(r: PickerRetailer) {
-  try { localStorage.setItem(RECENT_KEY, JSON.stringify([r, ...readRecent().filter((x) => x.id !== r.id)].slice(0, 6))); } catch { /* private mode */ }
+  try { localStorage.setItem(tenantKey(RECENT_KEY), JSON.stringify([r, ...readRecent().filter((x) => x.id !== r.id)].slice(0, 6))); } catch { /* private mode */ }
 }
 
 // Which legally required GST invoice details are missing for this shop (rule 46).
