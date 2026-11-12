@@ -35,15 +35,27 @@ trap 'rm -f "$TMP"; psql -q -d postgres -c "drop database if exists $DB" >/dev/n
 ERR=$(mktemp /tmp/apex-types-err-XXXXXX)
 trap 'rm -f "$TMP" "$ERR"; psql -q -d postgres -c "drop database if exists $DB" >/dev/null 2>&1 || true' EXIT
 
+RAW=$(mktemp /tmp/apex-types-raw-XXXXXX)
+trap 'rm -f "$TMP" "$ERR" "$RAW"; psql -q -d postgres -c "drop database if exists $DB" >/dev/null 2>&1 || true' EXIT
+
+npx --yes supabase@3 gen types typescript --db-url "$URL" >"$RAW" 2>"$ERR" || true
+
+# The CLI puts notes of its own on standard output, among them one about
+# connecting without TLS, which is true and harmless here: the database is a
+# throwaway on this machine. They are not TypeScript, so a note landing in the
+# file makes it unparseable. Keep the generated types only, from their first
+# line, so whatever the CLI chooses to say in front of them does not matter.
 {
   echo "// GENERATED from the database built by supabase/migrations: do not edit by hand."
   echo "// Regenerate after every migration: scripts/types/generate.sh (the Checks job fails when this file is out of date)."
-  npx --yes supabase@3 gen types typescript --db-url "$URL" 2>"$ERR" || true
+  sed -n '/^export type Json/,$p' "$RAW"
 } > "$TMP"
 
 if [ ! -s "$TMP" ] || ! grep -q "export type Database" "$TMP"; then
   echo "generate.sh: the Supabase CLI did not produce a usable file. What it said:" >&2
   cat "$ERR" >&2
+  echo "--- and what it put on standard output: ---" >&2
+  head -20 "$RAW" >&2
   exit 1
 fi
 

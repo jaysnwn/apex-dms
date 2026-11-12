@@ -1,6 +1,5 @@
 // GENERATED from the database built by supabase/migrations: do not edit by hand.
 // Regenerate after every migration: scripts/types/generate.sh (the Checks job fails when this file is out of date).
-
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
