@@ -8,7 +8,7 @@ import type { PickerRetailer } from "./actions";
 export async function builderOptions() {
   const supabase = await createClient();
   const [{ data: co }, ctx] = await Promise.all([
-    supabase.from("company_settings").select("state_code, salesman_max_discount, billing_max_discount").eq("id", 1).single(),
+    supabase.from("company_settings").select("state_code, salesman_max_discount, billing_max_discount").single(),
     getBrandContext(),
   ]);
   return {

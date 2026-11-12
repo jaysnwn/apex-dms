@@ -24,7 +24,7 @@ const OUT_KEY = "dms-m-outlets";
 const DRAFT_KEY = "dms-m-draft";
 const CREDIT = [0, 7, 15, 30];
 
-export function OrderFlow({ initialOutlets, initialCatalogue, presetRetailer }: { initialOutlets: Outlet[] | null; initialCatalogue: Catalogue | null; presetRetailer?: string }) {
+export function OrderFlow({ initialOutlets, initialCatalogue, presetRetailer, companyName }: { initialOutlets: Outlet[] | null; initialCatalogue: Catalogue | null; presetRetailer?: string; companyName?: string }) {
   const router = useRouter();
   const [outlets, setOutlets] = useState<Outlet[]>(initialOutlets ?? []);
   const [cat, setCat] = useState<Catalogue | null>(initialCatalogue);
@@ -92,7 +92,7 @@ export function OrderFlow({ initialOutlets, initialCatalogue, presetRetailer }: 
     cacheRemove(DRAFT_KEY);
   }
 
-  if (done) return <Done result={done} onNew={() => { setDone(null); setOutletId(null); }} onHome={() => router.push("/m")} />;
+  if (done) return <Done companyName={companyName} result={done} onNew={() => { setDone(null); setOutletId(null); }} onHome={() => router.push("/m")} />;
 
   // ----------------------------- Step 1: outlet -----------------------------
   if (!outlet) {
@@ -396,8 +396,8 @@ function Review({ outlet, lines, calc, totals, maxDiscount, setQty, setDiscount,
 }
 
 // ---------------------------------------------------------------------------
-function Done({ result, onNew, onHome }: { result: DoneResult; onNew: () => void; onHome: () => void }) {
-  const text = `Order from ${result.shop}${result.orderNo ? ` (${result.orderNo})` : ""}:\n${result.lines.map((l) => `• ${l}`).join("\n")}\nTotal ${inr(result.total, { decimals: false })} incl. GST\n— APEX TRADING CO.`;
+function Done({ result, onNew, onHome, companyName }: { result: DoneResult; onNew: () => void; onHome: () => void; companyName?: string }) {
+  const text = `Order from ${result.shop}${result.orderNo ? ` (${result.orderNo})` : ""}:\n${result.lines.map((l) => `• ${l}`).join("\n")}\nTotal ${inr(result.total, { decimals: false })} incl. GST${companyName ? `\n— ${companyName}` : ""}`;
   return (
     <div className="pt-6 text-center">
       <span className={cn("mx-auto grid size-24 place-items-center rounded-full text-white shadow-lg", result.offline ? "bg-amber-500 shadow-amber-500/30" : "bg-emerald-500 shadow-emerald-500/30")}>

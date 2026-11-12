@@ -42,8 +42,8 @@ async function load(o: Opts) {
     const c = o.withValue ? cost.get(p.id) ?? null : null;
     return { id: p.id, name: p.name, sku: p.sku, unit: p.unit_code, category: p.category_name ?? "Uncategorised", qty: q, avgCost: c, value: c === null ? null : Math.round(q * c * 100) / 100 };
   });
-  const { data: co } = await supabase.from("company_settings").select("legal_name").eq("id", 1).single();
-  return { supabase, brand, warehouseName: wh?.name ?? ((whs ?? []).length > 1 ? "All warehouses" : (whs ?? [])[0]?.name ?? ""), items, company: (co?.legal_name as string) ?? "APEX TRADING CO." };
+  const { data: co } = await supabase.from("company_settings").select("legal_name").single();
+  return { supabase, brand, warehouseName: wh?.name ?? ((whs ?? []).length > 1 ? "All warehouses" : (whs ?? [])[0]?.name ?? ""), items, company: (co?.legal_name as string | null) ?? "" };
 }
 
 export async function stockReportPdf(o: Opts) {

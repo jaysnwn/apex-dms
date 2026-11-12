@@ -197,7 +197,7 @@ export async function getCatalogue(supabase: SupabaseServer): Promise<{ items: C
       .order("brand_name").order("name")
       .limit(3000),
     supabase.from("product_stock").select("product_id, available"),
-    supabase.from("company_settings").select("salesman_max_discount").eq("id", 1).maybeSingle(),
+    supabase.from("company_settings").select("salesman_max_discount").maybeSingle(),
   ]);
   const sMap = new Map((stock ?? []).map((s) => [s.product_id as string, Number(s.available)]));
   const urls = await signProductImages(supabase, (rows ?? []).map((r) => r.image_path));

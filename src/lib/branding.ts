@@ -22,6 +22,15 @@ export const getCompanyLogoUrl = cache(async (): Promise<string | null> => {
   return logoUrl(data?.logo_path as string | null | undefined);
 });
 
+// The business's own name, once per request. Used wherever a message is signed
+// by the business: the name belongs in company_settings (Admin -> Company),
+// never in the code.
+export const getCompanyName = cache(async (): Promise<string> => {
+  const supabase = await createClient();
+  const { data } = await supabase.from("company_settings").select("legal_name").limit(1).maybeSingle();
+  return data?.legal_name?.trim() || "";
+});
+
 // The logo file itself, for PDFs (null = none set, or not readable).
 export async function getCompanyLogoFile(): Promise<{ data: Buffer; format: "png" | "jpg" } | null> {
   const supabase = await createClient();

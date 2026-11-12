@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getCatalogue, getOutlets } from "../data";
 import { OrderFlow } from "./order-flow";
+import { getCompanyName } from "@/lib/branding";
 
 export const metadata: Metadata = { title: "New order" };
 
@@ -17,5 +18,8 @@ export default async function OrderPage({ searchParams }: { searchParams: Promis
   } catch {
     // The phone falls back to its cached copy.
   }
-  return <OrderFlow key={retailer ?? "pick"} initialOutlets={outlets} initialCatalogue={catalogue} presetRetailer={retailer} />;
+  // The business signs the order message it sends to the shop, so its name
+  // comes from company_settings rather than from the code.
+  const companyName = await getCompanyName();
+  return <OrderFlow key={retailer ?? "pick"} initialOutlets={outlets} initialCatalogue={catalogue} presetRetailer={retailer} companyName={companyName} />;
 }

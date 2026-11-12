@@ -36,7 +36,7 @@ const schema = z.object({
 });
 
 export async function saveSettings(_prev: SettingsState, formData: FormData): Promise<SettingsState> {
-  await requireRole("super_admin");
+  const { tenant } = await requireRole("super_admin");
   const parsed = schema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
@@ -46,7 +46,7 @@ export async function saveSettings(_prev: SettingsState, formData: FormData): Pr
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.from("company_settings").update(data).eq("id", 1);
+  const { error } = await supabase.from("company_settings").update(data).eq("tenant_id", tenant.id);
   if (error) return { error: error.message };
 
   revalidatePath("/admin/settings");
@@ -59,8 +59,8 @@ export async function setCompanyLogo(path: string | null): Promise<SettingsState
   const { tenant } = await requireRole("super_admin");
   if (path && !(path.startsWith(`${tenant.id}/`) && LOGO_PATH_RE.test(path))) return { error: "Wrong file location." };
   const supabase = await createClient();
-  const { data: old } = await supabase.from("company_settings").select("logo_path").eq("id", 1).single();
-  const { error } = await supabase.from("company_settings").update({ logo_path: path }).eq("id", 1);
+  const { data: old } = await supabase.from("company_settings").select("logo_path").eq("tenant_id", tenant.id).single();
+  const { error } = await supabase.from("company_settings").update({ logo_path: path }).eq("tenant_id", tenant.id);
   if (error) return { error: error.message };
   if (old?.logo_path && old.logo_path !== path) await supabase.storage.from(LOGO_BUCKET).remove([old.logo_path as string]);
   revalidatePath("/", "layout");

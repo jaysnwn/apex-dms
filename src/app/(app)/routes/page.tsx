@@ -44,7 +44,7 @@ export default async function RoutesMonitor({ searchParams }: { searchParams: Pr
     sb.from("payments").select("collected_by, amount").eq("payment_date", day).in("status", ["received", "cheque_pending"]),
     sb.from("invoices").select("grand_total, orders(salesman_id)").eq("invoice_date", day).eq("status", "issued"),
     sb.from("salesman_locations").select("salesman_id, recorded_at, latitude, longitude, accuracy_m, source").gte("recorded_at", new Date(Date.now() - 3 * 864e5).toISOString()).order("recorded_at", { ascending: false }).limit(2000),
-    sb.from("company_settings").select("live_location_minutes, geofence_radius_m").eq("id", 1).maybeSingle(),
+    sb.from("company_settings").select("live_location_minutes, geofence_radius_m").maybeSingle(),
   ]);
   const liveMin = Number(settings?.live_location_minutes ?? 10);
   const rName = new Map((routes ?? []).map((r) => [r.id as string, r.name as string]));

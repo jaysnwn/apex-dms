@@ -23,7 +23,6 @@ async function company(): Promise<Company> {
     supabase
       .from("company_settings")
       .select("legal_name, gstin, state_code, address, phone, email, bank_details, invoice_terms")
-      .eq("id", 1)
       .single(),
     getCompanyLogoFile(),
   ]);

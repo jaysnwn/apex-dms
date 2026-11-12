@@ -34,6 +34,17 @@ for f in ../../supabase/migrations/*.sql; do
   if grep -n "pg_get_functiondef" "$f"; then echo "FAIL  $(basename "$f"): write the whole function with create or replace, do not patch its stored text"; exit 1; fi
 done
 echo "ok  migrations after 0029 state functions in full"
+# The business's own details come from company_settings, never from the code
+# (audit finding 9). company_settings is keyed by tenant_id and row level
+# security shows a login only its own row, so there is nothing to filter on;
+# the leftover "id" column is 1 for APEX TRADING CO. alone.
+if grep -rn 'from("company_settings")' ../../src --include=*.ts --include=*.tsx | grep 'eq("id"'; then
+  echo "FAIL  company_settings must not be looked up by id: it has one row per business, found by row level security"; exit 1
+fi
+if grep -rnE '"[^"]*APEX TRADING CO\.[^"]*"|`[^`]*APEX TRADING CO\.[^`]*`' ../../src --include=*.ts --include=*.tsx; then
+  echo "FAIL  a business name is written into the code: read legal_name from company_settings (getCompanyName)"; exit 1
+fi
+echo "ok  the business's name and settings are not written into the code"
 # Shared components and library code must not reach into a page folder
 # (audit finding 13): what several screens use lives in src/components or src/lib.
 if grep -rnE 'from "(@/app/|(\.\./)+app/)' ../../src/components ../../src/lib; then echo "FAIL  shared code imports from a page folder: move the shared piece to src/lib or src/components"; exit 1; fi
