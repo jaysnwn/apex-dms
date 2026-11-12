@@ -1,6 +1,7 @@
 # Checks every push and pull request before anything is merged or deployed:
-# types, lint, app logic checks, and all database migrations + the 15 database
-# test suites (business separation attacks included) on a throwaway Postgres.
+# types, lint, app logic checks, and all database migrations + the 18 database
+# test suites (business separation attacks and the owner-rights views included)
+# on a throwaway Postgres.
 # A red check on GitHub means: do not merge or promote this commit.
 name: Checks
 
