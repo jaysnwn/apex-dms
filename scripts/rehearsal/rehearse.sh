@@ -11,7 +11,7 @@
 # 2. check the restore is identical to production (row counts + checksums)
 # 3. record: schema fingerprint, business totals, a checksum of every row,
 #    and what every existing login can see through row-level security
-# 4. apply migrations 0019-0027, each in one transaction, as on Supabase
+# 4. apply every upgrade migration from 0019 on, each in one transaction, as on Supabase
 # 5. check: every old row unchanged, every row stamped Apex, business totals
 #    equal, every login sees the same as before
 # 6. roll back to 0018 with the rollback scripts and check schema, totals and
@@ -75,12 +75,13 @@ for f in "$ROOT"/supabase/migrations/2026111000001[9]_*.sql "$ROOT"/supabase/mig
   n=$(basename "$f" | cut -d_ -f1 | tail -c 5)
   s=$(date +%s%N)
   if Q -1 -f "$f" > "$WORK/m.out" 2>&1; then
+    LAST=$n
     log "migration $n applied in $(( ($(date +%s%N) - s) / 1000000 )) ms"
   else
     fail "Migration $n applies"; sed -n '1,15p' "$WORK/m.out"; break
   fi
 done
-[ "$FAILS" = 0 ] && pass "All upgrade migrations (0019-0027) applied, each in one transaction"
+[ "$FAILS" = 0 ] && pass "All upgrade migrations (0019-$LAST) applied, each in one transaction"
 
 if [ "$FAILS" = 0 ]; then
   # 5. after

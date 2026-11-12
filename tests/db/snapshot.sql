@@ -36,6 +36,6 @@ select jsonb_build_object(
   'audit_log_md5', (select md5(coalesce(string_agg(id || ':' || table_name || ':' || coalesce(record_id, '') || ':' || action || ':'
                                                    || coalesce(old_data::text, '') || ':' || coalesce(new_data::text, ''), '|' order by id), ''))
                       from public.audit_log),
-  'company_settings_md5', (select md5(coalesce(string_agg((to_jsonb(s) - 'tenant_id' - 'updated_at')::text, '|'), '')) from public.company_settings s),
+  'company_settings_md5', (select md5(coalesce(string_agg(jsonb_strip_nulls(to_jsonb(s) - 'tenant_id' - 'updated_at')::text, '|'), '')) from public.company_settings s),
   'profiles_md5', (select md5(coalesce(string_agg(id || ':' || role || ':' || is_active || ':' || coalesce(can_reimburse, false), '|' order by id), '')) from public.profiles)
 ) as snapshot;
