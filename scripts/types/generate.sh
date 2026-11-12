@@ -30,15 +30,29 @@ URL="postgresql://${PGUSER:-postgres}:${PGPASSWORD:-}@${PGHOST:-localhost}:${PGP
 TMP=$(mktemp /tmp/apex-types-XXXXXX.ts)
 trap 'rm -f "$TMP"; psql -q -d postgres -c "drop database if exists $DB" >/dev/null 2>&1 || true' EXIT
 
+# The generator's own messages are kept, and shown if it does not work out:
+# hiding them turns "the CLI could not start" into an unexplained exit code.
+ERR=$(mktemp /tmp/apex-types-err-XXXXXX)
+trap 'rm -f "$TMP" "$ERR"; psql -q -d postgres -c "drop database if exists $DB" >/dev/null 2>&1 || true' EXIT
+
 {
   echo "// GENERATED from the database built by supabase/migrations: do not edit by hand."
   echo "// Regenerate after every migration: scripts/types/generate.sh (the Checks job fails when this file is out of date)."
-  npx --yes supabase@3 gen types typescript --db-url "$URL" 2>/dev/null
+  npx --yes supabase@3 gen types typescript --db-url "$URL" 2>"$ERR" || true
 } > "$TMP"
-npx --yes oxfmt "$TMP" >/dev/null 2>&1
 
 if [ ! -s "$TMP" ] || ! grep -q "export type Database" "$TMP"; then
-  echo "generate.sh: the generator produced nothing usable; the file was left alone." >&2
+  echo "generate.sh: the Supabase CLI did not produce a usable file. What it said:" >&2
+  cat "$ERR" >&2
+  exit 1
+fi
+
+# Formatting only: if oxfmt cannot run, say so rather than stopping, and let
+# the comparison below decide, so a formatter problem is never mistaken for
+# the types having drifted.
+if ! npx --yes oxfmt "$TMP" >"$ERR" 2>&1; then
+  echo "generate.sh: oxfmt could not format the generated file. What it said:" >&2
+  cat "$ERR" >&2
   exit 1
 fi
 
