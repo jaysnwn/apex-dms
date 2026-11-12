@@ -9,6 +9,9 @@
 -- clean slate for orders created by earlier tests (they used direct inserts)
 create temp table ids (k text primary key, v uuid);
 grant all on ids to authenticated;
+-- product_available() is for database functions only since 0030: the tests read it through a helper
+create function pg_temp.avail(p uuid) returns numeric language sql security definer as 'select public.product_available(p)';
+grant execute on function pg_temp.avail(uuid) to authenticated;
 
 -- ---------- Billing: quotation with discount + GST ----------
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000003', false);
@@ -37,7 +40,7 @@ begin
   insert into ids values ('inv1', v_inv);
 
   -- reserved stock now reduces availability (power bank 50 on hand, 10 reserved)
-  assert public.product_available('30000000-0000-0000-0000-000000000001') = 40, 'available after invoice';
+  assert pg_temp.avail('30000000-0000-0000-0000-000000000001') = 40, 'available after invoice';
 
   -- not enough stock -> blocked with a clear message
   v_o := public.save_quotation(null, '20000000-0000-0000-0000-000000000001', 15, null,
@@ -210,7 +213,7 @@ begin
   v_d := public.dispatch_invoice(v_inv1, v_main, 'MH17 AB 1234', null);
   assert (select on_hand from public.stock_on_hand where product_id = '30000000-0000-0000-0000-000000000001' and warehouse_id = v_main) = 40,
     'power bank deducted on dispatch';
-  assert public.product_available('30000000-0000-0000-0000-000000000001') = 35, 'reserved released for dispatched, inv2 still reserves 5';
+  assert pg_temp.avail('30000000-0000-0000-0000-000000000001') = 35, 'reserved released for dispatched, inv2 still reserves 5';
   begin
     perform public.dispatch_invoice(v_inv1, v_main);
     raise exception 'double dispatch accepted';
@@ -235,7 +238,7 @@ begin
   end;
   perform public.cancel_invoice(v_igst, 'Customer changed mind');
   assert (select status from public.invoices where id = v_igst) = 'cancelled', 'cancelled';
-  assert public.product_available('30000000-0000-0000-0000-000000000002') = 75, 'cable reservation released (95 - 20 dispatched... )';
+  assert pg_temp.avail('30000000-0000-0000-0000-000000000002') = 75, 'cable reservation released (95 - 20 dispatched... )';
 
   select id into v_line from public.invoice_lines where invoice_id = v_inv1 and line_no = 1;
   v_cn := public.create_credit_note(v_inv1, '2 units returned damaged', true,

@@ -70,9 +70,9 @@ Q -v phase=before -f "$HERE/visible.sql"
 log "recorded: $(Q -c 'select count(*) from rh.rows') rows in $(Q -c 'select count(*) from rh.cols') tables, $(Q -c "select count(distinct who) from rh.visible") logins"
 
 # 4. upgrade
-for f in "$ROOT"/supabase/migrations/2026111000001[9]_*.sql "$ROOT"/supabase/migrations/2026111000002[0-9]_*.sql; do
-  [ -e "$f" ] || continue
+for f in "$ROOT"/supabase/migrations/*.sql; do
   n=$(basename "$f" | cut -d_ -f1 | tail -c 5)
+  [ "$((10#$n))" -gt 18 ] || continue   # production is at 0018
   s=$(date +%s%N)
   if Q -1 -f "$f" > "$WORK/m.out" 2>&1; then
     LAST=$n
@@ -118,7 +118,7 @@ if [ "$FAILS" = 0 ]; then
   else fail "Every login sees the same records"; echo "  $VIS"; fi
 
   # 6. roll back
-  for f in $(ls -r "$ROOT"/supabase/rollback/2026111000002*_down.sql); do
+  for f in $(ls -r "$ROOT"/supabase/rollback/*_down.sql); do
     if ! Q -1 -f "$f" > "$WORK/r.out" 2>&1; then fail "Rollback $(basename "$f") applies"; sed -n '1,15p' "$WORK/r.out"; break; fi
   done
   if [ "$FAILS" = 0 ]; then
