@@ -1,0 +1,44 @@
+# Applies the migrations production has not seen yet (scripts/deploy/migrate.sh).
+# Run: Actions -> "Deploy database" -> Run workflow, on the branch to deploy.
+# Needs the PROD_DB_URL secret, the same one the backup job uses.
+#
+# Take a backup first ("Database backup" -> Run workflow): this job does not,
+# so that it stays a single, obvious action.
+# Check first with "Only list what would be applied".
+name: Deploy database
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only list what would be applied"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-db
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common gnupg
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+      - name: Apply the pending migrations
+        env:
+          TARGET_URL: ${{ secrets.PROD_DB_URL }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+        run: scripts/deploy/migrate.sh
