@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import type { Insert, Update } from "@/lib/supabase/database";
 import { dbError } from "@/lib/actions";
 import { normaliseMobile } from "@/lib/format";
 import { getBrandContext } from "@/lib/brand";
@@ -104,7 +105,7 @@ export async function importProducts(brandId: string, rows: Record<string, strin
       }
       const skuKey = r.sku.trim().toLowerCase();
       const existingId = existing.get(skuKey);
-      const row: Record<string, unknown> = {
+      const row: Insert<"products"> = {
         name: r.name.trim(),
         brand_id: brandId,
         sku: r.sku.trim(),
@@ -127,11 +128,14 @@ export async function importProducts(brandId: string, rows: Record<string, strin
         description: r.description?.trim() || null,
       };
       if (existingId) {
-        // Only overwrite what the file actually has.
+        // Only overwrite what the file actually has. Every field of an update
+        // is optional, so the columns the file leaves blank are dropped from a
+        // copy and the product keeps what it already had.
+        const patch: Update<"products"> = { ...row };
         for (const [k, col] of [["category", "category_id"], ["gst_rate", "gst_rate"], ["purchase_cost", "purchase_cost"], ["distributor_price", "distributor_price"], ["retailer_price", "retailer_price"], ["mrp", "mrp"], ["min_stock_qty", "min_stock_qty"], ["hsn_code", "hsn_code"], ["barcode", "barcode"], ["description", "description"], ["unit_code", "unit_code"]] as const) {
-          if (!(r[k] ?? "").trim()) delete row[col];
+          if (!(r[k] ?? "").trim()) delete patch[col];
         }
-        const { error } = await supabase.from("products").update(row).eq("id", existingId);
+        const { error } = await supabase.from("products").update(patch).eq("id", existingId);
         if (error) throw new Error(dbError(error));
         result.updated++;
         continue;

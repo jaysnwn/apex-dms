@@ -50,7 +50,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
         city: snap.billing_city,
         mobile: snap.mobile,
         brand_id: i.brand_id,
-        brand_name: brandName.get(i.brand_id) ?? "",
+        brand_name: (i.brand_id ? brandName.get(i.brand_id) : null) ?? "",
         items: (lines ?? [])
           .filter((l) => l.invoice_id === i.id)
           .map((l) => ({

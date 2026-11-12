@@ -185,13 +185,18 @@ export async function saveWarehouse(_prev: FormResult, formData: FormData): Prom
   const parsed = warehouseSchema.safeParse(raw);
   if (!parsed.success) return { error: zodMessage(parsed.error) };
   const { id, ...v } = parsed.data;
-  const row: Record<string, unknown> = { name: v.name, address: v.address ?? null, is_active: v.is_active !== "false" };
-  if (!id) {
-    if (!v.brand_id) return { error: "Choose the brand this warehouse belongs to." };
-    row.brand_id = v.brand_id;
-  }
+  // The fields a warehouse always has. A new warehouse also needs its brand,
+  // which is added on the insert itself so that the database contract can
+  // check it; an existing warehouse does not change brand.
+  const row = { name: v.name, address: v.address ?? null, is_active: v.is_active !== "false" };
   const supabase = await createClient();
-  const { error } = id ? await supabase.from("warehouses").update(row).eq("id", id) : await supabase.from("warehouses").insert(row);
+  let error;
+  if (id) {
+    ({ error } = await supabase.from("warehouses").update(row).eq("id", id));
+  } else {
+    if (!v.brand_id) return { error: "Choose the brand this warehouse belongs to." };
+    ({ error } = await supabase.from("warehouses").insert({ ...row, brand_id: v.brand_id }));
+  }
   if (error) return { error: dbError(error) };
   revalidatePath("/stock/warehouses");
   return { ok: id ? "Saved." : `${v.name} added.`, resetForm: !id };

@@ -208,18 +208,28 @@ export async function saveMaster(_prev: FormResult, formData: FormData): Promise
   const { kind, id, name, code, brand_id, is_active } = parsed.data;
 
   const supabase = await createClient();
-  const row: Record<string, unknown> = { name, is_active: is_active !== "false" };
+  const row = { name, is_active: is_active !== "false" };
+
+  // One branch per table. A brand and a category do not need the same fields
+  // on a new row -- a brand needs its short code, a category its brand -- and
+  // writing them separately lets the database contract check each one.
+  let error;
   if (kind === "brands") {
     if (profile.role !== "super_admin") return { error: "Only the Super Admin can add or change brands." };
-    if (!id && !code) return { error: "Enter a 2-letter short code for the brand (used in invoice numbers)." };
-    if (code && !id) row.code = code;
-  } else if (!id) {
-    if (!brand_id) return { error: "Choose the brand for this category." };
-    row.brand_id = brand_id;
+    if (id) {
+      ({ error } = await supabase.from("brands").update(row).eq("id", id));
+    } else {
+      if (!code) return { error: "Enter a 2-letter short code for the brand (used in invoice numbers)." };
+      ({ error } = await supabase.from("brands").insert({ ...row, code }));
+    }
+  } else {
+    if (id) {
+      ({ error } = await supabase.from("categories").update(row).eq("id", id));
+    } else {
+      if (!brand_id) return { error: "Choose the brand for this category." };
+      ({ error } = await supabase.from("categories").insert({ ...row, brand_id }));
+    }
   }
-  const { error } = id
-    ? await supabase.from(kind).update(row).eq("id", id)
-    : await supabase.from(kind).insert(row);
   if (error) return { error: error.message.includes("brands_code") ? "Another brand already uses that short code." : dbError(error) };
   revalidatePath("/products/settings");
   revalidatePath("/", "layout");

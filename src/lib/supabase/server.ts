@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { OWNER_COOKIE, TENANT_COOKIE, TENANT_HEADER, UUID_RE } from "@/lib/tenant-shared";
 import { assertSupabaseEnv, SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
 import { capWatchingFetch } from "./row-cap";
+import type { Database } from "./database";
 
 // Server-side Supabase client acting as the signed-in user.
 // Every query runs under that user's row-level security, in the business
@@ -35,7 +36,7 @@ export async function createClient() {
   const tenant = cookieStore.get(TENANT_COOKIE)?.value;
   const headers: Record<string, string> = tenant && UUID_RE.test(tenant) ? { [TENANT_HEADER]: tenant } : {};
 
-  return createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  return createServerClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: { headers, fetch: capWatchingFetch((table) => reportCappedList(table, cookieStore.get(OWNER_COOKIE)?.value, tenant)) },
     cookies: {
       getAll() {

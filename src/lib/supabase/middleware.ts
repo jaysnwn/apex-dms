@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { IDLE_COOKIE, IDLE_LIMIT_MS, OWNER_COOKIE, TENANT_COOKIE, UUID_RE, tenantCookieOptions } from "@/lib/tenant-shared";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
+import type { Database } from "./database";
 import { REQUEST_START_HEADER } from "@/lib/timing";
 
 const PUBLIC_PATHS = ["/login", "/auth", "/d", "/sw.js", "/manifest.webmanifest", "/icons"];
@@ -22,7 +23,7 @@ export async function updateSession(request: NextRequest) {
 
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return response;
 
-  const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  const supabase = createServerClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
     cookies: {
       getAll() {
         return request.cookies.getAll();

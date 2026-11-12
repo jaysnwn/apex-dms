@@ -8,6 +8,7 @@ import { loadSchedule } from "@/lib/route-data";
 import { Card, PageHeader, cn } from "@/components/ui";
 import { RouteTabs } from "../manager-tabs";
 import { PlanForm } from "./plan-form";
+import { required } from "@/lib/required";
 
 export const metadata: Metadata = { title: "Visit schedule" };
 
@@ -89,7 +90,7 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
         </div>
       </Card>
       <div className="max-w-xl">
-        <PlanForm routes={(routes ?? []).map((r) => ({ id: r.id, name: `${r.name} (${r.code})`, default_salesman_id: r.default_salesman_id }))} salesmen={(salesmen ?? []).map((s) => ({ id: s.id, name: s.full_name }))} today={today} />
+        <PlanForm routes={(routes ?? []).map((r) => ({ id: r.id, name: `${r.name} (${r.code})`, default_salesman_id: r.default_salesman_id }))} salesmen={(salesmen ?? []).map((s) => ({ id: required(s.id, "Salesman id"), name: required(s.full_name, "Salesman name") }))} today={today} />
       </div>
     </>
   );

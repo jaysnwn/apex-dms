@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { dbError, formObject, zodMessage } from "@/lib/actions";
 import type { FormResult } from "@/components/action-form";
 import { searchSource, searchWords } from "@/lib/search-words";
+import { enumParam } from "@/lib/enum-param";
 
 const OFFICE = ["super_admin", "manager", "billing"] as const;
 
@@ -176,7 +177,7 @@ export async function recordSupplierPayment(input: {
   const { data, error } = await supabase.rpc("record_supplier_payment", {
     p_supplier_id: input.supplierId,
     p_amount: input.amount,
-    p_method: input.method,
+    p_method: enumParam("payment_method", input.method) ?? null,
     p_payment_date: input.date || null,
     p_reference: input.reference || null,
     p_notes: input.notes || null,

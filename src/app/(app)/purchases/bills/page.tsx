@@ -39,7 +39,7 @@ export default async function BillsPage({ searchParams }: { searchParams: Promis
   const bMap = new Map((bal ?? []).map((b) => [b.purchase_id as string, b]));
   const open = (bal ?? []).filter((b) => Number(b.balance) > 0);
   const totalOpen = open.reduce((t, b) => t + Number(b.balance), 0);
-  const overdue = open.filter((b) => b.due_date < today).reduce((t, b) => t + Number(b.balance), 0);
+  const overdue = open.filter((b) => b.due_date !== null && b.due_date < today).reduce((t, b) => t + Number(b.balance), 0);
   const purchased = (rows ?? []).filter((r) => r.status === "received").reduce((t, r) => t + Number(r.grand_total), 0);
 
   return (

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { dbError } from "@/lib/actions";
+import { enumParam } from "@/lib/enum-param";
 
 export async function approveMonth(month: string, override = false): Promise<{ ok?: boolean; count?: number; error?: string }> {
   await requireRole("super_admin", "manager");
@@ -18,7 +19,9 @@ export async function approveMonth(month: string, override = false): Promise<{ o
 export async function markPaid(id: string, method: string, reference: string): Promise<{ ok?: boolean; error?: string }> {
   await requireRole("super_admin", "manager");
   const supabase = await createClient();
-  const { error } = await supabase.rpc("mark_incentive_paid", { p_payout_id: id, p_method: method, p_reference: reference || null });
+  const payMethod = enumParam("payment_method", method);
+  if (!payMethod) return { error: "Choose how the incentive was paid." };
+  const { error } = await supabase.rpc("mark_incentive_paid", { p_payout_id: id, p_method: payMethod, p_reference: reference || null });
   if (error) return { error: dbError(error) };
   revalidatePath("/routes/incentives");
   return { ok: true };

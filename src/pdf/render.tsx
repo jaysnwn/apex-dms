@@ -10,6 +10,7 @@ import type { PdfKind } from "./kinds";
 import { getCompanyLogoFile } from "@/lib/branding";
 import { brandTone } from "@/lib/brand-style";
 import { allRows } from "@/lib/all-rows";
+import { required } from "@/lib/required";
 export type { PdfKind };
 
 export type RenderedPdf = { buffer: Buffer; filename: string; phone?: string; shareText: string };
@@ -76,6 +77,10 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
       supabase.from("invoices").select("*").eq("id", cn.invoice_id).single(),
       supabase.from("credit_note_lines").select("invoice_line_id, qty, taxable_value, cgst, sgst, igst, line_total").eq("credit_note_id", id),
     ]);
+    // The credit note names its invoice, so this row should always be there.
+    // If it is not (the invoice was hidden from this user, or removed), stop
+    // instead of printing a credit note with gaps where the invoice goes.
+    if (!inv) return null;
     const lineIds = (cls ?? []).map((c) => c.invoice_line_id);
     const { data: ils } = lineIds.length ? await supabase.from("invoice_lines").select(INV_LINE_COLS).in("id", lineIds) : { data: [] };
     const ilMap = new Map((ils ?? []).map((l) => [l.id as string, l]));
@@ -156,8 +161,8 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
           from,
           to,
           opening,
-          entries: (entries ?? []).map((e) => ({ ...e, debit: Number(e.debit), credit: Number(e.credit) })),
-          openInvoices: (open ?? []).map((o) => ({ ...o, balance: Number(o.balance), days_past_due: Number(o.days_past_due) })),
+          entries: (entries ?? []).map((e) => ({ ...e, debit: Number(e.debit), credit: Number(e.credit), entry_date: e.entry_date ?? "", doc_no: e.doc_no ?? "", narration: e.narration ?? "", created_at: e.created_at ?? "" })),
+          openInvoices: (open ?? []).map((o) => ({ ...o, balance: Number(o.balance), days_past_due: Number(o.days_past_due), invoice_no: required(o.invoice_no, "Invoice number"), invoice_date: required(o.invoice_date, "Invoice date"), due_date: required(o.due_date, "Invoice due date") })),
           summary: {
             outstanding: Number(bal?.outstanding ?? 0),
             not_yet_due: Number(bal?.not_yet_due ?? 0),

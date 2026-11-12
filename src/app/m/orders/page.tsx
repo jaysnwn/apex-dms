@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { date, inr } from "@/lib/format";
 import { ORDER_STATUS } from "@/lib/status";
 import { Badge, cn } from "@/components/ui";
+import { enumParam } from "@/lib/enum-param";
 
 export const metadata: Metadata = { title: "My orders" };
 
@@ -22,7 +23,8 @@ export default async function MyOrdersPage({ searchParams }: { searchParams: Pro
   const { status } = await searchParams;
   const supabase = await createClient();
   let q = supabase.from("orders").select("id, order_no, status, grand_total, created_at, cancel_reason, retailers(shop_name, billing_city)").eq("salesman_id", user.id).order("created_at", { ascending: false }).limit(200);
-  if (status) q = q.eq("status", status);
+  const statusFilter = enumParam("order_status", status);
+  if (statusFilter) q = q.eq("status", statusFilter);
   const { data: rows } = await q;
   const total = (rows ?? []).filter((r) => r.status !== "cancelled").reduce((t, r) => t + Number(r.grand_total), 0);
 

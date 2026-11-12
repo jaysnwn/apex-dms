@@ -3,6 +3,7 @@
 import { createBrowserClient } from "@supabase/ssr";
 import { OWNER_COOKIE, TENANT_COOKIE, TENANT_HEADER, UUID_RE } from "@/lib/tenant-shared";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
+import type { Database } from "./database";
 
 function uuidCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
@@ -26,7 +27,7 @@ export function currentUserId(): string | null {
 // business switch is picked up at once.
 export function createClient() {
   const tenant = currentTenantId();
-  return createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  return createBrowserClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: { headers: tenant ? { [TENANT_HEADER]: tenant } : {} },
     isSingleton: false,
   });

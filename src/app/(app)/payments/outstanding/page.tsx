@@ -9,6 +9,7 @@ import { Badge, Button, Card, Select, cn } from "@/components/ui";
 import { Chip } from "@/components/chip";
 import { StatCard } from "@/components/stat-card";
 import { allRows } from "@/lib/all-rows";
+import { required } from "@/lib/required";
 
 export const metadata: Metadata = { title: "Outstanding" };
 
@@ -25,7 +26,12 @@ export default async function OutstandingPage({ searchParams }: { searchParams: 
     isOffice ? supabase.from("tenant_people").select("id, full_name").eq("role", "salesman").order("full_name") : Promise.resolve({ data: [] }),
   ]);
   const dMap = new Map((dir ?? []).map((d) => [d.id as string, d]));
-  let rows = (bal ?? []).map((b) => ({ ...b, d: dMap.get(b.retailer_id) }));
+  // retailer_balances reads FROM retailers and left-joins the invoice
+  // balances, so retailer_id is the retailer's own primary key.
+  let rows = (bal ?? []).map((b) => {
+    const retailerId = required(b.retailer_id, "Retailer of an outstanding balance");
+    return { ...b, retailer_id: retailerId, d: dMap.get(retailerId) };
+  });
   if (sp.route) rows = rows.filter((r) => r.d?.route_id === sp.route);
   if (sp.salesman) rows = rows.filter((r) => r.d?.salesman_id === sp.salesman);
   const bucketKey = { "0-15": "overdue_0_15", "16-30": "overdue_16_30", "31-45": "overdue_31_45", "45+": "overdue_45_plus" } as const;
@@ -38,7 +44,19 @@ export default async function OutstandingPage({ searchParams }: { searchParams: 
   if (sp.view === "invoices") {
     const { data } = await allRows(() => supabase.from("invoice_balances").select("invoice_id, invoice_no, retailer_id, invoice_date, due_date, balance, due_status, days_past_due, ageing_bucket").gt("balance", 0).order("due_date").order("invoice_id"));
     const ids = new Set(rows.map((r) => r.retailer_id));
-    invoiceRows = (data ?? []).filter((i) => ids.has(i.retailer_id)).map((i) => ({ ...i, balance: Number(i.balance), days_past_due: Number(i.days_past_due) }));
+    invoiceRows = (data ?? [])
+      .filter((i) => i.retailer_id !== null && ids.has(i.retailer_id))
+      .map((i) => ({
+        ...i,
+        invoice_id: required(i.invoice_id, "Invoice id"),
+        invoice_no: required(i.invoice_no, "Invoice number"),
+        retailer_id: required(i.retailer_id, "Retailer of an invoice"),
+        invoice_date: required(i.invoice_date, "Invoice date"),
+        due_date: required(i.due_date, "Invoice due date"),
+        due_status: required(i.due_status, "Invoice due status"),
+        balance: Number(i.balance),
+        days_past_due: Number(i.days_past_due),
+      }));
   }
   const shopName = new Map(rows.map((r) => [r.retailer_id as string, r.shop_name as string]));
 

@@ -8,6 +8,7 @@ import { todayIST } from "@/lib/gst";
 import { ROUTE_COLS, loadAssignments, loadRouteOutlets, loadSchedule, type RouteRow } from "@/lib/route-data";
 import { PageHeader } from "@/components/ui";
 import { RouteEditor } from "./route-editor";
+import { required } from "@/lib/required";
 
 export const metadata: Metadata = { title: "Route" };
 
@@ -30,7 +31,7 @@ export default async function RoutePage({ params }: { params: Promise<{ id: stri
       <>
         <Link href="/routes/manage" className="mb-2 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800"><ArrowLeft className="size-4" /> Routes</Link>
         <PageHeader title="New route" description="Name, territory and visit days first; then add towns, outlets and the salesman." />
-        <RouteEditor route={null} territories={territories ?? []} locations={locations ?? []} salesmen={(salesmen ?? []).map((s) => ({ id: s.id, name: s.full_name }))}
+        <RouteEditor route={null} territories={territories ?? []} locations={locations ?? []} salesmen={(salesmen ?? []).map((s) => ({ id: required(s.id, "Salesman id"), name: required(s.full_name, "Salesman name") }))}
           towns={[]} outlets={[]} assignments={[]} schedule={[]} events={[]} today={today} superAdmin={profile.role === "super_admin"} />
       </>
     );
@@ -53,7 +54,7 @@ export default async function RoutePage({ params }: { params: Promise<{ id: stri
     <>
       <Link href="/routes/manage" className="mb-2 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800"><ArrowLeft className="size-4" /> Routes</Link>
       <PageHeader title={route.name} description={`${route.code ?? ""}${towns.length ? " · " + towns.map((t) => t.name).join(" → ") : ""}`} />
-      <RouteEditor route={route} territories={territories ?? []} locations={locations ?? []} salesmen={(salesmen ?? []).map((s) => ({ id: s.id, name: s.full_name }))}
+      <RouteEditor route={route} territories={territories ?? []} locations={locations ?? []} salesmen={(salesmen ?? []).map((s) => ({ id: required(s.id, "Salesman id"), name: required(s.full_name, "Salesman name") }))}
         towns={towns} outlets={outlets} assignments={assignments} schedule={schedule} events={events} today={today} superAdmin={profile.role === "super_admin"} />
     </>
   );

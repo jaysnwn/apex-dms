@@ -13,6 +13,7 @@ import { Chip, LinkButton } from "@/components/chip";
 import { DocButtons } from "@/components/doc-buttons";
 import { PromiseForm } from "./promise-form";
 import { allRows } from "@/lib/all-rows";
+import { required } from "@/lib/required";
 
 export const metadata: Metadata = { title: "Retailer" };
 
@@ -38,7 +39,7 @@ export default async function RetailerPage({ params, searchParams }: { params: P
   const role = profile.role;
   const canEdit = ["super_admin", "manager", "billing"].includes(role);
   const canSell = role !== "warehouse";
-  const status = RETAILER_STATUS[r.status];
+  const status = RETAILER_STATUS[required(r.status, "Retailer status")];
   const cls = r.classification ? RETAILER_CLASS[r.classification] : null;
 
   const summary = [
@@ -54,7 +55,7 @@ export default async function RetailerPage({ params, searchParams }: { params: P
   return (
     <>
       <PageHeader
-        title={r.shop_name}
+        title={required(r.shop_name, "Shop name")}
         description={`${r.code}${r.owner_name ? ` · ${r.owner_name}` : ""}${r.billing_city ? ` · ${r.billing_city}` : ""}`}
         actions={
           <>
@@ -107,7 +108,7 @@ export default async function RetailerPage({ params, searchParams }: { params: P
             <Row k="Mobile" v={<a href={`tel:${r.mobile}`} className="hover:underline">{r.mobile}</a>} />
             {r.alt_mobile && <Row k="Alternate mobile" v={r.alt_mobile} />}
             <Row k="GSTIN" v={r.gstin ?? "Unregistered"} />
-            <Row k="State" v={`${r.billing_state_code} · ${GST_STATES[r.billing_state_code] ?? ""}`} />
+            <Row k="State" v={`${r.billing_state_code} · ${GST_STATES[required(r.billing_state_code, "Retailer state code")] ?? ""}`} />
             <Row k="Billing address" v={[r.billing_address, r.billing_city, r.billing_pincode].filter(Boolean).join(", ") || "—"} />
             <Row k="Delivery address" v={r.delivery_address || r.delivery_city ? [r.delivery_address, r.delivery_city, r.delivery_pincode].filter(Boolean).join(", ") : "Same as billing"} />
             <Row k="Credit limit" v={Number(r.credit_limit) > 0 ? inr(r.credit_limit) : "No limit"} />
@@ -164,7 +165,7 @@ async function Statement({ id, from: f, to: t }: { id: string; from?: string; to
               return (
                 <tr key={i}>
                   <td className="px-4 py-2 whitespace-nowrap text-slate-500">{date(e.entry_date)}</td>
-                  <td className="px-3 py-2"><Link href={href(e.kind, e.doc_id)} className="font-mono text-xs hover:underline">{e.doc_no}</Link></td>
+                  <td className="px-3 py-2"><Link href={href(required(e.kind, "Ledger entry kind"), required(e.doc_id, "Ledger entry document"))} className="font-mono text-xs hover:underline">{e.doc_no}</Link></td>
                   <td className="px-3 py-2 text-slate-600">{e.narration}</td>
                   <td className="tabular px-3 py-2 text-right">{Number(e.debit) ? inr(e.debit) : ""}</td>
                   <td className="tabular px-3 py-2 text-right text-emerald-700">{Number(e.credit) ? inr(e.credit) : ""}</td>

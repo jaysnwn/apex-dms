@@ -237,7 +237,9 @@ async function SalesmanDash({ userId }: { userId: string }) {
   ]);
   const v = (visits.data ?? []).filter((x) => x.status !== "rescheduled" && x.status !== "cancelled");
   const done = v.filter((x) => x.status === "completed" || x.status === "missed").length;
-  const sumN = (rows: { amount?: number; grand_total?: number; outstanding?: number; overdue?: number }[] | null, k: "amount" | "grand_total" | "outstanding" | "overdue") => (rows ?? []).reduce((t, r) => t + Number(r[k] ?? 0), 0);
+  // Views report every column as possibly null (see lib/supabase/database.ts),
+  // so the rows accept null and a null counts as nothing, as it always did.
+  const sumN = (rows: Partial<Record<"amount" | "grand_total" | "outstanding" | "overdue", number | null>>[] | null, k: "amount" | "grand_total" | "outstanding" | "overdue") => (rows ?? []).reduce((t, r) => t + Number(r[k] ?? 0), 0);
   const sold = sumN(invs.data, "grand_total");
   const collected = sumN(pays.data, "amount");
 

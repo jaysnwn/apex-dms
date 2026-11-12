@@ -19,7 +19,7 @@ export type PendingInvoice = {
   shop_name: string;
   city: string | null;
   mobile: string;
-  brand_id: string;
+  brand_id: string | null;
   brand_name: string;
   items: { product_name: string; qty: number; unit_code: string; shortIn: Record<string, boolean> }[];
 };
@@ -31,7 +31,7 @@ export type DispatchedRow = {
   shop_name: string;
   city: string | null;
   vehicle_no: string | null;
-  dispatched_at: string;
+  dispatched_at: string | null;
   delivered_at: string | null;
   status: string;
   remarks: string | null;

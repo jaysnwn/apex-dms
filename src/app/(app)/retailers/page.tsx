@@ -11,6 +11,7 @@ import { RETAILER_CLASS } from "@/lib/status";
 import { ClassifyButton } from "./[id]/classify-button";
 import { searchSource, searchWords } from "@/lib/search-words";
 import { allRows } from "@/lib/all-rows";
+import { required } from "@/lib/required";
 
 export const metadata: Metadata = { title: "Retailers" };
 
@@ -77,7 +78,7 @@ export default async function RetailersPage({
         {isOffice ? (
           <Select name="salesman" defaultValue={sp.salesman ?? ""} aria-label="Salesman">
             <option value="">All salesmen</option>
-            {(salesmen ?? []).map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+            {(salesmen ?? []).map((s) => <option key={required(s.id, "Salesman id")} value={required(s.id, "Salesman id")}>{s.full_name}</option>)}
           </Select>
         ) : <div className="hidden sm:block" />}
         <Select name="status" defaultValue={sp.status ?? ""} aria-label="Status">

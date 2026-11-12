@@ -31,7 +31,8 @@ export default async function SupplierPage({ params }: { params: Promise<{ id: s
     supabase.from("purchases").select("id", { count: "exact", head: true }).eq("supplier_id", id).eq("status", "ordered"),
   ]);
   const payable = (open ?? []).reduce((t, b) => t + Number(b.balance), 0);
-  const overdue = (open ?? []).filter((b) => b.due_date < today).reduce((t, b) => t + Number(b.balance), 0);
+  // No due date means no agreed credit terms, so nothing is overdue yet.
+  const overdue = (open ?? []).filter((b) => b.due_date !== null && b.due_date < today).reduce((t, b) => t + Number(b.balance), 0);
   const purchasedFy = (fy ?? []).reduce((t, p) => t + Number(p.grand_total), 0);
   let running = 0;
   const rows = (ledger ?? []).map((e) => {

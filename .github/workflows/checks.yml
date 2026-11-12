@@ -6,7 +6,7 @@ name: Checks
 
 on:
   push:
-    branches: [main, multi-tenant]
+    branches: [main, multi-tenant, hotfix/audit-fixes]
   pull_request:
   workflow_dispatch:
 
@@ -62,3 +62,8 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
       - name: All migrations, then every database test suite
         run: bash tests/db/run.sh
+      # The app's database contract is generated from the migrations
+      # (audit finding 2). A migration merged without regenerating it turns
+      # this red, so the types can never quietly fall behind the schema.
+      - name: The database contract matches the migrations
+        run: bash scripts/types/generate.sh --check

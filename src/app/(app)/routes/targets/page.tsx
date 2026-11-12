@@ -7,6 +7,7 @@ import { Card, PageHeader, cn } from "@/components/ui";
 import { RouteTabs } from "../manager-tabs";
 import { TargetForm } from "./target-form";
 import { allRows } from "@/lib/all-rows";
+import { required } from "@/lib/required";
 
 export const metadata: Metadata = { title: "Targets" };
 
@@ -44,7 +45,7 @@ export default async function TargetsPage() {
             );
           })}
         </div>
-        <TargetForm salesmen={(salesmen ?? []).map((s) => ({ id: s.id, name: s.full_name }))} />
+        <TargetForm salesmen={(salesmen ?? []).map((s) => ({ id: required(s.id, "Salesman id"), name: required(s.full_name, "Salesman name") }))} />
       </div>
     </>
   );
