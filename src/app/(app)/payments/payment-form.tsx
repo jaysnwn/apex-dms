@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Banknote, Building2, CreditCard, Smartphone } from "lucide-react";
 import { Alert, Badge, Button, Card, Input, Label, Textarea, cn } from "@/components/ui";
-import { RetailerSelect } from "../sales/order-builder";
+import { RetailerSelect } from "../sales/retailer-select";
 import type { PickerRetailer } from "../sales/actions";
 import { date, inr } from "@/lib/format";
 import { DUE_STATUS } from "@/lib/status";

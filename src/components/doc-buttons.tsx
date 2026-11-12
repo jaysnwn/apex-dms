@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { FileDown, MessageCircle } from "lucide-react";
 import { Button } from "./ui";
-import { shareOnWhatsApp } from "@/app/(app)/share-actions";
+import { shareOnWhatsApp } from "@/lib/share-actions";
 import type { PdfKind } from "@/pdf/kinds";
 
 // "PDF" and "WhatsApp" buttons for any document.

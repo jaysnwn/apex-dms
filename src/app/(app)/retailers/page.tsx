@@ -10,6 +10,7 @@ import { SearchBar } from "@/components/search-bar";
 import { RETAILER_CLASS } from "@/lib/status";
 import { ClassifyButton } from "./[id]/classify-button";
 import { searchSource, searchWords } from "@/lib/search-words";
+import { allRows } from "@/lib/all-rows";
 
 export const metadata: Metadata = { title: "Retailers" };
 
@@ -40,7 +41,7 @@ export default async function RetailersPage({
     query,
     supabase.from("routes").select("id, name").order("name"),
     isOffice ? supabase.from("tenant_people").select("id, full_name").eq("role", "salesman").order("full_name") : Promise.resolve({ data: [] }),
-    supabase.from("retailer_balances").select("retailer_id, outstanding, overdue"),
+    allRows(() => supabase.from("retailer_balances").select("retailer_id, outstanding, overdue").order("retailer_id")),
   ]);
   const balMap = new Map((balances ?? []).map((b) => [b.retailer_id as string, b]));
   const list = rows ?? [];

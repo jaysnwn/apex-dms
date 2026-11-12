@@ -8,6 +8,7 @@ import { todayIST, addDays } from "@/lib/gst";
 import { Card, cn } from "@/components/ui";
 import { LinkButton } from "@/components/chip";
 import { StatCard } from "@/components/stat-card";
+import { allRows } from "@/lib/all-rows";
 
 export const metadata: Metadata = { title: "Payables" };
 
@@ -19,7 +20,7 @@ export default async function PayablesPage() {
   const today = todayIST();
   const week = addDays(today, 7);
   const [{ data: bal }, { data: suppliers }] = await Promise.all([
-    supabase.from("purchase_balances").select("supplier_id, due_date, balance, days_overdue").gt("balance", 0),
+    allRows(() => supabase.from("purchase_balances").select("supplier_id, due_date, balance, days_overdue").gt("balance", 0).order("purchase_id")),
     supabase.from("suppliers").select("id, name"),
   ]);
   const names = new Map((suppliers ?? []).map((s) => [s.id as string, s.name as string]));

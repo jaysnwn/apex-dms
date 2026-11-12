@@ -8,6 +8,7 @@ import { DUE_STATUS, RETAILER_CLASS } from "@/lib/status";
 import { Badge, Button, Card, Select, cn } from "@/components/ui";
 import { Chip } from "@/components/chip";
 import { StatCard } from "@/components/stat-card";
+import { allRows } from "@/lib/all-rows";
 
 export const metadata: Metadata = { title: "Outstanding" };
 
@@ -18,8 +19,8 @@ export default async function OutstandingPage({ searchParams }: { searchParams: 
   const isOffice = profile.role !== "salesman";
 
   const [{ data: bal }, { data: dir }, { data: routes }, { data: salesmen }] = await Promise.all([
-    supabase.from("retailer_balances").select("*").gt("outstanding", 0),
-    supabase.from("retailer_directory").select("id, route_id, route_name, salesman_id, salesman_name, mobile, classification, billing_city"),
+    allRows(() => supabase.from("retailer_balances").select("*").gt("outstanding", 0).order("retailer_id")),
+    allRows(() => supabase.from("retailer_directory").select("id, route_id, route_name, salesman_id, salesman_name, mobile, classification, billing_city").order("id")),
     supabase.from("routes").select("id, name").order("name"),
     isOffice ? supabase.from("tenant_people").select("id, full_name").eq("role", "salesman").order("full_name") : Promise.resolve({ data: [] }),
   ]);
@@ -35,7 +36,7 @@ export default async function OutstandingPage({ searchParams }: { searchParams: 
 
   let invoiceRows: { invoice_id: string; invoice_no: string; retailer_id: string; invoice_date: string; due_date: string; balance: number; due_status: string; days_past_due: number; ageing_bucket: string | null }[] = [];
   if (sp.view === "invoices") {
-    const { data } = await supabase.from("invoice_balances").select("invoice_id, invoice_no, retailer_id, invoice_date, due_date, balance, due_status, days_past_due, ageing_bucket").gt("balance", 0).order("due_date");
+    const { data } = await allRows(() => supabase.from("invoice_balances").select("invoice_id, invoice_no, retailer_id, invoice_date, due_date, balance, due_status, days_past_due, ageing_bucket").gt("balance", 0).order("due_date").order("invoice_id"));
     const ids = new Set(rows.map((r) => r.retailer_id));
     invoiceRows = (data ?? []).filter((i) => ids.has(i.retailer_id)).map((i) => ({ ...i, balance: Number(i.balance), days_past_due: Number(i.days_past_due) }));
   }

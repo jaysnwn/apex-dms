@@ -78,7 +78,17 @@ export async function createUser(_prev: ActionState, formData: FormData): Promis
   }
 
   const { error: bErr } = await supabase.rpc("set_user_brands", { p_user: userId, p_brands: brandIds });
-  if (bErr) return { error: `User added, but brand access could not be saved: ${bErr.message}` };
+  if (bErr) {
+    // A login made a moment ago must not stay behind half set up (no brands):
+    // remove it again, so the same form can simply be sent once more.
+    // Someone who already had a login keeps it; only their brands are missing.
+    if (!joined) {
+      const { error: undoErr } = await createAdminClient().auth.admin.deleteUser(userId);
+      if (!undoErr) return { error: `Nothing was created: brand access could not be saved (${bErr.message}). Please try again.` };
+    }
+    revalidatePath("/admin/users");
+    return { error: `${email} was added, but brand access could not be saved: ${bErr.message}. Open the user below and tick the brands.` };
+  }
 
   revalidatePath("/admin/users");
   return {

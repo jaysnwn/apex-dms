@@ -8,6 +8,7 @@ import { todayIST } from "@/lib/gst";
 import { GST_STATES } from "@/lib/states";
 import { Badge, Card } from "@/components/ui";
 import { LinkButton } from "@/components/chip";
+import { allRows } from "@/lib/all-rows";
 
 export const metadata: Metadata = { title: "Suppliers" };
 
@@ -17,7 +18,7 @@ export default async function SuppliersPage() {
   const today = todayIST();
   const [{ data: rows }, { data: bal }] = await Promise.all([
     supabase.from("suppliers").select("id, code, name, gstin, state_code, city, mobile, contact_name, credit_days, is_active").order("is_active", { ascending: false }).order("name"),
-    supabase.from("purchase_balances").select("supplier_id, balance, due_date").gt("balance", 0),
+    allRows(() => supabase.from("purchase_balances").select("supplier_id, balance, due_date").gt("balance", 0).order("purchase_id")),
   ]);
   const owed = new Map<string, { total: number; overdue: number }>();
   for (const b of bal ?? []) {

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Banknote, Building2, CheckCheck, CreditCard, Smartphone, XCircle } from "lucide-react";
 import { Alert, Badge, Button, Card, Label, Textarea, cn } from "@/components/ui";
-import { Dialog } from "../../sales/order-builder";
+import { Dialog } from "@/components/dialog";
 import { date, dateTime, inr } from "@/lib/format";
 import { PAYMENT_METHOD } from "@/lib/status";
 import { rejectCollection, verifyCollections } from "../actions";

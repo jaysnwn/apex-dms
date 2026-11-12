@@ -13,7 +13,7 @@ import { BarcodeScanButton } from "@/components/barcode-scanner";
 import { brandTone } from "@/lib/brand-style";
 import { addDays, calcLine, todayIST } from "@/lib/gst";
 import { date as fmtDate, inr, qty as fmtQty } from "@/lib/format";
-import { shareOnWhatsApp } from "../share-actions";
+import { shareOnWhatsApp } from "@/lib/share-actions";
 import { BillingDetailsDialog, RetailerSelect, missingTaxDetails, rememberRetailer } from "./retailer-select";
 import { loadBillingCatalogue, retailerUsuals, saveOrder, type PickerProduct, type PickerRetailer } from "./actions";
 import { tenantKey } from "@/lib/supabase/client";

@@ -8,6 +8,7 @@ import { normaliseMobile } from "@/lib/format";
 import { getBrandContext } from "@/lib/brand";
 import { fetchAll } from "@/lib/reports";
 import { checkRows, num, yes, type ImportContext } from "@/lib/product-import";
+import { allRows } from "@/lib/all-rows";
 
 export type ImportResult = {
   created: number;
@@ -170,7 +171,7 @@ export async function importRetailers(rows: Record<string, string>[]): Promise<I
 
   const supabase = await createClient();
   const [existingRes, routesRes, salesRes] = await Promise.all([
-    supabase.from("retailers").select("mobile, gstin"),
+    allRows(() => supabase.from("retailers").select("mobile, gstin").order("id")),
     supabase.from("routes").select("id, name"),
     supabase.from("tenant_people").select("id, email, full_name").eq("role", "salesman"),
   ]);

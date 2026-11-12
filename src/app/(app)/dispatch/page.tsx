@@ -5,6 +5,7 @@ import { brandScope } from "@/lib/brand";
 import { Chip } from "@/components/chip";
 import { PageHeader } from "@/components/ui";
 import { DispatchBoard, type DispatchedRow, type PendingInvoice } from "./dispatch-board";
+import { allRows } from "@/lib/all-rows";
 
 export const metadata: Metadata = { title: "Dispatch" };
 
@@ -24,17 +25,18 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
   let dispatched: DispatchedRow[] = [];
 
   if (tab === "pending") {
-    const { data: invs } = await supabase
+    const { data: invs } = await allRows(() => supabase
       .from("invoices")
       .select("id, invoice_no, invoice_date, grand_total, retailer_snapshot, brand_id, orders!inner(status)")
       .eq("status", "issued")
       .in("brand_id", scope)
       .eq("orders.status", "invoiced")
-      .order("invoice_date");
+      .order("invoice_date")
+      .order("id"));
     const ids = (invs ?? []).map((i) => i.id);
     const [{ data: lines }, { data: oh }] = await Promise.all([
-      ids.length ? supabase.from("invoice_lines").select("invoice_id, product_id, product_name, qty, unit_code").in("invoice_id", ids).order("line_no") : Promise.resolve({ data: [] }),
-      supabase.from("stock_on_hand").select("product_id, warehouse_id, on_hand"),
+      ids.length ? allRows(() => supabase.from("invoice_lines").select("invoice_id, product_id, product_name, qty, unit_code").in("invoice_id", ids).order("line_no").order("id")) : Promise.resolve({ data: [] }),
+      allRows(() => supabase.from("stock_on_hand").select("product_id, warehouse_id, on_hand").order("product_id").order("warehouse_id")),
     ]);
     const onHand = new Map((oh ?? []).map((r) => [`${r.product_id}:${r.warehouse_id}`, Number(r.on_hand)]));
     pending = (invs ?? []).map((i) => {

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { addDays, todayIST } from "@/lib/gst";
 import { signProductImages } from "@/lib/images";
 import { toShops, toSummary, type IncentiveShop, type IncentiveSummary } from "@/lib/incentive";
+import { allRows } from "@/lib/all-rows";
 
 export type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
 
@@ -165,7 +166,7 @@ export async function getOutlets(supabase: SupabaseServer, userId: string): Prom
       .neq("status", "inactive")
       .order("shop_name")
       .limit(2000),
-    supabase.from("retailer_balances").select("retailer_id, outstanding, overdue"),
+    allRows(() => supabase.from("retailer_balances").select("retailer_id, outstanding, overdue").order("retailer_id")),
     supabase.from("visits").select("retailer_id").eq("salesman_id", userId).eq("planned_date", today),
   ]);
   const bMap = new Map((bal ?? []).map((b) => [b.retailer_id as string, b]));

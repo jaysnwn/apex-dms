@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Layers } from "lucide-react";
 import { cn } from "@/components/ui";
 import { brandTone } from "@/lib/brand-style";
-import { switchBrand } from "@/app/(app)/brand/actions";
+import { switchBrand } from "@/lib/brand-actions";
 
 export type SwitcherBrand = { id: string; name: string; code: string };
 

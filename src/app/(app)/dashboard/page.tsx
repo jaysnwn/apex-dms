@@ -15,6 +15,7 @@ import { Alert, Badge, Card, PageHeader } from "@/components/ui";
 import { StatCard } from "@/components/stat-card";
 import { ColumnChart, RankBars } from "@/components/charts";
 import { SERIES } from "@/lib/chart-colors";
+import { allRows } from "@/lib/all-rows";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -49,16 +50,16 @@ async function OfficeDash({ showProfit }: { showProfit: boolean }) {
     fetchAll<{ product_id: string; available: number; min_stock_qty: number; is_low: boolean }>(() => supabase.from("product_stock").select("product_id, available, min_stock_qty, is_low").eq("is_low", true)),
     supabase.from("retailers").select("id", { count: "exact", head: true }).eq("status", "active"),
     supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "invoiced"),
-    supabase.from("payments").select("amount").eq("status", "cheque_pending"),
+    allRows(() => supabase.from("payments").select("amount").eq("status", "cheque_pending").order("id")),
     supabase.from("payment_promises").select("id, amount, promised_date, retailers(shop_name)").eq("status", "open").lte("promised_date", today).order("promised_date").limit(6),
-    supabase.from("expenses").select("amount, approved_amount, status").gte("expense_date", monthStart).in("status", ["submitted", "approved"]),
+    allRows(() => supabase.from("expenses").select("amount, approved_amount, status").gte("expense_date", monthStart).in("status", ["submitted", "approved"]).order("id")),
     supabase.from("tenant_people").select("id, full_name").eq("role", "salesman").eq("is_active", true),
-    supabase.from("visits").select("salesman_id, status").gte("planned_date", monthStart).lte("planned_date", today),
+    allRows(() => supabase.from("visits").select("salesman_id, status").gte("planned_date", monthStart).lte("planned_date", today).order("id")),
     showProfit ? fetchAll<{ line_id: string; cost: number }>(() => supabase.from("sales_costs").select("line_id, cost")) : Promise.resolve([]),
     fetchAll<{ balance: number; due_date: string }>(() => supabase.from("purchase_balances").select("balance, due_date").gt("balance", 0)),
     supabase.from("purchases").select("id", { count: "exact", head: true }).eq("status", "ordered"),
   ]);
-  const { data: unverified } = await supabase.from("payments").select("amount").is("verified_at", null).in("status", ["received", "cheque_pending"]);
+  const { data: unverified } = await allRows(() => supabase.from("payments").select("amount").is("verified_at", null).in("status", ["received", "cheque_pending"]).order("id"));
   const toVerify = (unverified ?? []).reduce((t, p) => t + Number(p.amount), 0);
   const payable = payables.reduce((t, b) => t + Number(b.balance), 0);
   const payableOverdue = payables.filter((b) => b.due_date < today).reduce((t, b) => t + Number(b.balance), 0);
@@ -189,7 +190,7 @@ async function WarehouseDash() {
     supabase.from("product_stock").select("product_id, available, min_stock_qty").eq("is_low", true).limit(12),
     supabase.from("stock_counts").select("id", { count: "exact", head: true }).in("status", ["draft", "submitted"]),
     supabase.from("stock_movements").select("id", { count: "exact", head: true }).gte("created_at", `${today}T00:00:00+05:30`),
-    supabase.from("purchase_receipts").select("purchase_id").eq("status", "ordered"),
+    allRows(() => supabase.from("purchase_receipts").select("purchase_id").eq("status", "ordered").order("purchase_id").order("line_no")),
   ]);
   const inboundCount = new Set((inbound.data ?? []).map((r) => r.purchase_id as string)).size;
   const ids = (low.data ?? []).map((l) => l.product_id);

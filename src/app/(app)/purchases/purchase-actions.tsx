@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Ban, PackageCheck } from "lucide-react";
 import { Alert, Button, Input, Label, Textarea } from "@/components/ui";
-import { Dialog } from "../sales/order-builder";
+import { Dialog } from "@/components/dialog";
 import { addDays, todayIST } from "@/lib/gst";
 import { date } from "@/lib/format";
 import { cancelPurchase, receivePurchase } from "./actions";

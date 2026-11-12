@@ -9,6 +9,7 @@ import { DeliveryNotePdf, PickingPdf, PurchasePdf, ReceiptPdf, StatementPdf, typ
 import type { PdfKind } from "./kinds";
 import { getCompanyLogoFile } from "@/lib/branding";
 import { brandTone } from "@/lib/brand-style";
+import { allRows } from "@/lib/all-rows";
 export type { PdfKind };
 
 export type RenderedPdf = { buffer: Buffer; filename: string; phone?: string; shareText: string };
@@ -183,7 +184,7 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
     const open = (invs ?? []).filter((i) => i.status !== "cancelled");
     if (!open.length) return null;
     const [{ data: lines }, { data: brands }] = await Promise.all([
-      supabase.from("invoice_lines").select("invoice_id, line_no, product_name, sku, hsn_code, unit_code, qty").in("invoice_id", open.map((i) => i.id)).order("line_no"),
+      allRows(() => supabase.from("invoice_lines").select("invoice_id, line_no, product_name, sku, hsn_code, unit_code, qty").in("invoice_id", open.map((i) => i.id)).order("line_no").order("id")),
       supabase.from("brands").select("id, name"),
     ]);
     const brandName = new Map((brands ?? []).map((b) => [b.id as string, b.name as string]));
@@ -221,7 +222,7 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
     const ids = id.split(",").filter(Boolean).slice(0, 50);
     const { data: invs } = await supabase.from("invoices").select("id, invoice_no, retailer_snapshot").in("id", ids);
     if (!invs?.length) return null;
-    const { data: lines } = await supabase.from("invoice_lines").select("invoice_id, product_id, product_name, sku, unit_code, qty").in("invoice_id", ids);
+    const { data: lines } = await allRows(() => supabase.from("invoice_lines").select("invoice_id, product_id, product_name, sku, unit_code, qty").in("invoice_id", ids).order("id"));
     const pIds = [...new Set((lines ?? []).map((l) => l.product_id as string))];
     const { data: cat } = pIds.length ? await supabase.from("catalog").select("id, default_location_id").in("id", pIds) : { data: [] };
     const locIds = (cat ?? []).map((c) => c.default_location_id).filter(Boolean) as string[];

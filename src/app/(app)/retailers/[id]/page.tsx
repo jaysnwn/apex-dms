@@ -12,6 +12,7 @@ import { Badge, Button, Card, Input, PageHeader, cn } from "@/components/ui";
 import { Chip, LinkButton } from "@/components/chip";
 import { DocButtons } from "@/components/doc-buttons";
 import { PromiseForm } from "./promise-form";
+import { allRows } from "@/lib/all-rows";
 
 export const metadata: Metadata = { title: "Retailer" };
 
@@ -134,8 +135,8 @@ async function Statement({ id, from: f, to: t }: { id: string; from?: string; to
   const to = t || todayIST();
   const from = f || new Date(Date.parse(to) - 90 * 864e5).toISOString().slice(0, 10);
   const [{ data: before }, { data: entries }] = await Promise.all([
-    supabase.from("retailer_ledger").select("debit, credit").eq("retailer_id", id).lt("entry_date", from),
-    supabase.from("retailer_ledger").select("kind, doc_id, entry_date, doc_no, narration, debit, credit, created_at").eq("retailer_id", id).gte("entry_date", from).lte("entry_date", to).order("entry_date").order("created_at"),
+    allRows(() => supabase.from("retailer_ledger").select("debit, credit").eq("retailer_id", id).lt("entry_date", from).order("entry_date").order("created_at").order("doc_id")),
+    allRows(() => supabase.from("retailer_ledger").select("kind, doc_id, entry_date, doc_no, narration, debit, credit, created_at").eq("retailer_id", id).gte("entry_date", from).lte("entry_date", to).order("entry_date").order("created_at").order("doc_id")),
   ]);
   const opening = (before ?? []).reduce((s, e) => s + Number(e.debit) - Number(e.credit), 0);
   let running = opening;
@@ -183,7 +184,7 @@ async function Invoices({ id }: { id: string }) {
   const supabase = await createClient();
   const [{ data: invs }, { data: bals }] = await Promise.all([
     supabase.from("invoices").select("id, invoice_no, invoice_date, due_date, grand_total, status").eq("retailer_id", id).order("invoice_date", { ascending: false }).limit(200),
-    supabase.from("invoice_balances").select("invoice_id, balance, due_status, days_past_due").eq("retailer_id", id),
+    allRows(() => supabase.from("invoice_balances").select("invoice_id, balance, due_status, days_past_due").eq("retailer_id", id).order("invoice_id")),
   ]);
   const b = new Map((bals ?? []).map((x) => [x.invoice_id as string, x]));
   return (

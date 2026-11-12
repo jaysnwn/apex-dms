@@ -7,6 +7,7 @@ import { WEEKDAYS } from "@/lib/status";
 import { todayIST } from "@/lib/gst";
 import { Badge, Card, PageHeader, cn } from "@/components/ui";
 import { RouteTabs } from "../manager-tabs";
+import { allRows } from "@/lib/all-rows";
 
 export const metadata: Metadata = { title: "Salesmen & routes" };
 
@@ -18,7 +19,7 @@ export default async function AssignmentsPage() {
     sb.from("routes").select("id, name, code, visit_days, visit_frequency, is_active").is("archived_at", null).order("sort_order").order("name"),
     sb.from("tenant_people").select("id, full_name").eq("role", "salesman").eq("is_active", true).order("full_name"),
     sb.from("route_assignments").select("route_id, salesman_id, status, start_date, end_date").or(`end_date.is.null,end_date.gte.${today}`),
-    sb.from("route_outlets").select("route_id").eq("is_active", true),
+    allRows(() => sb.from("route_outlets").select("route_id").eq("is_active", true).order("id")),
   ]);
   const cnt = new Map<string, number>();
   for (const o of outlets ?? []) cnt.set(o.route_id, (cnt.get(o.route_id) ?? 0) + 1);

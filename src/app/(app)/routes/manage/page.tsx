@@ -8,6 +8,7 @@ import { todayIST } from "@/lib/gst";
 import { safeSearch } from "@/lib/format";
 import { Badge, Button, Card, Input, PageHeader, Select } from "@/components/ui";
 import { RouteTabs } from "../manager-tabs";
+import { allRows } from "@/lib/all-rows";
 
 export const metadata: Metadata = { title: "Routes" };
 
@@ -32,7 +33,7 @@ export default async function ManageRoutesPage({ searchParams }: { searchParams:
     q,
     sb.from("territories").select("id, name").order("name"),
     sb.from("tenant_people").select("id, full_name").eq("role", "salesman").order("full_name"),
-    sb.from("route_outlets").select("route_id").eq("is_active", true),
+    allRows(() => sb.from("route_outlets").select("route_id").eq("is_active", true).order("id")),
     sb.from("route_locations").select("route_id, sequence, locations(name)").order("sequence"),
     sb.from("route_assignments").select("route_id, salesman_id, status, start_date").is("end_date", null),
   ]);

@@ -1,12 +1,13 @@
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Tabs } from "@/components/tabs";
+import { allRows } from "@/lib/all-rows";
 
 export default async function PurchasesLayout({ children }: { children: React.ReactNode }) {
   const { profile } = await requireRole("super_admin", "manager", "billing", "warehouse");
   const supabase = await createClient();
   const isWarehouse = profile.role === "warehouse";
-  const { data: toReceive } = await supabase.from("purchase_receipts").select("purchase_id").eq("status", "ordered");
+  const { data: toReceive } = await allRows(() => supabase.from("purchase_receipts").select("purchase_id").eq("status", "ordered").order("purchase_id").order("line_no"));
   const pending = new Set((toReceive ?? []).map((r) => r.purchase_id as string)).size;
   return (
     <>

@@ -8,6 +8,7 @@ import { PAYMENT_METHOD, PAYMENT_STATUS } from "@/lib/status";
 import { todayIST } from "@/lib/gst";
 import { Badge, Button, Card, Input, Select } from "@/components/ui";
 import { StatCard } from "@/components/stat-card";
+import { allRows } from "@/lib/all-rows";
 
 export const metadata: Metadata = { title: "Collections" };
 
@@ -32,7 +33,7 @@ export default async function CollectionsPage({ searchParams }: { searchParams: 
   const [{ data: rows }, { data: people }, { data: pendingCheques }] = await Promise.all([
     q,
     supabase.from("tenant_people").select("id, full_name"),
-    supabase.from("payments").select("id, amount").eq("status", "cheque_pending"),
+    allRows(() => supabase.from("payments").select("id, amount").eq("status", "cheque_pending").order("id")),
   ]);
   const uMap = new Map((people ?? []).map((u) => [u.id as string, u.full_name as string]));
   const live = (rows ?? []).filter((r) => r.status === "received" || r.status === "cheque_pending");

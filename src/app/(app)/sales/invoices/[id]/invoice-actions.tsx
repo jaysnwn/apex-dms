@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FileMinus, XCircle } from "lucide-react";
 import { Alert, Button, Input, Label } from "@/components/ui";
-import { Dialog } from "../../order-builder";
+import { Dialog } from "@/components/dialog";
 import { cancelInvoice, createCreditNote } from "../../actions";
 import { qty } from "@/lib/format";
 

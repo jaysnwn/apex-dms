@@ -6,6 +6,7 @@ import { todayIST } from "@/lib/gst";
 import { Card, PageHeader, cn } from "@/components/ui";
 import { RouteTabs } from "../manager-tabs";
 import { TargetForm } from "./target-form";
+import { allRows } from "@/lib/all-rows";
 
 export const metadata: Metadata = { title: "Targets" };
 
@@ -19,8 +20,8 @@ export default async function TargetsPage() {
   ]);
   const minStart = (targets ?? []).reduce((m, t) => (t.period_start < m ? t.period_start : m), today);
   const [{ data: pays }, { data: invs }] = await Promise.all([
-    supabase.from("payments").select("collected_by, amount, payment_date").in("status", ["received", "cheque_pending"]).gte("payment_date", minStart),
-    supabase.from("invoices").select("grand_total, invoice_date, orders(salesman_id)").eq("status", "issued").gte("invoice_date", minStart),
+    allRows(() => supabase.from("payments").select("collected_by, amount, payment_date").in("status", ["received", "cheque_pending"]).gte("payment_date", minStart).order("id")),
+    allRows(() => supabase.from("invoices").select("grand_total, invoice_date, orders(salesman_id)").eq("status", "issued").gte("invoice_date", minStart).order("id")),
   ]);
   const names = new Map((salesmen ?? []).map((s) => [s.id as string, s.full_name as string]));
 

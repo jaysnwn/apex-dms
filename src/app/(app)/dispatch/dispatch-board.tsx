@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Camera, ClipboardList, PackageCheck, Truck } from "lucide-react";
 import { Alert, Badge, Button, Card, Input, Label, Select, cn } from "@/components/ui";
-import { Dialog } from "../sales/order-builder";
+import { Dialog } from "@/components/dialog";
 import { createClient, tenantStoragePath } from "@/lib/supabase/client";
 import { date, dateTime, inr, qty } from "@/lib/format";
 import { confirmDelivery, dispatchInvoice } from "./actions";

@@ -6,6 +6,7 @@ import { date, qty } from "@/lib/format";
 import { addDays, todayIST } from "@/lib/gst";
 import { Badge, Card } from "@/components/ui";
 import { ReceiveButton } from "../purchase-actions";
+import { allRows } from "@/lib/all-rows";
 
 export const metadata: Metadata = { title: "Goods to receive" };
 
@@ -17,8 +18,8 @@ export default async function ReceivePage() {
   const supabase = await createClient();
   const today = todayIST();
   const [{ data: waiting }, { data: recent }] = await Promise.all([
-    supabase.from("purchase_receipts").select("*").eq("status", "ordered").order("order_date").order("line_no"),
-    supabase.from("purchase_receipts").select("*").eq("status", "received").gte("received_date", addDays(today, -14)).order("received_date", { ascending: false }).order("line_no"),
+    allRows(() => supabase.from("purchase_receipts").select("*").eq("status", "ordered").order("order_date").order("purchase_id").order("line_no")),
+    allRows(() => supabase.from("purchase_receipts").select("*").eq("status", "received").gte("received_date", addDays(today, -14)).order("received_date", { ascending: false }).order("purchase_id").order("line_no")),
   ]);
   const group = (rows: Row[]) => {
     const m = new Map<string, { head: Row; lines: Row[] }>();
