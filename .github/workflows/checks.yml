@@ -71,3 +71,9 @@ jobs:
       # this red, so the types can never quietly fall behind the schema.
       - name: The database contract matches the migrations
         run: bash scripts/types/generate.sh --check
+      # The GST maths exists twice: in SQL, which decides what is invoiced,
+      # and in the browser, which shows the salesman what a line comes to
+      # (audit finding 16). This runs every line the columns can hold through
+      # both and insists they agree to the paisa.
+      - name: The browser's GST preview matches the database
+        run: bash tests/parity/gst.sh
