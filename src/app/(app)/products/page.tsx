@@ -18,7 +18,7 @@ export const metadata: Metadata = { title: "Products" };
 type CatalogRow = {
   id: string; name: string; sku: string; barcode: string | null; brand_id: string; brand_name: string;
   category_name: string | null; unit_code: string; retailer_price: number; retailer_price_mode: string;
-  mrp: number; gst_rate: number; is_active: boolean; image_path: string | null; created_at: string;
+  gst_rate: number; is_active: boolean; image_path: string | null; created_at: string;
 };
 type Sp = { q?: string; cat?: string; stock?: string; sort?: string; archived?: string; view?: string };
 
@@ -34,7 +34,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const seesCost = canEdit || profile.role === "billing";
   const archivedView = canEdit && sp.archived === "1";
 
-  const COLS = "id, name, sku, barcode, brand_id, brand_name, category_name, unit_code, retailer_price, retailer_price_mode, mrp, gst_rate, is_active, image_path, created_at";
+  const COLS = "id, name, sku, barcode, brand_id, brand_name, category_name, unit_code, retailer_price, retailer_price_mode, gst_rate, is_active, image_path, created_at";
   const words = searchWords(sp.q);
   const { data: rows } = await (words.length
     ? supabase.rpc("search_catalog", { p_words: words, p_limit: 1000, p_active: !archivedView }).select(COLS)
