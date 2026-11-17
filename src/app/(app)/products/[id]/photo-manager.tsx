@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/components/confirm";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ImagePlus, Star, Trash2 } from "lucide-react";
@@ -111,7 +112,7 @@ export function PhotoManager({ productId, photos, canEdit }: { productId: string
                 size="sm"
                 variant="ghost"
                 onClick={async () => {
-                  if (!confirm("Remove this photo?")) return;
+                  if (!(await askConfirm("Remove this photo?", { confirmLabel: "Remove", danger: true }))) return;
                   await removeProductImage(productId, current.id);
                   setSelected(undefined);
                   router.refresh();

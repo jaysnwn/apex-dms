@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/components/confirm";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Button, Card, Input, cn } from "@/components/ui";
@@ -126,19 +127,19 @@ export function CountSheet({
             <Button variant="secondary" disabled={pending} onClick={() => run(() => saveCountLines(countId, payload(), false))}>Save progress</Button>
             <Button
               disabled={pending || counted === 0}
-              onClick={() => {
-                if (confirm(`Submit this count? ${lines.length - counted} uncounted product(s) will be left unchanged.`))
+              onClick={async () => {
+                if (await askConfirm(`Submit this count? ${lines.length - counted} uncounted product(s) will be left unchanged.`, { confirmLabel: "Submit count" }))
                   run(() => saveCountLines(countId, payload(), true));
               }}
             >
               Submit for approval
             </Button>
-            <Button variant="ghost" disabled={pending} onClick={() => confirm("Cancel this count?") && run(() => reviewCount(countId, "cancel"))}>Cancel count</Button>
+            <Button variant="ghost" disabled={pending} onClick={async () => (await askConfirm("Cancel this count?", { confirmLabel: "Cancel count", danger: true })) && run(() => reviewCount(countId, "cancel"))}>Cancel count</Button>
           </>
         )}
         {status === "submitted" && canApprove && (
           <>
-            <Button disabled={pending} onClick={() => confirm("Approve and post the differences to stock?") && run(() => reviewCount(countId, "approve"))}>
+            <Button disabled={pending} onClick={async () => (await askConfirm("Approve and post the differences to stock?", { confirmLabel: "Approve and post" })) && run(() => reviewCount(countId, "approve"))}>
               Approve and post differences
             </Button>
             <Button variant="secondary" disabled={pending} onClick={() => run(() => reviewCount(countId, "reopen"))}>Send back for recount</Button>

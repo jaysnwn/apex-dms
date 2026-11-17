@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/components/confirm";
 import { useState, type ReactNode } from "react";
 import { currentUserId } from "@/lib/supabase/client";
 import { clearOfflineCopies, unsentCount } from "@/lib/offline-reset";
@@ -17,7 +18,7 @@ export function SignOutButton({ className, children }: { className?: string; chi
         e.preventDefault();
         const form = e.currentTarget;
         const unsent = unsentCount(currentUserId());
-        if (unsent > 0 && !window.confirm(`${unsent} item(s) are not sent yet. They stay on this phone and are sent the next time you sign in. Sign out now?`)) return;
+        if (unsent > 0 && !(await askConfirm(`${unsent} item(s) are not sent yet. They stay on this phone and are sent the next time you sign in. Sign out now?`, { confirmLabel: "Sign out" }))) return;
         setBusy(true);
         await clearOfflineCopies();
         form.submit();

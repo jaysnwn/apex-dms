@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "sonner";
+import { askConfirm } from "@/components/confirm";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { BadgeCheck, Undo2, Wallet } from "lucide-react";
@@ -76,7 +78,7 @@ export function ReopenButton({ id }: { id: string }) {
   const [pending, start] = useTransition();
   return (
     <button title="Undo approval (not paid yet)" disabled={pending} className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-red-700"
-      onClick={() => { if (confirm("Undo this approval? Figures will be recalculated live.")) start(async () => { const r = await reopenPayout(id); if (r.error) alert(r.error); router.refresh(); }); }}>
+      onClick={async () => { if (await askConfirm("Undo this approval? Figures will be recalculated live.", { confirmLabel: "Undo approval" })) start(async () => { const r = await reopenPayout(id); if (r.error) toast.error(r.error); router.refresh(); }); }}>
       <Undo2 className="size-3.5" /> Undo
     </button>
   );

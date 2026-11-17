@@ -7,6 +7,7 @@ import "./globals.css";
 import { NavProgress } from "@/components/nav-progress";
 import { PrefsProvider } from "@/components/prefs-provider";
 import { AppToaster } from "@/components/toaster";
+import { ConfirmHost } from "@/components/confirm";
 import { PLATFORM_NAME, PLATFORM_TAGLINE } from "@/lib/tenant-shared";
 import { readPrefs } from "@/lib/prefs";
 
@@ -49,6 +50,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           </Suspense>
           {children}
           <AppToaster />
+          <ConfirmHost />
         </PrefsProvider>
       </body>
     </html>

@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/components/confirm";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -102,7 +103,7 @@ export function OrderFlow({ initialOutlets, initialCatalogue, presetRetailer, co
   // ---------------------------- Step 2: products ----------------------------
   return (
     <div className={cn(units > 0 && "pb-24")}>
-      <button onClick={() => { if (!units || confirm("Change outlet? Products added so far will be cleared.")) { clearDraft(); setOutletId(null); } }}
+      <button onClick={async () => { if (!units || (await askConfirm("Change outlet? Products added so far will be cleared.", { confirmLabel: "Change outlet" }))) { clearDraft(); setOutletId(null); } }}
         className="mb-3 flex w-full items-center gap-3 rounded-2xl bg-surface p-3 text-left shadow-sm ring-1 ring-slate-200/70 active:bg-slate-50">
         <span className="grid size-10 place-items-center rounded-xl bg-violet-100 text-violet-700"><Store className="size-5" /></span>
         <span className="min-w-0 flex-1">

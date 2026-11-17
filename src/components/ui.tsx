@@ -9,6 +9,7 @@ export function cn(...args: Parameters<typeof clsx>) {
 }
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  ref?: Ref<HTMLButtonElement>;
   variant?: "primary" | "secondary" | "danger" | "ghost";
   size?: "sm" | "md";
 };

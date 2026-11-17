@@ -1,5 +1,6 @@
 "use client";
 
+import { toast as notify } from "sonner";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -186,9 +187,12 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
     setRetailer(r);
     if (r && !initial) { setDays(r.credit_days); setCustom(!TERMS.some((t) => t.days === r.credit_days)); }
   }
+  // Clearing is instant and can be undone from the toast (no "are you sure?").
   function clearCart() {
-    if (lines.length && !confirm("Remove all products from the cart?")) return;
+    if (!lines.length) return;
+    const before = { lines, overall, paid };
     setLines([]); setOverall(""); setPaid("");
+    notify("Cart cleared", { action: { label: "Undo", onClick: () => { setLines(before.lines); setOverall(before.overall); setPaid(before.paid); } } });
   }
   function repeatLast() {
     if (!usuals?.last) return;
