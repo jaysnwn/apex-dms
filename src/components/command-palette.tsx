@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import * as m from "motion/react-m";
 import { AnimatePresence } from "motion/react";
 import { ArrowRight, Clock, FileText, Loader2, Package, Search, Store, Zap } from "lucide-react";
-import { searchEverything, type SearchHit } from "@/app/(app)/search-actions";
+import { searchEverything, type SearchHit } from "@/lib/search-actions";
 import { Kbd, cn } from "./ui";
 import type { NavGroup, QuickAction } from "./nav-config";
 import type { PageRef } from "@/lib/recent";
