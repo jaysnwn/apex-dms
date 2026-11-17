@@ -7,7 +7,8 @@ import {
   AlertTriangle, Check, CheckCircle2, ChevronDown, Download, FileText, ImageOff, Keyboard, LayoutGrid, MessageCircle, Minus,
   Plus, Printer, Repeat, Search, ShoppingCart, Sparkles, Star, X,
 } from "lucide-react";
-import { Alert, Button, Input, Textarea, cn } from "@/components/ui";
+import { Alert, Badge, Button, Input, Textarea, cn } from "@/components/ui";
+import { ShortStockBanner } from "./short-stock-banner";
 import { Dialog } from "@/components/dialog";
 import { BarcodeScanButton } from "@/components/barcode-scanner";
 import { brandTone } from "@/lib/brand-style";
@@ -145,6 +146,14 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
   const today = todayIST();
   const due = addDays(today, days || 0);
   const shortLines = lines.filter((l) => l.qty > (byId.get(l.product.id)?.available ?? l.product.available));
+  const shortInfo = shortLines.map((l) => ({ id: l.product.id, name: l.product.name, need: l.qty, have: byId.get(l.product.id)?.available ?? l.product.available }));
+  // Bring every short line down to what is in stock (lines with nothing in stock are removed).
+  const useAvailable = () =>
+    setLines((p) => p.flatMap((l) => {
+      const have = byId.get(l.product.id)?.available ?? l.product.available;
+      if (l.qty <= have) return [l];
+      return have > 0 ? [{ ...l, qty: have }] : [];
+    }));
   const discTooHigh = lines.some((l) => effDisc(l) > maxDisc + 0.001);
   const overLimit = !!retailer && retailer.credit_limit > 0 && retailer.outstanding + grand - paidNum > retailer.credit_limit;
   const missing = retailer ? missingTaxDetails(retailer, grand) : [];
@@ -395,6 +404,11 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
             </div>
 
             <div className="min-h-24 flex-1 overflow-y-auto">
+              {shortInfo.length > 0 && (
+                <div className="p-3 pb-0">
+                  <ShortStockBanner lines={shortInfo} isManager={isMgr} override={overrideStock} onOverride={setOverrideStock} onUseAvailable={useAvailable} onSaveDraft={isOffice ? () => submit(false) : undefined} compact />
+                </div>
+              )}
               {lines.length === 0 ? (
                 <p className="p-6 text-center text-sm text-slate-400">Click a product to add it here.</p>
               ) : (
@@ -433,7 +447,7 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
                           )}
                           <span className="tabular ml-auto text-sm font-semibold">{inr(calc[i].total)}</span>
                         </div>
-                        {short && <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-red-700"><AlertTriangle className="size-3" /> Only {fmtQty(avail)} in stock</div>}
+                        {short && <div className="mt-1.5"><Badge tone="red">Short by {fmtQty(l.qty - Math.max(avail, 0))} · {fmtQty(Math.max(avail, 0))} in stock</Badge></div>}
                       </li>
                     );
                   })}
@@ -486,9 +500,9 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
               {error && <div className="mt-2"><Alert>{error.message}</Alert></div>}
               <div className="mt-3 grid gap-2">
                 {isOffice ? (
-                  <Button className="h-12 bg-primary text-base font-bold tracking-wide hover:bg-primary-hover" disabled={pending || !lines.length || !retailer}
+                  <Button className="h-12 text-base font-semibold" disabled={pending || !lines.length || !retailer}
                     onClick={() => { const v = validate(); if (v) setError({ message: v }); else { setError(null); setReviewing(true); } }}>
-                    <FileText className="size-5" /> GENERATE INVOICE
+                    <FileText className="size-5" /> Generate invoice
                   </Button>
                 ) : (
                   <Button className="h-12 text-base font-bold" disabled={pending} onClick={() => submit(false)}>{pending ? "Saving…" : "Send quotation to office"}</Button>
@@ -545,14 +559,7 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
                 <Button size="sm" className="mt-2 block" onClick={() => setEditingDetails(true)}>Complete details now</Button>
               </div>
             )}
-            {shortLines.length > 0 && (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-800">
-                Not enough stock: {shortLines.map((l) => l.product.name).join(", ")}.
-                {isMgr ? (
-                  <label className="mt-2 flex items-center gap-2 font-semibold"><input type="checkbox" checked={overrideStock} onChange={(e) => setOverrideStock(e.target.checked)} className="size-4" /> Invoice anyway (back-order; goods are dispatched when stock arrives)</label>
-                ) : <p className="mt-1">Reduce the quantity, or save a draft and ask a manager.</p>}
-              </div>
-            )}
+            <ShortStockBanner lines={shortInfo} isManager={isMgr} override={overrideStock} onOverride={setOverrideStock} />
             {overLimit && isMgr && (
               <label className="flex items-center gap-2 rounded-lg bg-red-50 p-3 font-semibold text-red-800"><input type="checkbox" checked={overrideCredit} onChange={(e) => setOverrideCredit(e.target.checked)} className="size-4" /> Allow over credit limit (recorded)</label>
             )}

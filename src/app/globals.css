@@ -562,6 +562,15 @@ body {
   animation: grow-x 520ms var(--ease-out) both;
 }
 
+/* An alert that must be seen: one ring pulse when it appears, then still. */
+@keyframes attention-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--red-600) 45%, transparent); }
+  100% { box-shadow: 0 0 0 10px color-mix(in oklab, var(--red-600) 0%, transparent); }
+}
+.attention-pulse {
+  animation: attention-pulse 900ms var(--ease-out) 240ms 1 both;
+}
+
 /* Wrong input: one short shake. */
 @keyframes nudge {
   0%, 100% { transform: translateX(0); }
@@ -600,7 +609,7 @@ html[data-motion="reduce"] *::after {
 @media (prefers-reduced-motion: reduce) {
   .skeleton { animation: none; }
   .nav-progress { transition: none; }
-  .flash, .nudge, .grow-x { animation: none; }
+  .flash, .nudge, .grow-x, .attention-pulse { animation: none; }
 }
 
 @media print {
