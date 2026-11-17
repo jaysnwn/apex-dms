@@ -270,13 +270,13 @@ async function SalesmanDash({ userId }: { userId: string }) {
     <div className="space-y-6">
       <Link href="/routes/today" className="block">
         <Card className="overflow-hidden">
-          <div className="flex items-center gap-4 bg-gradient-to-br from-blue-700 to-blue-600 p-5 text-on-fill">
+          <div className="flex items-center gap-4 hero-blue p-5 text-white">
             <span className="grid size-12 place-items-center rounded-xl bg-primary text-ink-900"><RouteIcon className="size-6" /></span>
             <div className="flex-1">
               <div className="text-lg font-semibold">Today&apos;s route</div>
-              <div className="text-sm text-on-fill/85">{v.length ? `${done} of ${v.length} visits done` : "No visits planned today"}</div>
+              <div className="text-sm text-white/85">{v.length ? `${done} of ${v.length} visits done` : "No visits planned today"}</div>
             </div>
-            <span className="text-sm font-medium text-on-fill">Open →</span>
+            <span className="text-sm font-medium text-white">Open →</span>
           </div>
         </Card>
       </Link>

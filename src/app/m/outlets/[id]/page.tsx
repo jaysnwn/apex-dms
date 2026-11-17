@@ -40,10 +40,10 @@ export default async function OutletPage({ params }: { params: Promise<{ id: str
       <Link href="/m/outlets" className="flex items-center gap-1 px-1 text-sm font-medium text-slate-600"><ArrowLeft className="size-4" /> Outlets</Link>
 
       <section className="overflow-hidden rounded-3xl bg-surface shadow-sm ring-1 ring-slate-200/70">
-        <div className="bg-gradient-to-br from-blue-700 to-blue-600 p-5 text-on-fill">
-          <div className="text-xs text-on-fill/85">{r.code}{(r.routes as unknown as { name: string } | null)?.name ? ` · ${(r.routes as unknown as { name: string }).name}` : ""}</div>
+        <div className="hero-blue p-5 text-white">
+          <div className="text-xs text-white/85">{r.code}{(r.routes as unknown as { name: string } | null)?.name ? ` · ${(r.routes as unknown as { name: string }).name}` : ""}</div>
           <h1 className="text-2xl leading-tight font-bold">{r.shop_name}</h1>
-          <p className="text-sm text-on-fill/85">{[r.owner_name, r.billing_city].filter(Boolean).join(" · ")}</p>
+          <p className="text-sm text-white/85">{[r.owner_name, r.billing_city].filter(Boolean).join(" · ")}</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {cls && <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-medium">{cls.label}</span>}
             {r.status !== "active" && <span className="rounded-full bg-amber-400 px-2 py-0.5 text-xs font-semibold text-amber-950">{r.status === "on_hold" ? "On hold" : r.status}</span>}
@@ -62,7 +62,7 @@ export default async function OutletPage({ params }: { params: Promise<{ id: str
       </section>
 
       <div className="grid grid-cols-2 gap-3">
-        <Link href={`/m/order?retailer=${r.id}`} className={cn("flex h-14 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-600 font-bold text-on-fill shadow-md active:scale-[0.98]", r.status === "blocked" && "pointer-events-none opacity-50")}>
+        <Link href={`/m/order?retailer=${r.id}`} className={cn("flex h-14 items-center justify-center gap-2 rounded-2xl hero-blue font-bold text-white shadow-md active:scale-[0.98]", r.status === "blocked" && "pointer-events-none opacity-50")}>
           <ShoppingCart className="size-5" /> Take order
         </Link>
         <CollectButton retailerId={r.id} shop={r.shop_name} outstanding={outstanding} overdue={overdue} />

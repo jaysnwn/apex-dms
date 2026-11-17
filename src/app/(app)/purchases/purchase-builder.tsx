@@ -268,10 +268,10 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, d
         </Card>
 
         <Card className="overflow-hidden">
-          <div className="bg-gradient-to-br from-blue-700 to-blue-600 px-5 py-4 text-on-fill">
-            <div className="text-sm text-on-fill/85">Purchase total</div>
+          <div className="hero-blue px-5 py-4 text-white">
+            <div className="text-sm text-white/85">Purchase total</div>
             <div className="tabular text-3xl font-semibold tracking-tight">{inr(grand)}</div>
-            <div className="text-xs text-on-fill/85">{lines.length} product{lines.length === 1 ? "" : "s"} · {fmtQty(lines.reduce((s, l) => s + (l.qty || 0), 0))} units · {igst ? "IGST" : "CGST + SGST"}</div>
+            <div className="text-xs text-white/85">{lines.length} product{lines.length === 1 ? "" : "s"} · {fmtQty(lines.reduce((s, l) => s + (l.qty || 0), 0))} units · {igst ? "IGST" : "CGST + SGST"}</div>
           </div>
           <dl className="tabular space-y-1.5 p-5 text-sm">
             <Row k="Subtotal" v={inr(t.subtotal)} />

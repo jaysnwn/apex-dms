@@ -273,16 +273,16 @@ export function FieldApp({ initial, mobile = false }: { initial: FieldDay | null
       {notice && <div onClick={() => setNotice(null)}><Alert tone={notice.tone}>{notice.text}</Alert></div>}
 
       <Card className="overflow-hidden">
-        <div className="bg-gradient-to-br from-blue-700 to-blue-600 p-4 text-on-fill">
+        <div className="hero-blue p-4 text-white">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-sm text-on-fill/85">{date(day.date)}</div>
+              <div className="text-sm text-white/85">{date(day.date)}</div>
               <div className="text-lg leading-tight font-semibold">{day.routeNames.length ? day.routeNames.join(" + ") : total ? "Visits for today" : "No route today"}</div>
-              {day.routes.map((r) => r.towns.length > 0 && <div key={r.id} className="truncate text-xs text-on-fill/85">{r.towns.join(" → ")}</div>)}
+              {day.routes.map((r) => r.towns.length > 0 && <div key={r.id} className="truncate text-xs text-white/85">{r.towns.join(" → ")}</div>)}
             </div>
             <div className="text-right">
               <div className="tabular text-2xl font-semibold">{done}/{total}</div>
-              <div className="text-xs text-on-fill/85">visited{missed ? ` · ${missed} missed` : ""}</div>
+              <div className="text-xs text-white/85">visited{missed ? ` · ${missed} missed` : ""}</div>
             </div>
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/15">

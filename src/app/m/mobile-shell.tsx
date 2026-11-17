@@ -5,6 +5,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { CloudOff, Home, LayoutGrid, Plus, RefreshCw, Route as RouteIcon, Store, Wifi } from "lucide-react";
 import { cn } from "@/components/ui";
+import * as m from "motion/react-m";
+import { AnimatePresence } from "motion/react";
+import { duration, ease, spring } from "@/lib/motion";
 import { inr } from "@/lib/format";
 import { Avatar } from "./ui";
 import { onOutboxChange, readOutbox, writeOutbox, type OutboxItem } from "./outbox";
@@ -67,18 +70,16 @@ export function MobileShell({ name, roleLabel, orgName, logoUrl, tenantId, child
   const failed = outbox.filter((o) => o.error);
 
   return (
-    <div className="min-h-dvh bg-slate-100">
-      <div className="mx-auto flex min-h-dvh max-w-md flex-col bg-slate-50 shadow-xl sm:border-x sm:border-slate-200">
+    <div className="min-h-dvh bg-sunken">
+      <div className="mx-auto flex min-h-dvh max-w-md flex-col bg-bg shadow-[var(--shadow-raised)] sm:border-x sm:border-line">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200/80 bg-surface/95 px-4 py-2.5 backdrop-blur pt-[max(0.625rem,env(safe-area-inset-top))]">
+        <header className="glass sticky top-0 z-30 flex items-center gap-3 border-b border-line/70 px-4 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))]">
           {logoUrl ? (
             <>
               <Link href="/m" className="flex min-w-0 flex-1 items-center" aria-label={`${orgName} home`}>
-                <CompanyLogo src={logoUrl} name={orgName} className="h-8 w-auto max-w-[60%] object-contain" fallbackClassName="truncate text-base font-semibold text-slate-900" />
+                <CompanyLogo src={logoUrl} name={orgName} className="h-8 w-auto max-w-[60%] object-contain brightness-[1.04] contrast-[1.04] mix-blend-multiply dark:mix-blend-screen dark:invert dark:hue-rotate-180" fallbackClassName="truncate text-base font-semibold text-text" />
               </Link>
-              <span className={cn("flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium", online ? "bg-emerald-50 text-emerald-700" : "bg-amber-100 text-amber-800")}>
-                {online ? <Wifi className="size-3.5" /> : <CloudOff className="size-3.5" />} {online ? "Online" : "Offline"}
-              </span>
+              <NetPill online={online} />
               <Link href="/m/more" aria-label={`${firstName}, ${roleLabel}: account and more`} title={`${name} · ${roleLabel}`}>
                 <Avatar name={name} size={36} />
               </Link>
@@ -92,15 +93,20 @@ export function MobileShell({ name, roleLabel, orgName, logoUrl, tenantId, child
                   <span className="block truncate text-xs text-slate-500">{roleLabel} · {orgName}</span>
                 </span>
               </Link>
-              <span className={cn("flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium", online ? "bg-emerald-50 text-emerald-700" : "bg-amber-100 text-amber-800")}>
-                {online ? <Wifi className="size-3.5" /> : <CloudOff className="size-3.5" />} {online ? "Online" : "Offline"}
-              </span>
+              <NetPill online={online} />
             </>
           )}
         </header>
 
+        <AnimatePresence initial={false}>
         {outbox.length > 0 && (
-          <div className={cn("mx-3 mt-3 flex items-center justify-between gap-2 rounded-2xl px-4 py-3 text-sm", failed.length ? "bg-red-50 text-red-900" : "bg-sky-50 text-sky-900")}>
+          <m.div
+            key="outbox"
+            role="status"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0, transition: { duration: duration.base, ease: ease.out } }}
+            exit={{ opacity: 0, y: -6, transition: { duration: duration.fast, ease: ease.in } }}
+            className={cn("mx-3 mt-3 flex items-center justify-between gap-2 rounded-2xl px-4 py-3 text-sm", failed.length ? "bg-red-50 text-red-900" : "bg-blue-50 text-blue-900")}>
             <span>
               {failed.length
                 ? <>Order for {failed[0].shop} not sent: {failed[0].error}</>
@@ -109,35 +115,49 @@ export function MobileShell({ name, roleLabel, orgName, logoUrl, tenantId, child
             {online && (
               <span className="flex shrink-0 gap-1">
                 {failed.length > 0 && <button onClick={() => writeOutbox(outbox.filter((o) => o.id !== failed[0].id))} className="rounded-lg bg-surface px-2 py-1 text-xs font-medium text-red-700 shadow-sm">Remove</button>}
-                <button onClick={sync} className="grid size-8 place-items-center rounded-lg bg-surface shadow-sm" aria-label="Send now"><RefreshCw className={cn("size-4", syncing && "animate-spin")} /></button>
+                <button onClick={sync} className="grid size-11 place-items-center rounded-xl bg-surface shadow-sm" aria-label="Send now"><RefreshCw className={cn("size-4", syncing && "animate-spin")} /></button>
               </span>
             )}
-          </div>
+          </m.div>
         )}
+        </AnimatePresence>
 
-        <main className="flex-1 px-3 pt-3 pb-28">{children}</main>
+        <main className="flex-1 px-3 pt-3 pb-28">
+          <m.div key={pathname} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, ease: ease.out }}>
+            {children}
+          </m.div>
+        </main>
 
-        {/* Bottom tab bar */}
-        <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-slate-200 bg-surface/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
+        {/* Bottom tab bar: frosted, with a pill that slides to the current tab */}
+        <nav aria-label="Main" className="glass fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-line/70 pb-[env(safe-area-inset-bottom)]">
           <ul className="grid grid-cols-5">
             {TABS.map((t) => {
               const active = isActive(t.href);
               if (t.main) {
                 return (
                   <li key={t.href} className="flex justify-center">
-                    <Link href={t.href} className="-mt-6 flex flex-col items-center gap-1" aria-label="New order">
-                      <span className={cn("grid size-16 place-items-center rounded-full bg-gradient-to-br from-blue-700 to-blue-600 text-on-fill shadow-lg ring-4 ring-surface transition active:scale-95", active && "ring-accent-100")}>
-                        <Plus className="size-8" strokeWidth={2.5} />
-                      </span>
-                      <span className={cn("text-xs font-semibold", active ? "text-accent-600" : "text-slate-600")}>New order</span>
+                    <Link href={t.href} className="-mt-6 flex flex-col items-center gap-1" aria-label="New order" aria-current={active ? "page" : undefined}>
+                      <m.span
+                        whileTap={{ scale: 0.92 }}
+                        transition={spring.snappy}
+                        className={cn("grid size-16 place-items-center rounded-full bg-gradient-to-b from-blue-500 to-blue-700 text-on-fill shadow-[0_10px_24px_-8px_rgb(21_108_221/0.6)] ring-4 ring-bg", active && "ring-primary-soft")}
+                      >
+                        <m.span animate={{ rotate: active ? 45 : 0 }} transition={spring.snappy} className="grid">
+                          <Plus className="size-8" strokeWidth={2.5} />
+                        </m.span>
+                      </m.span>
+                      <span className={cn("text-xs font-semibold", active ? "text-primary-text" : "text-text-2")}>New order</span>
                     </Link>
                   </li>
                 );
               }
               return (
                 <li key={t.href}>
-                  <Link href={t.href} className={cn("flex flex-col items-center gap-1 py-2.5 text-xs font-medium", active ? "text-ink-900" : "text-slate-500")}>
-                    <span className={cn("grid h-7 w-12 place-items-center rounded-full transition", active && "bg-accent-100 text-accent-700")}><t.icon className="size-5" /></span>
+                  <Link href={t.href} aria-current={active ? "page" : undefined} className={cn("flex min-h-14 flex-col items-center justify-center gap-1 py-2 text-xs font-medium transition-colors", active ? "text-primary-text" : "text-text-2")}>
+                    <span className="relative grid h-7 w-12 place-items-center">
+                      {active && <m.span layoutId="m-tab-pill" className="absolute inset-0 rounded-full bg-primary-soft" transition={spring.snappy} />}
+                      <t.icon className="relative size-5" />
+                    </span>
                     {t.label}
                   </Link>
                 </li>
@@ -147,5 +167,23 @@ export function MobileShell({ name, roleLabel, orgName, logoUrl, tenantId, child
         </nav>
       </div>
     </div>
+  );
+}
+
+// Online / offline: the pill swaps with a quick fade so a change of network is noticed.
+function NetPill({ online }: { online: boolean }) {
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <m.span
+        key={online ? "on" : "off"}
+        role="status"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1, transition: spring.snappy }}
+        exit={{ opacity: 0, scale: 0.9, transition: { duration: duration.instant } }}
+        className={cn("flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium", online ? "bg-emerald-50 text-emerald-800" : "bg-amber-100 text-amber-900")}
+      >
+        {online ? <Wifi className="size-3.5" /> : <CloudOff className="size-3.5" />} {online ? "Online" : "Offline"}
+      </m.span>
+    </AnimatePresence>
   );
 }

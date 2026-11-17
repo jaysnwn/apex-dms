@@ -25,14 +25,14 @@ export function IncentiveView({ s, shops, shopHref, orderHref }: {
 
   return (
     <div className="space-y-4">
-      <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-blue-700 to-blue-600 p-5 text-on-fill shadow-md">
-        <div className="flex items-center justify-between text-sm text-on-fill/85">
+      <section className="overflow-hidden rounded-3xl hero-blue p-5 text-white shadow-md">
+        <div className="flex items-center justify-between text-sm text-white/85">
           <span className="flex items-center gap-1.5"><Sparkles className="size-4" /> Incentive</span>
           <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-xs">{s.is_final ? "Final" : `Provisional · final on ${date(s.final_on)}`}</span>
         </div>
         <div className="mt-1 flex items-end gap-2">
           <span className="tabular text-4xl font-bold">{inr(s.total, { decimals: false })}</span>
-          <span className="tabular pb-1 text-on-fill/85">of {inr(s.max_total, { decimals: false })}</span>
+          <span className="tabular pb-1 text-white/85">of {inr(s.max_total, { decimals: false })}</span>
         </div>
         <div className="mt-3 grid grid-cols-4 gap-1.5">
           {[s.sales_earned, s.billed_earned, s.smart_earned, s.collection_earned].map((v, i) => (

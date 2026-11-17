@@ -5,6 +5,9 @@ import { ORDER_STATUS, PAYMENT_METHOD } from "@/lib/status";
 import { Badge, cn } from "@/components/ui";
 import type { HomeData } from "./data";
 import { Ring } from "./ui";
+import { Reveal } from "@/components/anim/reveal";
+import { CountUp } from "@/components/anim/count-up";
+import { ConfettiBurst } from "@/components/anim/confetti-burst";
 
 export function HomeView({ h, firstName }: { h: HomeData; firstName: string }) {
   const hour = new Date(Date.now() + 5.5 * 3600 * 1000).getUTCHours();
@@ -14,18 +17,19 @@ export function HomeView({ h, firstName }: { h: HomeData; firstName: string }) {
   const pct = goal > 0 ? (h.achieved / goal) * 100 : 0;
   const remaining = Math.max(0, goal - h.achieved);
   const perDay = h.daysLeft > 0 ? remaining / h.daysLeft : remaining;
-  const ringColor = pct >= 100 ? "#34d399" : pct >= 60 ? "#38bdf8" : "#f6a43d";
+  const ringColor = pct >= 100 ? "#6EE7A8" : pct >= 60 ? "#A9D4FF" : "#FFD38A";
   const monthName = new Date(h.period.start + "T00:00:00Z").toLocaleDateString("en-IN", { month: "long", timeZone: "UTC" });
 
   return (
-    <div className="space-y-4">
-      <p className="px-1 text-sm text-slate-500">{greet}, <span className="font-medium text-slate-800">{firstName}</span> · {date(h.today)}</p>
+    <Reveal className="space-y-4">
+      <p className="px-1 text-sm text-text-2">{greet}, <span className="font-medium text-slate-800">{firstName}</span> · {date(h.today)}</p>
 
       {/* ---------- Monthly target (main highlight) ---------- */}
-      <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-blue-700 to-blue-600 text-on-fill shadow-lg">
+      <section className="relative overflow-hidden rounded-3xl hero-blue text-white shadow-lg">
+        {goal > 0 && remaining <= 0 && <ConfettiBurst id={`target-${h.period.start}`} />}
         <div className="flex items-center justify-between px-5 pt-4">
-          <span className="flex items-center gap-1.5 text-sm font-medium text-on-fill/85"><Target className="size-4 text-on-fill" /> {h.target ? "Sales target" : "Sales"} · {monthName}</span>
-          {h.target && <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs text-on-fill/85">{h.daysLeft} day{h.daysLeft === 1 ? "" : "s"} left</span>}
+          <span className="flex items-center gap-1.5 text-sm font-medium text-white/85"><Target className="size-4 text-white" /> {h.target ? "Sales target" : "Sales"} · {monthName}</span>
+          {h.target && <span className="glass-tint rounded-full px-2.5 py-0.5 text-xs text-white/90">{h.daysLeft} day{h.daysLeft === 1 ? "" : "s"} left</span>}
         </div>
 
         {h.target && goal > 0 ? (
@@ -35,41 +39,41 @@ export function HomeView({ h, firstName }: { h: HomeData; firstName: string }) {
               <div className="absolute inset-0 grid place-items-center text-center">
                 <div>
                   <div className="tabular text-3xl font-bold">{Math.floor(pct)}%</div>
-                  <div className="text-xs text-on-fill/85">achieved</div>
+                  <div className="text-xs text-white/85">achieved</div>
                 </div>
               </div>
             </div>
             <div className="min-w-0 flex-1 space-y-2">
               <div>
-                <div className="text-xs tracking-wide text-on-fill/75 uppercase">Achieved</div>
-                <div className="tabular text-2xl leading-tight font-bold">{inr(h.achieved, { decimals: false })}</div>
-                <div className="tabular text-xs text-on-fill/85">of {inr(goal, { decimals: false })}</div>
+                <div className="text-xs tracking-wide text-white/75 uppercase">Achieved</div>
+                <CountUp id="m-achieved" value={h.achieved} format="inr" className="tabular block text-2xl leading-tight font-bold" />
+                <div className="tabular text-xs text-white/85">of {inr(goal, { decimals: false })}</div>
               </div>
               {remaining > 0 ? (
-                <div className="rounded-xl bg-white/10 px-3 py-2">
-                  <div className="tabular text-sm font-semibold text-on-fill">{inr(remaining, { decimals: false })} to go</div>
-                  <div className="tabular text-xs text-on-fill/85">≈ {inr(perDay, { decimals: false })} per day</div>
+                <div className="glass-tint rounded-xl px-3 py-2">
+                  <div className="tabular text-sm font-semibold text-white">{inr(remaining, { decimals: false })} to go</div>
+                  <div className="tabular text-xs text-white/85">≈ {inr(perDay, { decimals: false })} per day</div>
                 </div>
               ) : (
-                <div className="rounded-xl bg-emerald-400/20 px-3 py-2 text-sm font-semibold text-on-fill">Target reached! 🎉</div>
+                <div className="rounded-xl bg-emerald-400/25 px-3 py-2 text-sm font-semibold text-white">Target reached. Well done!</div>
               )}
             </div>
           </div>
         ) : (
           <div className="px-5 pt-3 pb-4">
-            <div className="tabular text-4xl font-bold">{inr(h.achieved, { decimals: false })}</div>
-            <div className="text-sm text-on-fill/85">invoiced this month · no target set yet</div>
+            <CountUp id="m-achieved" value={h.achieved} format="inr" className="tabular block text-4xl font-bold" />
+            <div className="text-sm text-white/85">invoiced this month · no target set yet</div>
           </div>
         )}
 
         <div className="grid grid-cols-2 divide-x divide-white/10 border-t border-white/10 text-center">
           <Link href="/m/orders?status=quotation" className="px-3 py-3 active:bg-white/5">
-            <div className="tabular text-base font-semibold text-on-fill">{inr(h.pendingQuotes.value, { decimals: false })}</div>
-            <div className="text-xs text-on-fill/75">{h.pendingQuotes.count} quotation{h.pendingQuotes.count === 1 ? "" : "s"} with office</div>
+            <div className="tabular text-base font-semibold text-white">{inr(h.pendingQuotes.value, { decimals: false })}</div>
+            <div className="text-xs text-white/75">{h.pendingQuotes.count} quotation{h.pendingQuotes.count === 1 ? "" : "s"} with office</div>
           </Link>
           <div className="px-3 py-3">
-            <div className="tabular text-base font-semibold text-on-fill">{inr(h.collected, { decimals: false })}</div>
-            <div className="text-xs text-on-fill/75">collected{h.target?.collection ? ` of ${inr(h.target.collection, { decimals: false })}` : ""}</div>
+            <div className="tabular text-base font-semibold text-white">{inr(h.collected, { decimals: false })}</div>
+            <div className="text-xs text-white/75">collected{h.target?.collection ? ` of ${inr(h.target.collection, { decimals: false })}` : ""}</div>
           </div>
         </div>
       </section>
@@ -121,11 +125,11 @@ export function HomeView({ h, firstName }: { h: HomeData; firstName: string }) {
       )}
 
       {/* ---------- Big order button ---------- */}
-      <Link href="/m/order" className="flex items-center gap-4 rounded-3xl bg-gradient-to-r from-blue-700 to-blue-600 p-4 text-on-fill shadow-md active:scale-[0.99]">
-        <span className="grid size-14 place-items-center rounded-2xl bg-white/20"><Plus className="size-8" strokeWidth={2.5} /></span>
+      <Link href="/m/order" className="flex items-center gap-4 rounded-3xl hero-blue p-4 text-white shadow-md active:scale-[0.99]">
+        <span className="glass-tint grid size-14 place-items-center rounded-2xl"><Plus className="size-8" strokeWidth={2.5} /></span>
         <span className="flex-1">
           <span className="block text-lg font-bold">Take new order</span>
-          <span className="block text-sm text-orange-50">Pick outlet → tap products → send</span>
+          <span className="block text-sm text-white/85">Pick outlet → tap products → send</span>
         </span>
         <ChevronRight className="size-6" />
       </Link>
@@ -200,7 +204,7 @@ export function HomeView({ h, firstName }: { h: HomeData; firstName: string }) {
           </ul>
         )}
       </section>
-    </div>
+    </Reveal>
   );
 }
 

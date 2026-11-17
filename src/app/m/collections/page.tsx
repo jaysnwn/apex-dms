@@ -40,10 +40,10 @@ export default async function MyCollectionsPage() {
     <div className="space-y-4">
       <Link href="/m" className="flex items-center gap-1 px-1 text-sm font-medium text-slate-600"><ArrowLeft className="size-4" /> Home</Link>
 
-      <section className="rounded-3xl bg-gradient-to-br from-blue-700 to-blue-600 p-5 text-on-fill shadow-md">
-        <div className="flex items-center gap-2 text-sm font-medium text-on-fill/90"><HandCoins className="size-4" /> Money with you</div>
+      <section className="rounded-3xl hero-blue p-5 text-white shadow-md">
+        <div className="flex items-center gap-2 text-sm font-medium text-white/90"><HandCoins className="size-4" /> Money with you</div>
         <div className="tabular mt-1 text-4xl font-bold">{inr(total, { decimals: false })}</div>
-        <div className="text-sm text-on-fill/90">{open.length ? `${open.length} payment${open.length === 1 ? "" : "s"} to hand over to office` : "Nothing to hand over — all verified."}</div>
+        <div className="text-sm text-white/90">{open.length ? `${open.length} payment${open.length === 1 ? "" : "s"} to hand over to office` : "Nothing to hand over — all verified."}</div>
         {open.length > 0 && (
           <div className="mt-3 grid grid-cols-2 gap-2">
             {(["cash", "upi", "cheque", "bank_transfer"] as const).filter((m) => by(m) > 0).map((m) => {

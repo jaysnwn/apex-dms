@@ -100,8 +100,8 @@ export function ExpenseScreen(p: Props) {
         <button onClick={() => setForm({})} className="flex h-10 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-sm font-semibold text-on-fill shadow-sm active:scale-95"><Plus className="size-4" /> Add expense</button>
       </div>
 
-      <section className="rounded-3xl bg-gradient-to-br from-blue-700 to-blue-600 p-5 text-on-fill shadow-md">
-        <div className="text-sm text-on-fill/85">This month</div>
+      <section className="rounded-3xl hero-blue p-5 text-white shadow-md">
+        <div className="text-sm text-white/85">This month</div>
         <div className="tabular text-3xl font-bold">{inr(p.month.incurred, { decimals: false })}</div>
         <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
           <Tile k="Waiting approval" v={p.month.pending} />

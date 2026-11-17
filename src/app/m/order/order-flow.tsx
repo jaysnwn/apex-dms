@@ -1,11 +1,15 @@
 "use client";
+import * as m from "motion/react-m";
+import { AnimatePresence } from "motion/react";
+import { duration, ease, spring } from "@/lib/motion";
+import { SuccessCheck } from "@/components/anim/success-check";
 
 import { askConfirm } from "@/components/confirm";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  AlertTriangle, ArrowLeft, Check, ChevronRight, CloudOff, MapPin, MessageCircle, PackageX, Plus, RefreshCw, Search, Send, ShoppingCart, Store, Trash2, X,
+  AlertTriangle, ArrowLeft, ChevronRight, CloudOff, MapPin, MessageCircle, PackageX, Plus, RefreshCw, Search, Send, ShoppingCart, Store, Trash2, X,
 } from "lucide-react";
 import { cn } from "@/components/ui";
 import { calcLine, orderTotals } from "@/lib/gst";
@@ -97,21 +101,28 @@ export function OrderFlow({ initialOutlets, initialCatalogue, presetRetailer, co
 
   // ----------------------------- Step 1: outlet -----------------------------
   if (!outlet) {
-    return <PickOutlet outlets={outlets} onPick={(id) => { setOutletId(id); if (cacheGet<{ outletId: string }>(DRAFT_KEY)?.outletId !== id) setCart({}); }} />;
+    return (
+      <StepSlide step={1}>
+        <StepBar step={1} />
+        <PickOutlet outlets={outlets} onPick={(id) => { setOutletId(id); if (cacheGet<{ outletId: string }>(DRAFT_KEY)?.outletId !== id) setCart({}); }} />
+      </StepSlide>
+    );
   }
 
   // ---------------------------- Step 2: products ----------------------------
   return (
+    <StepSlide step={2}>
+    <StepBar step={reviewing ? 3 : 2} />
     <div className={cn(units > 0 && "pb-24")}>
       <button onClick={async () => { if (!units || (await askConfirm("Change outlet? Products added so far will be cleared.", { confirmLabel: "Change outlet" }))) { clearDraft(); setOutletId(null); } }}
         className="mb-3 flex w-full items-center gap-3 rounded-2xl bg-surface p-3 text-left shadow-sm ring-1 ring-slate-200/70 active:bg-slate-50">
-        <span className="grid size-10 place-items-center rounded-xl bg-violet-100 text-violet-700"><Store className="size-5" /></span>
+        <span className="grid size-10 place-items-center rounded-xl bg-primary-soft text-primary-text"><Store className="size-5" /></span>
         <span className="min-w-0 flex-1">
           <span className="block text-xs font-medium text-slate-500 uppercase">Order for</span>
           <span className="block truncate font-semibold">{outlet.shop_name}</span>
           <span className="block truncate text-xs text-slate-500">{[outlet.city, outlet.overdue > 0 ? `overdue ${inr(outlet.overdue, { decimals: false })}` : null].filter(Boolean).join(" · ")}</span>
         </span>
-        <span className="text-xs font-medium text-sky-700">Change</span>
+        <span className="text-xs font-medium text-primary-text">Change</span>
       </button>
       {outlet.status === "on_hold" && (
         <p className="mb-3 flex items-start gap-2 rounded-2xl bg-amber-50 p-3 text-sm text-amber-900"><AlertTriangle className="mt-0.5 size-4 shrink-0" /> This outlet is on hold. You can send the quotation, but the office must release the account before invoicing.</p>
@@ -123,22 +134,29 @@ export function OrderFlow({ initialOutlets, initialCatalogue, presetRetailer, co
         <Catalogue items={items} cart={cart} setQty={setQty} loadedAt={cat.loadedAt} onRefresh={refreshStock} refreshing={refreshing} />
       )}
 
-      {/* Cart bar */}
+      {/* Cart bar: springs up with the first product */}
+      <AnimatePresence>
       {units > 0 && (
-        <div className="fixed inset-x-0 bottom-[calc(76px+env(safe-area-inset-bottom))] z-30 mx-auto max-w-md px-3">
-          <button onClick={() => setReviewing(true)} className="flex w-full items-center gap-3 rounded-2xl bg-primary p-3 pl-4 text-on-fill shadow-xl active:scale-[0.99]">
-            <span className="relative grid size-10 place-items-center rounded-xl bg-white/10">
+        <m.div
+          key="cartbar"
+          initial={{ y: 80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1, transition: spring.gentle }}
+          exit={{ y: 80, opacity: 0, transition: { duration: duration.fast, ease: ease.in } }}
+          className="fixed inset-x-0 bottom-[calc(76px+env(safe-area-inset-bottom))] z-30 mx-auto max-w-md px-3">
+          <button onClick={() => setReviewing(true)} className="hero-blue flex w-full items-center gap-3 rounded-2xl p-3 pl-4 shadow-[0_16px_32px_-12px_rgb(15_85_194/0.6)] transition-transform active:scale-[0.98]">
+            <span className="relative grid size-10 place-items-center rounded-xl bg-white/15">
               <ShoppingCart className="size-5" />
-              <span className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-full bg-primary text-xs font-bold">{cartLines.length}</span>
+              <m.span key={cartLines.length} initial={{ scale: 0.5 }} animate={{ scale: 1 }} transition={spring.snappy} className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-full bg-white text-xs font-bold text-blue-700">{cartLines.length}</m.span>
             </span>
             <span className="flex-1 text-left">
               <span className="tabular block text-lg leading-tight font-bold">{inr(grand, { decimals: false })}</span>
-              <span className="block text-xs text-slate-300">{units} unit{units === 1 ? "" : "s"} · incl. GST</span>
+              <span className="block text-xs text-white/80">{units} unit{units === 1 ? "" : "s"} · incl. GST</span>
             </span>
-            <span className="flex items-center gap-1 rounded-xl bg-primary px-4 py-2.5 font-semibold">Review <ChevronRight className="size-4" /></span>
+            <span className="flex items-center gap-1 rounded-xl bg-white/15 px-4 py-2.5 font-semibold">Review <ChevronRight className="size-4" /></span>
           </button>
-        </div>
+        </m.div>
       )}
+      </AnimatePresence>
 
       {reviewing && (
         <Review
@@ -154,6 +172,37 @@ export function OrderFlow({ initialOutlets, initialCatalogue, presetRetailer, co
         />
       )}
     </div>
+    </StepSlide>
+  );
+}
+
+// Progress across the three steps: the filled part grows as you move on.
+function StepBar({ step }: { step: 1 | 2 | 3 }) {
+  const labels = ["Outlet", "Products", "Review"];
+  return (
+    <div className="mb-3 px-1" aria-label={`Step ${step} of 3: ${labels[step - 1]}`}>
+      <div className="grid grid-cols-3 gap-1.5">
+        {labels.map((l, i) => (
+          <div key={l} className="h-1 overflow-hidden rounded-full bg-line">
+            <m.div className="h-full origin-left rounded-full bg-primary" initial={false} animate={{ scaleX: i < step ? 1 : 0 }} transition={{ duration: duration.slow, ease: ease.out }} />
+          </div>
+        ))}
+      </div>
+      <div className="mt-1.5 grid grid-cols-3 text-xs font-medium">
+        {labels.map((l, i) => (
+          <span key={l} className={cn(i === 1 && "text-center", i === 2 && "text-right", i < step ? "text-primary-text" : "text-text-3")}>{l}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Steps slide in from the right as you go forward.
+function StepSlide({ step, children }: { step: number; children: React.ReactNode }) {
+  return (
+    <m.div key={step} initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: duration.base, ease: ease.out }}>
+      {children}
+    </m.div>
   );
 }
 
@@ -167,12 +216,12 @@ function PickOutlet({ outlets, onPick }: { outlets: Outlet[]; onPick: (id: strin
   return (
     <div>
       <h1 className="mb-1 px-1 text-xl font-bold">New order</h1>
-      <p className="mb-3 px-1 text-sm text-slate-500">Step 1 of 3 · Which outlet?</p>
+      <p className="mb-3 px-1 text-sm text-text-2">Which outlet?</p>
       <div className="relative mb-3">
         <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-slate-400" />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search shop, owner, village or mobile" className="h-13 w-full rounded-2xl border border-slate-200 bg-surface pr-4 pl-12 text-base shadow-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/15" />
       </div>
-      <Link href="/m/outlets/new?then=order" className="mb-4 flex items-center gap-3 rounded-2xl border-2 border-dashed border-violet-300 bg-violet-50/60 p-3 text-violet-800 active:bg-violet-100">
+      <Link href="/m/outlets/new?then=order" className="mb-4 flex items-center gap-3 rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50/60 p-3 text-blue-800 active:bg-blue-100">
         <span className="grid size-10 place-items-center rounded-xl bg-primary text-on-fill"><Plus className="size-5" /></span>
         <span className="font-semibold">New outlet (not in the list)</span>
       </Link>
@@ -242,7 +291,7 @@ function Catalogue({ items, cart, setQty, loadedAt, onRefresh, refreshing }: {
         </div>
       </div>
       <p className="mb-2 flex items-center justify-between px-1 text-xs text-slate-500">
-        <span>Step 2 of 3 · Only items in stock are shown</span>
+        <span>Only items in stock are shown</span>
         <button onClick={onRefresh} className="flex items-center gap-1 font-medium text-sky-700"><RefreshCw className={cn("size-3", refreshing && "animate-spin")} /> {mins < 1 ? "stock just now" : `stock ${mins} min ago`}</button>
       </p>
 
@@ -337,7 +386,7 @@ function Review({ outlet, lines, calc, totals, maxDiscount, setQty, setDiscount,
       footer={
         <>
           {error && <p className="mb-2 rounded-xl bg-red-50 p-2.5 text-sm text-red-800">{error}</p>}
-          <button disabled={busy || !lines.length} onClick={send} className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-600 text-lg font-bold text-on-fill shadow-lg active:scale-[0.99] disabled:opacity-60">
+          <button disabled={busy || !lines.length} onClick={send} className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl hero-blue text-lg font-bold text-white shadow-lg active:scale-[0.99] disabled:opacity-60">
             <Send className="size-5" /> {busy ? "Sending…" : `Send quotation · ${inr(totals.grand, { decimals: false })}`}
           </button>
           <p className="mt-2 text-center text-xs text-slate-500">This goes to the office as a quotation. The office confirms the invoice.</p>
@@ -401,9 +450,14 @@ function Done({ result, onNew, onHome, companyName }: { result: DoneResult; onNe
   const text = `Order from ${result.shop}${result.orderNo ? ` (${result.orderNo})` : ""}:\n${result.lines.map((l) => `• ${l}`).join("\n")}\nTotal ${inr(result.total, { decimals: false })} incl. GST${companyName ? `\n— ${companyName}` : ""}`;
   return (
     <div className="pt-6 text-center">
-      <span className={cn("mx-auto grid size-24 place-items-center rounded-full text-on-fill shadow-lg", result.offline ? "bg-amber-500" : "bg-emerald-500")}>
-        {result.offline ? <CloudOff className="size-12" /> : <Check className="size-14" strokeWidth={3} />}
-      </span>
+      <m.span
+        initial={{ scale: 0.6, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={spring.snappy}
+        className={cn("mx-auto grid size-24 place-items-center rounded-full", result.offline ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700")}
+      >
+        {result.offline ? <CloudOff className="size-12" /> : <SuccessCheck className="size-16" />}
+      </m.span>
       <h1 className="mt-5 text-2xl font-bold">{result.offline ? "Saved on phone" : "Order sent!"}</h1>
       <p className="mt-1 text-slate-600">{result.shop} · <span className="tabular font-semibold">{inr(result.total, { decimals: false })}</span></p>
       {result.orderNo && <p className="mt-1 font-mono text-sm text-slate-500">{result.orderNo}</p>}
