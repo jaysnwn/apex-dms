@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { OrderTimeline } from "@/components/order-timeline";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { CheckCircle2, Circle, Truck, Wallet } from "lucide-react";
+import { Truck, Wallet } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { date, dateTime, inr, qty } from "@/lib/format";
@@ -97,15 +98,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
 
       {!cancelled && (
         <Card className="p-4">
-          <ol className="grid grid-cols-4 gap-2">
-            {steps.map((s) => (
-              <li key={s.label} className="flex flex-col items-center text-center">
-                {s.done ? <CheckCircle2 className="size-6 text-emerald-600" /> : <Circle className="size-6 text-slate-300" />}
-                <span className={cn("mt-1 text-sm font-medium", s.done ? "text-slate-900" : "text-slate-400")}>{s.label}</span>
-                {s.when && <span className="text-xs text-slate-500">{s.when}</span>}
-              </li>
-            ))}
-          </ol>
+          <OrderTimeline steps={steps} />
         </Card>
       )}
 

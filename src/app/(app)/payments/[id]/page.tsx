@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SuccessCheck } from "@/components/anim/success-check";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth";
@@ -29,7 +30,15 @@ export default async function PaymentPage({ params, searchParams }: { params: Pr
 
   return (
     <div className="max-w-4xl space-y-6">
-      {isNew && <Alert tone="green">Payment saved. Share the receipt with the retailer.</Alert>}
+      {isNew && (
+        <div role="status" className="flex items-center gap-3 rounded-[var(--radius-card)] border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
+          <SuccessCheck className="size-9 shrink-0 text-emerald-600" />
+          <div>
+            <p className="font-semibold">Payment recorded</p>
+            <p className="text-sm">Share the receipt with the retailer.</p>
+          </div>
+        </div>
+      )}
       {!p.verified_at && (p.status === "received" || p.status === "cheque_pending") && (
         <Alert tone="amber">
           Not verified yet — the salesman still has to hand this money over to the office. It counts for his incentive only after verification.
