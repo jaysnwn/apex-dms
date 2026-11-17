@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
 import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -46,7 +47,7 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
             <tr><th className="px-4 py-2.5">Order</th><th className="px-3 py-2.5">Retailer</th><th className="hidden px-3 py-2.5 sm:table-cell">Salesman</th><th className="px-3 py-2.5">Status</th><th className="px-4 py-2.5 text-right">Amount</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {(orders ?? []).length === 0 && <tr><td colSpan={5} className="px-4 py-10 text-center text-slate-500">No quotations. <Link href="/sales/new" className="font-medium text-accent-700 underline">Create a new order</Link></td></tr>}
+            {(orders ?? []).length === 0 && <tr><td colSpan={5}><EmptyState art="receipt" title="No drafts or quotations" action={{ href: "/sales/new", label: "New order" }} /></td></tr>}
             {(orders ?? []).map((o) => (
               <tr key={o.id} className="hover:bg-slate-50">
                 <td className="px-4 py-2.5"><Link href={`/sales/orders/${o.id}`} className="font-mono font-medium hover:underline">{o.order_no}</Link><div className="text-xs text-slate-500">{dateTime(o.created_at)}</div></td>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
 import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -89,7 +90,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {rows.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-slate-500">No invoices match.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={6}><EmptyState art="receipt" title="No invoices match">Try another invoice number, shop name or date range.</EmptyState></td></tr>}
             {rows.map((i) => {
               const b = bMap.get(i.id);
               const ds = i.status === "cancelled" ? DUE_STATUS.cancelled : DUE_STATUS[b?.due_status ?? "not_yet_due"];

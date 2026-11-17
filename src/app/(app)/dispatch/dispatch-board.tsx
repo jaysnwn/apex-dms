@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/empty-state";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -154,7 +155,7 @@ export function DispatchBoard({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {dispatched.length === 0 && <tr><td colSpan={5} className="px-4 py-10 text-center text-slate-500">Nothing here.</td></tr>}
+            {dispatched.length === 0 && <tr><td colSpan={5}><EmptyState art="truck" title="Nothing here yet" /></td></tr>}
             {dispatched.map((d) => (
               <tr key={d.id}>
                 <td className="px-4 py-2.5"><div className="font-mono text-xs">{d.dispatch_no}</div><Link href={`/sales/invoices/${d.invoice_id}`} className="font-mono text-xs text-slate-500 hover:underline">{d.invoice_no}</Link></td>

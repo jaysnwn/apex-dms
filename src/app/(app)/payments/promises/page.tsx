@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
 import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -36,7 +37,7 @@ export default async function PromisesPage({ searchParams }: { searchParams: Pro
             <tr><th className="px-4 py-2.5">Promised for</th><th className="px-3 py-2.5">Retailer</th><th className="px-3 py-2.5">Remarks</th><th className="px-3 py-2.5 text-right">Amount</th><th className="px-4 py-2.5"></th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {(rows ?? []).length === 0 && <tr><td colSpan={5} className="px-4 py-10 text-center text-slate-500">No open promises.</td></tr>}
+            {(rows ?? []).length === 0 && <tr><td colSpan={5}><EmptyState art="check" title="No open promises" /></td></tr>}
             {(rows ?? []).map((p) => {
               const r = p.retailers as unknown as { shop_name: string; code: string; mobile: string };
               const late = p.status === "open" && p.promised_date < today;

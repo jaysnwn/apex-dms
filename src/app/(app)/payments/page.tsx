@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
 import type { Metadata } from "next";
 import { Banknote, Clock, CreditCard, Smartphone } from "lucide-react";
 import { requireRole } from "@/lib/auth";
@@ -78,7 +79,7 @@ export default async function CollectionsPage({ searchParams }: { searchParams: 
             <tr><th className="px-4 py-2.5">Receipt</th><th className="px-3 py-2.5">Retailer</th><th className="px-3 py-2.5">Mode</th><th className="hidden px-3 py-2.5 md:table-cell">Collected by</th><th className="px-3 py-2.5">Status</th><th className="px-4 py-2.5 text-right">Amount</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {(rows ?? []).length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-slate-500">No payments in this period. <Link href="/payments/new" className="font-medium text-accent-700 underline">Record a payment</Link></td></tr>}
+            {(rows ?? []).length === 0 && <tr><td colSpan={6}><EmptyState art="wallet" title="No payments in this period" action={{ href: "/payments/new", label: "Record payment" }} /></td></tr>}
             {(rows ?? []).map((p) => {
               const r = p.retailers as unknown as { shop_name: string; code: string } | null;
               const st = PAYMENT_STATUS[p.status];

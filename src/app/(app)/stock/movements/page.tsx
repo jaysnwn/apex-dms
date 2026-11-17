@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
 import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -105,7 +106,7 @@ export default async function MovementsPage({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {rows.length === 0 && <tr><td colSpan={9} className="px-4 py-10 text-center text-slate-500">No movements match.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={9}><EmptyState art="box" title="No stock movements match" /></td></tr>}
             {rows.map((m) => {
               const q = Number(m.qty);
               const label = txnLabel(m.movement_type, m.reference_type);

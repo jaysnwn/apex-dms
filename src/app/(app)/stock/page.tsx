@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
 import type { Metadata } from "next";
 import {
   AlertTriangle, ArrowDownToLine, ArrowUpFromLine, Boxes, ClipboardCheck, FileSpreadsheet, IndianRupee, Package,
@@ -166,7 +167,7 @@ export default async function InventoryDashboard({ searchParams }: { searchParam
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {rows.length === 0 && <tr><td colSpan={7} className="px-4 py-10 text-center text-slate-500">No products match.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={7}><EmptyState art="box" title="No products match">Try a model number, barcode or a different filter.</EmptyState></td></tr>}
             {rows.map((r) => {
               const s = stockMap.get(r.id);
               const out = isOut(r.id), low = isLow(r.id);

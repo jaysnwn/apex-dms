@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
 import type { Metadata } from "next";
 import { ArrowDownUp, ImageOff, LayoutGrid, List, Pencil, Plus, Settings2, Upload } from "lucide-react";
 import { requireRole } from "@/lib/auth";
@@ -127,9 +128,10 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
       </div>
 
       {visible.length === 0 ? (
-        <Card className="p-10 text-center text-sm text-slate-500">
-          No products match.{" "}
-          {canEdit && <Link href="/products/new" className="font-medium text-ink-900 underline">Add a product</Link>}
+        <Card>
+          <EmptyState art="box" title="No products match" action={canEdit ? { href: "/products/new", label: "Add product" } : undefined}>
+            Try a model number, barcode or another category.
+          </EmptyState>
         </Card>
       ) : grid ? (
         <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">

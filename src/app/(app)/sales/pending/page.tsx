@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
 import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -32,7 +33,7 @@ export default async function PendingPage() {
             <tr><th className="px-4 py-2.5">Invoice</th><th className="px-3 py-2.5">Retailer</th><th className="px-3 py-2.5">Waiting</th><th className="px-4 py-2.5 text-right">Amount</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {rows.length === 0 && <tr><td colSpan={4} className="px-4 py-10 text-center text-slate-500">Nothing waiting for dispatch.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={4}><EmptyState art="check" title="Nothing waiting for dispatch">Every invoice has gone out.</EmptyState></td></tr>}
             {rows.map((i) => {
               const days = Math.floor((Date.now() - new Date(i.invoice_date).getTime()) / 864e5);
               const snap = i.retailer_snapshot as { shop_name: string; billing_city?: string };
