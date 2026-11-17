@@ -7,7 +7,7 @@ import * as m from "motion/react-m";
 import { AnimatePresence } from "motion/react";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import {
-  ChevronRight, Command as CommandIcon, Keyboard, LogOut, Menu, Moon, PanelLeftClose, PanelLeftOpen, Pin, PinOff, Search, Sun, X,
+  ArrowLeftRight, ChevronRight, Command as CommandIcon, Keyboard, LogOut, Menu, Moon, PanelLeftClose, PanelLeftOpen, Pin, PinOff, Search, Sun, X,
 } from "lucide-react";
 import type { AppRole, ModuleDef } from "@/lib/roles";
 import { Kbd, cn } from "@/components/ui";
@@ -54,7 +54,10 @@ export function Shell({ modules, role, userName, roleLabel, orgName, logoUrl, ca
   const groups = useMemo(() => navFor(modules), [modules]);
   const tabs = useMemo(() => tabsFor(role, groups), [role, groups]);
   const allowed = useMemo(() => new Set(modules.map((x) => x.key)), [modules]);
-  const actions = useMemo(() => QUICK_ACTIONS.filter((a) => allowed.has(a.module) && !(role === "warehouse" && a.module === "sales")), [allowed, role]);
+  const actions = useMemo(() => {
+    const list = QUICK_ACTIONS.filter((a) => allowed.has(a.module) && !(role === "warehouse" && a.module === "sales"));
+    return canSwitchOrg ? [...list, { key: "switch-org", label: "Switch business", href: "/select-org", module: "dashboard" as const, keywords: "company organisation tenant odoo copy" }] : list;
+  }, [allowed, role, canSwitchOrg]);
   const { recent, pinned } = useNavStore();
 
   const [drawer, setDrawer] = useState(false);
@@ -186,7 +189,7 @@ export function Shell({ modules, role, userName, roleLabel, orgName, logoUrl, ca
           <div className={cn("flex h-[72px] shrink-0 items-center gap-2 px-4", collapsed && "justify-center px-0")}>{brand}</div>
           <SideNav groups={groups} pathname={pathname} collapsed={collapsed} pinned={pinned} recent={recent} />
           <div className={cn("shrink-0 border-t border-line p-3", collapsed && "px-2")}>
-            <UserBox name={userName} roleLabel={roleLabel} collapsed={collapsed} canSwitchOrg={canSwitchOrg} />
+            <UserBox name={userName} roleLabel={roleLabel} collapsed={collapsed} canSwitchOrg={canSwitchOrg} orgName={orgName} />
             <NavButton label={collapsed ? "Expand menu" : "Collapse menu"} collapsed={collapsed} onClick={toggleCollapsed}>
               {collapsed ? <PanelLeftOpen className="size-[18px]" /> : <PanelLeftClose className="size-[18px]" />}
             </NavButton>
@@ -223,7 +226,7 @@ export function Shell({ modules, role, userName, roleLabel, orgName, logoUrl, ca
                 </div>
                 <SideNav groups={groups} pathname={pathname} collapsed={false} pinned={pinned} recent={recent} />
                 <div className="shrink-0 border-t border-line p-3 pb-[max(12px,env(safe-area-inset-bottom))]">
-                  <UserBox name={userName} roleLabel={roleLabel} collapsed={false} canSwitchOrg={canSwitchOrg} />
+                  <UserBox name={userName} roleLabel={roleLabel} collapsed={false} canSwitchOrg={canSwitchOrg} orgName={orgName} />
                 </div>
               </m.aside>
             </div>
@@ -401,8 +404,25 @@ function MiniList({ label, items, pathname }: { label: string; items: { href: st
   );
 }
 
-function UserBox({ name, roleLabel, collapsed, canSwitchOrg }: { name: string; roleLabel: string; collapsed: boolean; canSwitchOrg: boolean }) {
+function UserBox({ name, roleLabel, collapsed, canSwitchOrg, orgName }: { name: string; roleLabel: string; collapsed: boolean; canSwitchOrg: boolean; orgName: string }) {
   return (
+    <>
+    {canSwitchOrg && (
+      <Link
+        href="/select-org"
+        title={`Switch business (now: ${orgName})`}
+        aria-label={`Switch business. Now in ${orgName}`}
+        className={cn("mb-2 flex h-10 items-center gap-2.5 rounded-full border border-line px-3 text-[13px] text-text-2 transition-colors hover:bg-sunken hover:text-text", collapsed && "justify-center px-0")}
+      >
+        <ArrowLeftRight className="size-4 shrink-0" aria-hidden />
+        {!collapsed && (
+          <span className="min-w-0 flex-1 truncate">
+            <span className="font-medium text-text">{orgName}</span>
+          </span>
+        )}
+        {!collapsed && <span className="shrink-0 font-medium text-primary-text">Switch</span>}
+      </Link>
+    )}
     <div className={cn("mb-1 flex items-center gap-2", collapsed && "flex-col")}>
       <Link href="/account" className={cn("flex min-w-0 flex-1 items-center gap-3 rounded-full p-1 pr-2 hover:bg-sunken", collapsed && "flex-none p-0.5 pr-0.5")} title="My account">
         <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-soft text-[13px] font-semibold text-primary-text">{initials(name || "Me")}</span>
@@ -411,7 +431,6 @@ function UserBox({ name, roleLabel, collapsed, canSwitchOrg }: { name: string; r
             <span className="block truncate text-[13.5px] font-semibold text-text">{name || "My account"}</span>
             <span className="block truncate text-xs text-text-2">
               {roleLabel}
-              {canSwitchOrg && " · switch"}
             </span>
           </span>
         )}
@@ -420,6 +439,7 @@ function UserBox({ name, roleLabel, collapsed, canSwitchOrg }: { name: string; r
         <LogOut className="size-[18px]" aria-label="Sign out" />
       </SignOutButton>
     </div>
+    </>
   );
 }
 
