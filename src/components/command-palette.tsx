@@ -87,7 +87,7 @@ export function CommandPalette({ open, onOpenChange, groups, actions, recent }: 
             <div className="pointer-events-none fixed inset-0 z-[60] flex items-start justify-center px-3 pt-[12vh]">
               <RD.Content asChild forceMount aria-describedby={undefined}>
                 <m.div
-                  className="pointer-events-auto w-full max-w-xl overflow-hidden rounded-[var(--radius-sheet)] border border-line bg-raised shadow-[var(--shadow-raised)]"
+                  className="glass pointer-events-auto w-full max-w-xl overflow-hidden rounded-[var(--radius-sheet)] border border-line/80 shadow-[var(--shadow-raised)]"
                   initial={{ opacity: 0, scale: 0.97, y: -6 }}
                   animate={{ opacity: 1, scale: 1, y: 0, transition: { duration: duration.base, ease: ease.out } }}
                   exit={{ opacity: 0, scale: 0.98, transition: { duration: duration.fast, ease: ease.in } }}

@@ -583,6 +583,62 @@ body {
   animation: nudge 200ms var(--ease-out);
 }
 
+/* Glass: frosted surfaces for things that float over content (bars, palette, sheets).
+   Used sparingly; solid where the browser can't blur or the person asks for less transparency. */
+.glass {
+  background: color-mix(in oklab, var(--surface) 72%, transparent);
+  -webkit-backdrop-filter: blur(18px) saturate(1.6);
+  backdrop-filter: blur(18px) saturate(1.6);
+}
+.dark .glass {
+  background: color-mix(in oklab, var(--surface) 70%, transparent);
+}
+/* Hero summary card: the one place with a large blue area. Same deep blue in both themes,
+   white text on it (5.6:1 at its lightest). */
+.hero-blue {
+  background: linear-gradient(135deg, #0A3A8C 0%, #0F55C2 55%, #1A6CDD 100%);
+  color: #fff;
+}
+.dark .hero-blue {
+  background: linear-gradient(135deg, #0A2B66 0%, #0D459E 60%, #155BC4 100%);
+}
+
+/* Glass on a coloured hero card (white frost over the blue). */
+.glass-tint {
+  background: rgb(255 255 255 / 0.14);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.4);
+  border: 1px solid rgb(255 255 255 / 0.22);
+}
+.dark .glass-tint {
+  background: rgb(0 0 0 / 0.12);
+  border-color: rgb(0 0 0 / 0.14);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass { background: var(--surface); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass { background: var(--surface); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .glass-tint { backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+
+/* Entrance used on server-rendered screens (login): rise and fade, once. */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.rise {
+  animation: rise 520ms var(--ease-out) both;
+}
+/* Slow drifting light behind the sign-in panel (decorative). */
+@keyframes drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(24px, -18px, 0) scale(1.06); }
+}
+.drift {
+  animation: drift 14s ease-in-out infinite;
+}
+
 /* Table rows: a quiet tint under the pointer so the eye can follow a long row. */
 tbody > tr {
   transition: background-color 110ms ease-out;
@@ -619,7 +675,7 @@ html[data-motion="reduce"] *::after {
 @media (prefers-reduced-motion: reduce) {
   .skeleton { animation: none; }
   .nav-progress { transition: none; }
-  .flash, .nudge, .grow-x, .attention-pulse { animation: none; }
+  .flash, .nudge, .grow-x, .attention-pulse, .rise, .drift { animation: none; }
 }
 
 @media print {
