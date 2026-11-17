@@ -13,7 +13,7 @@ export function initials(name: string) {
 export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
   return (
     <span
-      className="grid shrink-0 place-items-center rounded-full bg-gradient-to-br from-accent-400 to-accent-600 font-bold text-on-fill shadow-sm ring-2 ring-surface"
+      className="grid shrink-0 place-items-center rounded-full bg-gradient-to-br from-blue-700 to-blue-600 font-bold text-on-fill shadow-sm ring-2 ring-surface"
       style={{ width: size, height: size, fontSize: size * 0.38 }}
     >
       {initials(name)}

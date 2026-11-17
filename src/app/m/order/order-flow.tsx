@@ -337,7 +337,7 @@ function Review({ outlet, lines, calc, totals, maxDiscount, setQty, setDiscount,
       footer={
         <>
           {error && <p className="mb-2 rounded-xl bg-red-50 p-2.5 text-sm text-red-800">{error}</p>}
-          <button disabled={busy || !lines.length} onClick={send} className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-accent-500 to-accent-600 text-lg font-bold text-on-fill shadow-lg active:scale-[0.99] disabled:opacity-60">
+          <button disabled={busy || !lines.length} onClick={send} className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-600 text-lg font-bold text-on-fill shadow-lg active:scale-[0.99] disabled:opacity-60">
             <Send className="size-5" /> {busy ? "Sending…" : `Send quotation · ${inr(totals.grand, { decimals: false })}`}
           </button>
           <p className="mt-2 text-center text-[11px] text-slate-500">This goes to the office as a quotation. The office confirms the invoice.</p>

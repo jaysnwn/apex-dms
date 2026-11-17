@@ -274,9 +274,9 @@ async function SalesmanDash({ userId }: { userId: string }) {
             <span className="grid size-12 place-items-center rounded-xl bg-primary text-ink-900"><RouteIcon className="size-6" /></span>
             <div className="flex-1">
               <div className="text-lg font-semibold">Today&apos;s route</div>
-              <div className="text-sm text-slate-300">{v.length ? `${done} of ${v.length} visits done` : "No visits planned today"}</div>
+              <div className="text-sm text-on-fill/85">{v.length ? `${done} of ${v.length} visits done` : "No visits planned today"}</div>
             </div>
-            <span className="text-sm font-medium text-accent-500">Open →</span>
+            <span className="text-sm font-medium text-on-fill">Open →</span>
           </div>
         </Card>
       </Link>

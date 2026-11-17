@@ -126,7 +126,7 @@ export function MobileShell({ name, roleLabel, orgName, logoUrl, tenantId, child
                 return (
                   <li key={t.href} className="flex justify-center">
                     <Link href={t.href} className="-mt-6 flex flex-col items-center gap-1" aria-label="New order">
-                      <span className={cn("grid size-16 place-items-center rounded-full bg-gradient-to-br from-accent-400 to-accent-600 text-on-fill shadow-lg ring-4 ring-surface transition active:scale-95", active && "ring-accent-100")}>
+                      <span className={cn("grid size-16 place-items-center rounded-full bg-gradient-to-br from-blue-700 to-blue-600 text-on-fill shadow-lg ring-4 ring-surface transition active:scale-95", active && "ring-accent-100")}>
                         <Plus className="size-8" strokeWidth={2.5} />
                       </span>
                       <span className={cn("text-[11px] font-semibold", active ? "text-accent-600" : "text-slate-600")}>New order</span>

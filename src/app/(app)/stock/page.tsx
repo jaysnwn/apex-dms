@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import { brandScope, getBrandContext, pageBrand } from "@/lib/brand";
 import { BrandFilter } from "@/components/brand-filter";
 import { inr, qty } from "@/lib/format";
-import { Card, cn } from "@/components/ui";
+import { Card, cn, pressable } from "@/components/ui";
 import { SearchBar } from "@/components/search-bar";
 import { Chip } from "@/components/chip";
 import { StatCard } from "@/components/stat-card";
@@ -89,13 +89,13 @@ export default async function InventoryDashboard({ searchParams }: { searchParam
     : [];
 
   const actions = [
-    isMgr && { href: "/products/new", label: "Add product", icon: Plus, tone: "from-indigo-500 to-indigo-600" },
-    isMgr && { href: "/import", label: "Import products", icon: Upload, tone: "from-slate-600 to-slate-700" },
-    canMove && { href: "/stock/entry?type=stock_in", label: "Stock inward", icon: ArrowDownToLine, tone: "from-emerald-500 to-emerald-600" },
-    canMove && { href: "/stock/entry?type=stock_out", label: "Stock outward", icon: ArrowUpFromLine, tone: "from-rose-500 to-rose-600" },
-    { href: "/stock/reports", label: "Stock report", icon: FileSpreadsheet, tone: "from-amber-500 to-amber-600" },
-    isMgr && { href: "/stock/entry?type=adjustment", label: "Stock adjustment", icon: SlidersHorizontal, tone: "from-violet-500 to-violet-600" },
-  ].filter(Boolean) as { href: string; label: string; icon: typeof Plus; tone: string }[];
+    isMgr && { href: "/products/new", label: "Add product", icon: Plus },
+    isMgr && { href: "/import", label: "Import products", icon: Upload },
+    canMove && { href: "/stock/entry?type=stock_in", label: "Stock inward", icon: ArrowDownToLine },
+    canMove && { href: "/stock/entry?type=stock_out", label: "Stock outward", icon: ArrowUpFromLine },
+    { href: "/stock/reports", label: "Stock report", icon: FileSpreadsheet },
+    isMgr && { href: "/stock/entry?type=adjustment", label: "Stock adjustment", icon: SlidersHorizontal },
+  ].filter(Boolean) as { href: string; label: string; icon: typeof Plus }[];
 
   return (
     <>
@@ -112,9 +112,9 @@ export default async function InventoryDashboard({ searchParams }: { searchParam
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {actions.map((a) => (
-          <Link key={a.href} href={a.href} className={cn("group flex items-center gap-3 rounded-xl bg-gradient-to-br p-3 text-on-fill shadow-sm transition hover:shadow-md active:scale-[0.99]", a.tone)}>
-            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white/20"><a.icon className="size-5" /></span>
-            <span className="text-sm font-semibold leading-tight">{a.label}</span>
+          <Link key={a.href} href={a.href} className={cn("group flex items-center gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-3 text-text shadow-[var(--shadow-card)] hover:border-field/40", pressable)}>
+            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-soft text-primary-text"><a.icon className="size-[18px]" /></span>
+            <span className="text-sm font-medium leading-tight">{a.label}</span>
           </Link>
         ))}
       </div>
