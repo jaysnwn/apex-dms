@@ -99,26 +99,56 @@ export async function saveOrder(input: {
   const invoiced = { ok: true, orderId: first.orderId, invoiceId: first.invoiceId, invoiceNo: docs.map((d) => d.invoiceNo).join(" + "), docs };
   if (!input.payment || !(input.payment.amount > 0)) return invoiced;
 
-  // Money received at the counter goes against these invoices (not the oldest bill).
-  const { data: invs } = await supabase.from("invoices").select("id, grand_total").in("id", docs.map((d) => d.invoiceId!));
+  const pay = await payAtCounter(input.retailerId, docs.map((d) => d.invoiceId!), input.payment, input.clientUuid);
+  if (pay.error) return { ...invoiced, error: pay.error };
+  return pay.paid ? { ...invoiced, paid: pay.paid } : invoiced;
+}
+
+// Money received at the counter goes against these invoices (not the oldest bill).
+async function payAtCounter(
+  retailerId: string,
+  invoiceIds: string[],
+  payment: { amount: number; method: "cash" | "upi" | "bank_transfer" | "cheque"; reference?: string },
+  clientUuid?: string,
+): Promise<{ paid?: number; error?: string }> {
+  const supabase = await createClient();
+  const { data: invs } = await supabase.from("invoices").select("id, grand_total").in("id", invoiceIds);
   const totalOf = new Map((invs ?? []).map((v) => [v.id as string, Number(v.grand_total)]));
-  let left = Math.round(input.payment.amount * 100) / 100;
+  let left = Math.round(payment.amount * 100) / 100;
   const allocations: { invoice_id: string; amount: number }[] = [];
-  for (const d of docs) {
+  for (const id of invoiceIds) {
     if (left <= 0) break;
-    const take = Math.min(left, totalOf.get(d.invoiceId!) ?? 0);
-    if (take > 0) { allocations.push({ invoice_id: d.invoiceId!, amount: take }); left = Math.round((left - take) * 100) / 100; }
+    const take = Math.min(left, totalOf.get(id) ?? 0);
+    if (take > 0) { allocations.push({ invoice_id: id, amount: take }); left = Math.round((left - take) * 100) / 100; }
   }
   const amount = allocations.reduce((t, a) => t + a.amount, 0);
-  if (!(amount > 0)) return invoiced;
+  if (!(amount > 0)) return {};
   const { error: payErr } = await supabase.rpc("record_payment", {
-    p_retailer_id: input.retailerId, p_amount: Math.round(amount * 100) / 100, p_method: input.payment.method, p_payment_date: null,
-    p_reference: input.payment.reference || null, p_cheque_date: null, p_bank: null, p_notes: "Paid at billing",
-    p_allocations: allocations, p_visit_id: null, p_client_uuid: input.clientUuid ?? null,
+    p_retailer_id: retailerId, p_amount: Math.round(amount * 100) / 100, p_method: payment.method, p_payment_date: null,
+    p_reference: payment.reference || null, p_cheque_date: null, p_bank: null, p_notes: "Paid at billing",
+    p_allocations: allocations, p_visit_id: null, p_client_uuid: clientUuid ?? null,
   });
   revalidatePath("/payments");
-  if (payErr) return { ...invoiced, error: `Invoice created, but the payment was not saved: ${dbError(payErr)}` };
-  return { ...invoiced, paid: Math.round(amount * 100) / 100 };
+  if (payErr) return { error: `Invoice created, but the payment was not saved: ${dbError(payErr)}` };
+  return { paid: Math.round(amount * 100) / 100 };
+}
+
+// Step 3 of billing: the invoice draft is confirmed. The quotation becomes an
+// invoice (confirm_order runs the stock, credit and GST-details checks), then any
+// money taken at the counter is recorded against it.
+export async function confirmInvoiceDraft(input: {
+  orderId: string;
+  overrideCredit?: boolean;
+  overrideStock?: boolean;
+  payment?: { amount: number; method: "cash" | "upi" | "bank_transfer" | "cheque"; reference?: string } | null;
+  clientUuid?: string;
+}): Promise<SaveResult> {
+  const res = await confirmOrder(input.orderId, input.overrideCredit ?? false, input.overrideStock ?? false);
+  if (!res.invoiceId || !input.payment || !(input.payment.amount > 0)) return res;
+  const supabase = await createClient();
+  const { data: o } = await supabase.from("orders").select("retailer_id").eq("id", input.orderId).single();
+  const pay = await payAtCounter(o!.retailer_id as string, [res.invoiceId], input.payment, input.clientUuid);
+  return pay.error ? { ...res, error: pay.error } : { ...res, paid: pay.paid };
 }
 
 export async function confirmOrder(orderId: string, overrideCredit = false, overrideStock = false): Promise<SaveResult> {

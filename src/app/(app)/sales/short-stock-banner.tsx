@@ -9,9 +9,11 @@ import { duration, ease } from "@/lib/motion";
 
 export type ShortLine = { id: string; name: string; need: number; have: number };
 
-// Shown the moment a cart line asks for more than is in stock. Orders ship in full, so
-// this invoice can't go out until every line is covered: the banner says which items,
+// Shown the moment a line asks for more than is in stock. Orders ship in full, so
+// the invoice can't go out until every line is covered: the banner says which items,
 // by how much, and what to do. It slides in with one attention pulse, then stays still.
+// On a quotation it warns (the quote can still be saved); on the invoice draft it
+// blocks Confirm unless a manager chooses "invoice anyway".
 export function ShortStockBanner({
   lines,
   isManager,
@@ -20,15 +22,18 @@ export function ShortStockBanner({
   onUseAvailable,
   onSaveDraft,
   compact,
+  stage = "invoice",
 }: {
   lines: ShortLine[];
   isManager: boolean;
-  override: boolean;
-  onOverride: (v: boolean) => void;
+  override?: boolean;
+  onOverride?: (v: boolean) => void;
   onUseAvailable?: () => void;
   onSaveDraft?: () => void;
   compact?: boolean;
+  stage?: "quote" | "invoice";
 }) {
+  const quote = stage === "quote";
   const n = lines.length;
   return (
     <AnimatePresence initial={false}>
@@ -48,7 +53,11 @@ export function ShortStockBanner({
               <p className="font-semibold text-red-900">
                 {n} item{n === 1 ? " is" : "s are"} short
               </p>
-              <p className="text-[13px] text-red-900/80">Orders ship in full, so this invoice can’t go out until {n === 1 ? "it is" : "they are"} in stock.</p>
+              <p className="text-[13px] text-red-900/80">
+                {quote
+                  ? <>You can save this quotation, but orders ship in full, so it can’t be invoiced until {n === 1 ? "it is" : "they are"} in stock.</>
+                  : <>Orders ship in full, so this invoice can’t go out until {n === 1 ? "it is" : "they are"} in stock.</>}
+              </p>
             </div>
           </div>
           <table className="mt-2.5 w-full text-[13px]">
@@ -72,15 +81,15 @@ export function ShortStockBanner({
             </tbody>
           </table>
           {compact && lines.length > 4 && <p className="mt-1 text-xs text-red-900/70">and {lines.length - 4} more</p>}
-          {isManager ? (
+          {quote ? null : isManager ? (
             <label className="mt-3 flex cursor-pointer items-start gap-2.5 rounded-[var(--radius-control)] bg-raised p-2.5 text-[13px] text-text">
-              <input type="checkbox" checked={override} onChange={(e) => onOverride(e.target.checked)} className="mt-0.5 size-4 accent-red-600" />
+              <input type="checkbox" checked={!!override} onChange={(e) => onOverride?.(e.target.checked)} className="mt-0.5 size-4 accent-red-600" />
               <span>
                 <span className="font-semibold">Invoice anyway as a back-order.</span> Goods are dispatched only when all stock arrives. This is recorded.
               </span>
             </label>
           ) : (
-            <p className="mt-2 text-[13px] text-red-900/80">Reduce the quantities, or save a draft and ask a manager.</p>
+            <p className="mt-2 text-[13px] text-red-900/80">Edit the quotation to reduce the quantities, or ask a manager to confirm it.</p>
           )}
           {(onUseAvailable || onSaveDraft) && (
             <div className="mt-3 flex flex-wrap gap-2">

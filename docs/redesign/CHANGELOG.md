@@ -41,6 +41,11 @@
   Each one opens the right page. When there is nothing to do it says "All clear".
 
 ## Billing
+- **Three steps, like Odoo: quotation → invoice draft → confirm.** Billing (now "New quotation") only saves a
+  quotation; there is no button that makes an invoice straight away. On the quotation, **Create invoice** opens the
+  invoice draft: the bill-to details, invoice and due dates, the lines with stock, the GST-details, short-stock and
+  credit checks, and the payment received now. **Confirm invoice** issues it and gives it its number. Leaving the
+  draft changes nothing; the quotation stays as it was. Salesmen still only send quotations to the office.
 - If a product is **short**, a red box appears in the cart straight away with how many you need, how many are in
   stock and how many are short. **Use what's in stock** lowers the quantities for you. The rule is the same as before:
   an order ships in full, and only a manager can invoice anyway as a back-order.

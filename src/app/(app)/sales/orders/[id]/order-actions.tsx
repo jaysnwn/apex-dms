@@ -3,50 +3,41 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check, Pencil, XCircle } from "lucide-react";
+import { FileText, Pencil, XCircle } from "lucide-react";
 import { Alert, Button } from "@/components/ui";
-import { cancelQuotation, confirmOrder } from "../../actions";
+import { cancelQuotation } from "../../actions";
 
-export function OrderActions({ orderId, canConfirm, canOverride, canEdit }: { orderId: string; canConfirm: boolean; canOverride: boolean; canEdit: boolean }) {
+// Quotation page actions. "Create invoice" opens the invoice draft (step 2); the
+// invoice itself is only issued there, with Confirm invoice.
+export function OrderActions({ orderId, canInvoice, canEdit }: { orderId: string; canInvoice: boolean; canEdit: boolean }) {
   const router = useRouter();
-  const [error, setError] = useState<{ message: string; hint?: string } | null>(null);
-  const [override, setOverride] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        {canConfirm && (
-          <Button
-            className="bg-primary hover:bg-primary-hover"
-            disabled={pending}
-            onClick={() =>
-              start(async () => {
-                setError(null);
-                const res = await confirmOrder(orderId, override);
-                if (res.invoiceId) router.push(`/sales/invoices/${res.invoiceId}?new=1`);
-                else setError({ message: res.error ?? "Could not confirm", hint: res.hint });
-              })
-            }
-          >
-            <Check className="size-4" /> {pending ? "Confirming…" : "Confirm invoice"}
-          </Button>
+        {canInvoice && (
+          <Link href={`/sales/orders/${orderId}?step=invoice`} className="inline-flex h-10 items-center gap-2 rounded-[var(--radius-control)] bg-primary px-4 text-sm font-medium text-on-fill hover:bg-primary-hover">
+            <FileText className="size-4" /> Create invoice
+          </Link>
         )}
         {canEdit && (
-          <Link href={`/sales/orders/${orderId}/edit`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-surface px-4 text-sm font-medium hover:bg-slate-50">
+          <Link href={`/sales/orders/${orderId}/edit`} className="inline-flex h-10 items-center gap-2 rounded-[var(--radius-control)] border border-line bg-surface px-4 text-sm font-medium text-text hover:bg-sunken">
             <Pencil className="size-4" /> Edit
           </Link>
         )}
         {canEdit && (
           <Button
             variant="ghost"
+            className="h-10"
             disabled={pending}
             onClick={() => {
               const reason = prompt("Why is this quotation being cancelled?");
               if (reason === null) return;
               start(async () => {
                 const res = await cancelQuotation(orderId, reason);
-                if (res.error) setError({ message: res.error });
+                if (res.error) setError(res.error);
                 else router.refresh();
               });
             }}
@@ -55,18 +46,7 @@ export function OrderActions({ orderId, canConfirm, canOverride, canEdit }: { or
           </Button>
         )}
       </div>
-      {error && (
-        <Alert>
-          {error.message}
-          {error.hint === "CREDIT_LIMIT" && canOverride && (
-            <label className="mt-2 flex items-center gap-2 font-medium">
-              <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} className="size-4" />
-              Override credit limit and try again (recorded in the audit log)
-            </label>
-          )}
-          {error.hint === "STOCK_SHORT" && <div className="mt-1">Edit the quotation to reduce quantities, or record stock in first.</div>}
-        </Alert>
-      )}
+      {error && <Alert>{error}</Alert>}
     </div>
   );
 }

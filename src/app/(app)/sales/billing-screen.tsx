@@ -4,7 +4,7 @@ import { toast as notify } from "sonner";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { AlertTriangle, Check, CheckCircle2, Download, FileText, Keyboard, LayoutGrid, MessageCircle, Plus, Printer } from "lucide-react";
+import { AlertTriangle, Check, FileText, Keyboard, LayoutGrid } from "lucide-react";
 import * as m from "motion/react-m";
 import { AnimatePresence } from "motion/react";
 import { Alert, Badge, Button, Input, Kbd, Select, Textarea, cn } from "@/components/ui";
@@ -12,18 +12,16 @@ import { duration, ease, spring } from "@/lib/motion";
 import { AddProductRow, LinesTable, QuickAdd } from "./bill-lines";
 import { CatalogView } from "./catalog-view";
 import { ShortStockBanner } from "./short-stock-banner";
-import { Dialog } from "@/components/dialog";
 import { brandTone } from "@/lib/brand-style";
 import { addDays, calcLine, todayIST } from "@/lib/gst";
 import { date as fmtDate, inr, qty as fmtQty } from "@/lib/format";
-import { shareOnWhatsApp } from "@/lib/share-actions";
 import { BillingDetailsDialog, RetailerSelect, missingTaxDetails, rememberRetailer } from "./retailer-select";
-import { loadBillingCatalogue, retailerUsuals, saveOrder, type PickerProduct, type PickerRetailer, type SavedDoc } from "./actions";
+import { loadBillingCatalogue, retailerUsuals, saveOrder, type PickerProduct, type PickerRetailer } from "./actions";
+import { DocSteps } from "./doc-steps";
 import { tenantKey } from "@/lib/supabase/client";
 
 export type BuilderLine = { product: PickerProduct; qty: number; discount: number; price: number | null };
 type Brand = { id: string; name: string; code: string };
-type Method = "cash" | "upi" | "bank_transfer" | "cheque";
 
 export type BillingProps = {
   role: string;
@@ -40,7 +38,6 @@ export type BillingProps = {
 const TERMS: { days: number; label: string }[] = [
   { days: 0, label: "Immediate / Cash" }, { days: 10, label: "10 days" }, { days: 15, label: "15 days" }, { days: 21, label: "21 days" }, { days: 30, label: "30 days" },
 ];
-const METHODS: { k: Method; label: string }[] = [{ k: "cash", label: "Cash" }, { k: "upi", label: "UPI" }, { k: "bank_transfer", label: "Bank" }, { k: "cheque", label: "Cheque" }];
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const norm = (s: string) => s.toLowerCase().replace(/[-_/.,()]+/g, " ");
 const newKey = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
@@ -76,26 +73,19 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
   const [custom, setCustom] = useState(!TERMS.some((t) => t.days === startDays));
   const [lines, setLines] = useState<BuilderLine[]>(initial?.lines ?? []);
   const [overall, setOverall] = useState("");
-  const [paid, setPaid] = useState("");
-  const [method, setMethod] = useState<Method>("cash");
-  const [payRef, setPayRef] = useState("");
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [q, setQ] = useState("");
   const [browse, setBrowse] = useState(false);
-  const [tab, setTab] = useState<"lines" | "payment">("lines");
+  const [tab, setTab] = useState<"lines" | "note">("lines");
   const [flashId, setFlashId] = useState<{ id: string; n: number } | null>(null);
   const [toast, setToast] = useState<{ text: string; warn?: boolean } | null>(null);
   const [usuals, setUsuals] = useState<Awaited<ReturnType<typeof retailerUsuals>> | null>(null);
   const [favs, setFavs] = useState<string[]>([]);
   const [recentProducts, setRecentProducts] = useState<string[]>([]);
-  const [reviewing, setReviewing] = useState(false);
   const [editingDetails, setEditingDetails] = useState(false);
-  const [overrideStock, setOverrideStock] = useState(false);
-  const [overrideCredit, setOverrideCredit] = useState(false);
   const [error, setError] = useState<{ message: string; hint?: string } | null>(null);
-  const [done, setDone] = useState<Done | null>(null);
   const [savedOrderId, setSavedOrderId] = useState<string | null>(initial?.orderId ?? null);
-  const [clientKey, setClientKey] = useState(newKey);
+  const [clientKey] = useState(newKey);
   const [pending, start] = useTransition();
   const searchRef = useRef<HTMLInputElement>(null);
   const retailerRef = useRef<HTMLInputElement>(null);
@@ -143,7 +133,6 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
     return m.set(l.product.gst_rate, g);
   }, new Map<number, { taxable: number; tax: number }>()).entries()].sort(([a], [b]) => a - b);
   const totalQty = lines.reduce((t, l) => t + (l.qty || 0), 0);
-  const paidNum = Math.min(Math.max(0, Number(paid) || 0), grand);
   const today = todayIST();
   const due = addDays(today, days || 0);
   const shortLines = lines.filter((l) => l.qty > (byId.get(l.product.id)?.available ?? l.product.available));
@@ -156,7 +145,7 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
       return have > 0 ? [{ ...l, qty: have }] : [];
     }));
   const discTooHigh = lines.some((l) => effDisc(l) > maxDisc + 0.001);
-  const overLimit = !!retailer && retailer.credit_limit > 0 && retailer.outstanding + grand - paidNum > retailer.credit_limit;
+  const overLimit = !!retailer && retailer.credit_limit > 0 && retailer.outstanding + grand > retailer.credit_limit;
   const missing = retailer ? missingTaxDetails(retailer, grand) : [];
   const inCart = useMemo(() => new Map(lines.map((l) => [l.product.id, l.qty])), [lines]);
 
@@ -187,9 +176,9 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
   // Clearing is instant and can be undone from the toast (no "are you sure?").
   function clearCart() {
     if (!lines.length) return;
-    const before = { lines, overall, paid };
-    setLines([]); setOverall(""); setPaid("");
-    notify("Cart cleared", { action: { label: "Undo", onClick: () => { setLines(before.lines); setOverall(before.overall); setPaid(before.paid); } } });
+    const before = { lines, overall };
+    setLines([]); setOverall("");
+    notify("Products cleared", { action: { label: "Undo", onClick: () => { setLines(before.lines); setOverall(before.overall); } } });
   }
   function repeatLast() {
     if (!usuals?.last) return;
@@ -206,7 +195,9 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
     if (days < 0 || days > 365) return "Credit period must be 0–365 days.";
     return null;
   }
-  function submit(confirmInvoice: boolean) {
+  // Step 1 only: save the quotation. The invoice is made from the quotation page
+  // (Create invoice → invoice draft → Confirm invoice).
+  function submit() {
     const v = validate();
     if (v) return setError({ message: v });
     setError(null);
@@ -214,31 +205,21 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
       const res = await saveOrder({
         orderId: savedOrderId, retailerId: retailer!.id, creditDays: days, notes,
         lines: lines.map((l) => ({ product_id: l.product.id, qty: l.qty, discount_pct: effDisc(l), unit_price: isMgr && l.price !== null ? l.price : null })),
-        clientUuid: clientKey, confirm: confirmInvoice, overrideCredit, overrideStock,
-        payment: confirmInvoice && paidNum > 0 ? { amount: paidNum, method, reference: payRef } : null,
+        clientUuid: clientKey, confirm: false,
       });
       if (res.orderId) setSavedOrderId(res.orderId);
-      if (res.invoiceId) {
-        ls.set(`apex.recentProducts.${brandId || "all"}`, [...new Set([...lines.map((l) => l.product.id), ...recentProducts])].slice(0, 16));
-        rememberRetailer(retailer!);
-        setReviewing(false);
-        setDone({ invoiceId: res.invoiceId, invoiceNo: res.invoiceNo ?? "", total: grand, paid: res.paid ?? 0, due, shop: retailer!.shop_name, docs: (res.docs ?? []).filter((d) => d.invoiceId) });
-        if (res.error) setError({ message: res.error });
-        return;
-      }
       if (res.error) {
-        setError({ message: res.orderId && confirmInvoice ? `Saved as draft, but not invoiced: ${res.error}` : res.error, hint: res.hint });
+        setError({ message: res.error, hint: res.hint });
         if (res.hint === "RETAILER_DETAILS") setEditingDetails(true);
         return;
       }
-      if (!confirmInvoice && res.orderId) router.push(`/sales/orders/${res.orderId}?saved=1`);
+      ls.set(`apex.recentProducts.${brandId || "all"}`, [...new Set([...lines.map((l) => l.product.id), ...recentProducts])].slice(0, 16));
+      rememberRetailer(retailer!);
+      const docs = res.docs ?? [];
+      // A cart with two brands is saved as two quotations (one per brand).
+      if (docs.length > 1) router.push(`/sales/quotations?saved=${docs.map((d) => d.orderNo).filter(Boolean).join(",")}`);
+      else if (res.orderId) router.push(`/sales/orders/${res.orderId}?saved=1`);
     });
-  }
-  function newInvoice() {
-    setDone(null); setRetailer(null); setLines([]); setOverall(""); setPaid(""); setPayRef(""); setNotes(""); setTab("lines");
-    setSavedOrderId(null); setClientKey(newKey()); setOverrideStock(false); setOverrideCredit(false); setError(null); setQ("");
-    reloadCatalogue(brandId);
-    setTimeout(() => retailerRef.current?.focus(), 50);
   }
 
   // ---- keyboard shortcuts -----------------------------------------------------
@@ -248,7 +229,7 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
       if (e.key === "/" && !typing) { e.preventDefault(); setTab("lines"); setTimeout(() => searchRef.current?.focus(), 0); }
       else if (e.key === "F2" && !browse) { e.preventDefault(); setBrowse(true); }   // the catalogue closes itself
       else if (e.key === "F4") { e.preventDefault(); retailerRef.current?.focus(); }
-      else if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && isOffice && !done) { e.preventDefault(); const v = validate(); if (v) setError({ message: v }); else setReviewing(true); }
+      else if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !pending) { e.preventDefault(); submit(); }
       else if (e.key === "Escape" && !typing) { setQ(""); }
     };
     window.addEventListener("keydown", onKey);
@@ -268,42 +249,34 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
 
 
 
-  // ---- done screen --------------------------------------------------------------
-  if (done) return <DonePanel done={done} onNew={newInvoice} error={error?.message} />;
-
   const termValue = custom ? "custom" : String(days);
-  const steps = ["Draft", "Invoice", "Dispatched", "Delivered"];
-  const canInvoice = isOffice;
-  const openReview = () => { const v = validate(); if (v) setError({ message: v }); else { setError(null); setReviewing(true); } };
+  const saveLabel = isOffice ? "Save quotation" : "Send quotation to office";
 
   return (
     <div className="pb-28 xl:pb-6">
       {/* Action bar: primary actions on the left, where the document stands on the right */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        {canInvoice ? (
-          <Button className="h-10" disabled={pending || !lines.length || !retailer} onClick={openReview}>
-            <FileText className="size-4" /> Generate invoice <Kbd className="hidden border-on-fill/30 bg-on-fill/15 text-on-fill sm:inline-flex">Ctrl ↵</Kbd>
-          </Button>
-        ) : (
-          <Button className="h-10" disabled={pending || !lines.length || !retailer} onClick={() => submit(false)}>{pending ? "Saving…" : "Send quotation to office"}</Button>
-        )}
-        {canInvoice && <Button variant="secondary" className="h-10" disabled={pending || !lines.length || !retailer} onClick={() => submit(false)}>{savedOrderId ? "Save draft" : "Save as draft"}</Button>}
+        <Button className="h-10" disabled={pending || !lines.length || !retailer} onClick={submit}>
+          <FileText className="size-4" /> {pending ? "Saving…" : saveLabel} <Kbd className="hidden border-on-fill/30 bg-on-fill/15 text-on-fill sm:inline-flex">Ctrl ↵</Kbd>
+        </Button>
         <Button variant="secondary" className="h-10" onClick={() => setBrowse(true)}><LayoutGrid className="size-4" /> Catalogue</Button>
         {lines.length > 0 && <Button variant="ghost" className="h-10" onClick={clearCart}>Clear</Button>}
-        <ol aria-label="Status" className="ml-auto hidden items-center rounded-full border border-line bg-surface p-1 md:flex">
-          {steps.map((s, i) => (
-            <li key={s} aria-current={i === 0 ? "step" : undefined} className={cn("rounded-full px-3.5 py-1.5 text-[13px]", i === 0 ? "bg-primary-soft font-semibold text-primary-text" : "text-text-3")}>{s}</li>
-          ))}
-        </ol>
+        {initial && <Link href={`/sales/orders/${initial.orderId}`} className="inline-flex h-10 items-center rounded-[var(--radius-control)] px-3 text-sm font-medium text-text-2 hover:bg-sunken hover:text-text">Discard changes</Link>}
+        <DocSteps at={0} className="ml-auto hidden md:flex" />
       </div>
+      <p className="mb-4 -mt-1 text-[13px] text-text-2">
+        {isOffice
+          ? "Save the quotation first. Then open it and choose Create invoice to check the invoice draft and confirm it."
+          : "The office turns your quotation into an invoice."}
+      </p>
 
       <div className="rounded-[var(--radius-sheet)] border border-line bg-surface shadow-[var(--shadow-card)]">
         {/* Document head */}
         <div className="px-4 pt-5 pb-4 sm:px-6 sm:pt-6">
           <div className="mb-5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <h2 className="text-[26px] font-semibold tracking-[-0.02em] text-text">{initial ? <span className="font-mono text-[22px]">{initial.orderNo}</span> : "New invoice"}</h2>
-            {initial && <Badge tone="violet">Draft</Badge>}
-            {split.length > 1 && <span className="text-[13px] text-text-2">Becomes {split.length} invoices, one per brand</span>}
+            <h2 className="text-[26px] font-semibold tracking-[-0.02em] text-text">{initial ? <span className="font-mono text-[22px]">{initial.orderNo}</span> : "New quotation"}</h2>
+            <Badge tone="violet">Quotation</Badge>
+            {split.length > 1 && <span className="text-[13px] text-text-2">Saved as {split.length} quotations, one per brand</span>}
           </div>
 
           <div className="grid gap-x-10 gap-y-4 lg:grid-cols-[1.25fr_1fr]">
@@ -321,8 +294,8 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
               )}
             </div>
 
-            <dl className="grid grid-cols-[auto_1fr] items-center gap-x-6 gap-y-3 text-sm">
-              <dt className="text-[13px] font-medium text-text">Invoice date</dt>
+            <dl className="grid content-start grid-cols-[auto_1fr] items-center gap-x-6 gap-y-3 text-sm">
+              <dt className="text-[13px] font-medium text-text">Quotation date</dt>
               <dd className="tabular text-text">{fmtDate(today)} <span className="text-text-3">· today</span></dd>
 
               <dt className="text-[13px] font-medium text-text"><label htmlFor="terms">Payment terms</label></dt>
@@ -339,22 +312,21 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
                 )}
               </dd>
 
-              <dt className="text-[13px] font-medium text-text"><label htmlFor="due">Due date</label></dt>
-              <dd className="flex flex-wrap items-center gap-2">
-                <Input id="due" type="date" min={today} value={due} className="h-9 w-44"
-                  onChange={(e) => { if (!e.target.value) return; setCustom(true); setDays(Math.max(0, Math.round((Date.parse(e.target.value) - Date.parse(today)) / 864e5))); }} />
-                <span className="text-xs text-text-2"><b className="tabular font-medium text-text">{fmtDate(due)}</b> · {days === 0 ? "pay now" : `${days} days`}{retailer && retailer.credit_days !== days ? ` · shop default ${retailer.credit_days}` : ""}</span>
+              <dt className="text-[13px] font-medium text-text">Due date</dt>
+              <dd className="text-xs text-text-2">
+                <b className="tabular font-medium text-text">{days === 0 ? "On the invoice date" : `${days} days after the invoice date`}</b>
+                {" · "}{fmtDate(due)} if invoiced today{retailer && retailer.credit_days !== days ? ` · shop default ${retailer.credit_days} days` : ""}
               </dd>
             </dl>
           </div>
         </div>
 
         {/* Tabs: products / payment & note */}
-        <div role="tablist" aria-label="Invoice sections" className="flex gap-1 border-b border-line px-3 sm:px-5">
-          {(["lines", "payment"] as const).map((t) => (
+        <div role="tablist" aria-label="Quotation sections" className="flex gap-1 border-b border-line px-3 sm:px-5">
+          {(["lines", "note"] as const).map((t) => (
             <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
               className={cn("relative flex h-11 items-center gap-2 px-3 text-sm font-medium transition-colors", tab === t ? "text-text" : "text-text-2 hover:text-text")}>
-              {t === "lines" ? "Products" : isOffice ? "Payment & note" : "Note"}
+              {t === "lines" ? "Products" : "Note"}
               {t === "lines" && lines.length > 0 && <span className="tabular min-w-5 rounded-full bg-primary-soft px-1.5 text-center text-xs leading-5 text-primary-text">{lines.length}</span>}
               {tab === t && <m.span layoutId="bill-tab" className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-primary" transition={spring.snappy} />}
             </button>
@@ -365,7 +337,7 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
           <div>
             {shortInfo.length > 0 && (
               <div className="px-3 pt-4 sm:px-5">
-                <ShortStockBanner lines={shortInfo} isManager={isMgr} override={overrideStock} onOverride={setOverrideStock} onUseAvailable={useAvailable} onSaveDraft={isOffice ? () => submit(false) : undefined} />
+                <ShortStockBanner stage="quote" lines={shortInfo} isManager={isMgr} onUseAvailable={useAvailable} />
               </div>
             )}
             {lines.length > 0 ? (
@@ -395,34 +367,11 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
             )}
           </div>
         ) : (
-          <div className="grid gap-6 px-4 py-5 sm:px-6 lg:grid-cols-2">
-            {isOffice && (
-              <section aria-labelledby="pay-h" className="space-y-3">
-                <h3 id="pay-h" className="text-sm font-semibold text-text">Paid now</h3>
-                <div className="flex items-center gap-2">
-                  <Input type="number" min={0} step="1" value={paid} placeholder="0" onChange={(e) => setPaid(e.target.value)} className="tabular h-10 w-40 text-right font-semibold" aria-label="Amount paid now" />
-                  {grand > 0 && paidNum < grand && <button type="button" onClick={() => setPaid(String(grand))} className="text-[13px] font-medium text-primary-text hover:underline">Paid in full ({inr(grand, { decimals: false })})</button>}
-                </div>
-                {paidNum > 0 && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div role="radiogroup" aria-label="Payment method" className="flex rounded-full bg-sunken p-1">
-                      {METHODS.map((mm) => (
-                        <button key={mm.k} role="radio" aria-checked={method === mm.k} type="button" onClick={() => setMethod(mm.k)}
-                          className={cn("relative h-8 rounded-full px-3 text-[13px] font-medium", method === mm.k ? "text-text" : "text-text-2")}>
-                          {method === mm.k && <m.span layoutId="bill-method" className="absolute inset-0 rounded-full bg-raised shadow-[var(--shadow-card)]" transition={spring.snappy} />}
-                          <span className="relative">{mm.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                    {method !== "cash" && <Input value={payRef} onChange={(e) => setPayRef(e.target.value)} placeholder={method === "cheque" ? "Cheque no." : "UTR / reference"} className="h-9 w-48" />}
-                  </div>
-                )}
-                <p className="text-sm text-text-2">Balance due {days ? `by ${fmtDate(due)}` : "today"}: <b className="tabular text-text">{inr(grand - paidNum)}</b></p>
-              </section>
-            )}
+          <div className="max-w-2xl px-4 py-5 sm:px-6">
             <section aria-labelledby="note-h" className="space-y-2">
-              <h3 id="note-h" className="text-sm font-semibold text-text">Note on invoice</h3>
-              <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Printed on the invoice (optional)" />
+              <h3 id="note-h" className="text-sm font-semibold text-text">Note</h3>
+              <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Printed on the quotation and the invoice (optional)" />
+              <p className="text-xs text-text-2">Payment received at the counter is entered on the invoice draft, when you confirm the invoice.</p>
             </section>
           </div>
         )}
@@ -464,7 +413,7 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
         {error && <div className="px-4 pb-5 sm:px-6"><div key={error.message} className="nudge"><Alert>{error.message}</Alert></div></div>}
       </div>
 
-      <p className="mt-3 hidden items-center gap-1.5 text-xs text-text-3 lg:flex"><Keyboard className="size-3.5" /> F4 retailer · / add product · F2 catalogue · Ctrl ↵ invoice</p>
+      <p className="mt-3 hidden items-center gap-1.5 text-xs text-text-3 lg:flex"><Keyboard className="size-3.5" /> F4 retailer · / add product · F2 catalogue · Ctrl ↵ save quotation</p>
 
       {/* Phone: total + main action, frosted */}
       {lines.length > 0 && (
@@ -473,9 +422,7 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
             <div className="text-xs text-text-2">{lines.length} product{lines.length === 1 ? "" : "s"} · {fmtQty(totalQty)} qty</div>
             <div className="tabular text-lg font-semibold text-text">{inr(grand)}</div>
           </div>
-          {canInvoice
-            ? <Button className="h-11" disabled={pending || !retailer} onClick={openReview}>Generate invoice</Button>
-            : <Button className="h-11" disabled={pending || !retailer} onClick={() => submit(false)}>Send to office</Button>}
+          <Button className="h-11" disabled={pending || !retailer} onClick={submit}>{pending ? "Saving…" : isOffice ? "Save quotation" : "Send to office"}</Button>
         </div>
       )}
 
@@ -507,54 +454,6 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
           />
         )}
       </AnimatePresence>
-      {reviewing && retailer && (
-        <Dialog title="Invoice summary" onClose={() => setReviewing(false)}>
-          <div className="space-y-3 text-sm">
-            <div className="flex items-start justify-between gap-3 rounded-xl bg-slate-50 p-3">
-              <div>
-                <div className="font-semibold">{retailer.shop_name}</div>
-                <div className="text-xs text-slate-500">{retailer.gstin ? `GSTIN ${retailer.gstin}` : "Unregistered"} · {igst ? "IGST" : "CGST + SGST"}</div>
-              </div>
-              <span className="flex flex-wrap justify-end gap-1">{split.map((g) => <span key={g.id} className={cn("rounded-md px-2 py-0.5 text-xs font-bold", brandTone(g.code).solid)}>{g.name}</span>)}</span>
-            </div>
-            {split.length > 1 && (
-              <div className="rounded-lg bg-sky-50 p-3 text-sky-900 ring-1 ring-sky-200">
-                <div className="mb-1 font-semibold">This bill becomes {split.length} invoices — one per brand, each with its own number:</div>
-                {split.map((g) => <div key={g.id} className="tabular flex justify-between"><span>{g.name} · {g.items} product{g.items === 1 ? "" : "s"}</span><b>{inr(g.total)}</b></div>)}
-              </div>
-            )}
-            <dl className="tabular space-y-1">
-              <Row k={`${lines.length} products · ${fmtQty(totalQty)} qty`} v="" />
-              <Row k="Taxable value" v={inr(taxable)} />
-              <Row k="GST" v={inr(tax)} />
-              {discount > 0 && <Row k="Discount given" v={inr(discount)} tone="green" />}
-              <div className="flex justify-between border-t border-slate-200 pt-1 text-base font-bold"><dt>Grand total</dt><dd>{inr(grand)}</dd></div>
-              {paidNum > 0 && <Row k={`Paid now (${METHODS.find((m) => m.k === method)?.label})`} v={inr(paidNum)} tone="green" />}
-              <Row k={`Balance due ${fmtDate(due)} (${days ? `${days} days` : "immediate"})`} v={inr(grand - paidNum)} />
-            </dl>
-            {missing.length > 0 && (
-              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-amber-900">
-                A GST invoice to this shop needs its <b>{missing.join(" and ")}</b>.
-                <Button size="sm" className="mt-2 block" onClick={() => setEditingDetails(true)}>Complete details now</Button>
-              </div>
-            )}
-            <ShortStockBanner lines={shortInfo} isManager={isMgr} override={overrideStock} onOverride={setOverrideStock} />
-            {overLimit && isMgr && (
-              <label className="flex items-center gap-2 rounded-lg bg-red-50 p-3 font-semibold text-red-800"><input type="checkbox" checked={overrideCredit} onChange={(e) => setOverrideCredit(e.target.checked)} className="size-4" /> Allow over credit limit (recorded)</label>
-            )}
-            {error && <Alert>{error.message}</Alert>}
-            <div className="flex justify-end gap-2 pt-1">
-              <Button variant="secondary" onClick={() => setReviewing(false)}>Back</Button>
-              <Button className="bg-primary hover:bg-primary-hover" autoFocus
-                disabled={pending || missing.length > 0 || (shortLines.length > 0 && !overrideStock) || (overLimit && !overrideCredit && isMgr)}
-                onClick={() => submit(true)}>
-                {pending ? "Generating…" : "Confirm & generate invoice"}
-              </Button>
-            </div>
-            <p className="text-xs text-slate-400">The invoice number is given now. Stock leaves the warehouse when the order is dispatched.</p>
-          </div>
-        </Dialog>
-      )}
       {editingDetails && retailer && (
         <BillingDetailsDialog retailer={retailer} onClose={() => setEditingDetails(false)} onSaved={(r) => { setRetailer(r); rememberRetailer(r); setEditingDetails(false); setError(null); }} />
       )}
@@ -568,53 +467,6 @@ function Row({ k, v, tone }: { k: string; v: string; tone?: "green" }) {
     <div className="flex justify-between gap-3">
       <dt className="text-slate-500">{k}</dt>
       <dd className={cn("font-medium", tone === "green" && "text-emerald-700")}>{v}</dd>
-    </div>
-  );
-}
-
-type Done = { invoiceId: string; invoiceNo: string; total: number; paid: number; due: string; shop: string; docs: SavedDoc[] };
-
-// After the invoice: print, download, WhatsApp, next bill.
-function DonePanel({ done, onNew, error }: { done: Done; onNew: () => void; error?: string }) {
-  const [sharing, start] = useTransition();
-  const [shareError, setShareError] = useState<string | null>(null);
-  const pdf = `/api/pdf/invoice/${done.invoiceId}`;
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); onNew(); } };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onNew]);
-  return (
-    <div className="mx-auto max-w-xl py-6 text-center">
-      <CheckCircle2 className="mx-auto size-20 text-emerald-500" />
-      <h1 className="mt-3 text-2xl font-bold">{done.docs.length > 1 ? `${done.docs.length} invoices created` : `Invoice ${done.invoiceNo} created`}</h1>
-      <p className="mt-1 text-slate-600">{done.shop} · <b className="tabular">{inr(done.total)}</b>{done.paid > 0 ? ` · paid ${inr(done.paid)}` : ""} · {done.total - done.paid > 0 ? `balance due ${fmtDate(done.due)}` : "fully paid"}</p>
-      {error && <div className="mt-3 text-left"><Alert>{error}</Alert></div>}
-      {done.docs.length > 1 && (
-        <ul className="mt-5 divide-y divide-slate-100 rounded-xl bg-surface text-left ring-1 ring-slate-200">
-          {done.docs.map((d) => (
-            <li key={d.invoiceId} className="flex flex-wrap items-center gap-2 p-3">
-              <div className="min-w-0 flex-1"><div className="font-semibold">{d.brandName}</div><div className="font-mono text-xs text-slate-500">{d.invoiceNo}</div></div>
-              <span className="tabular font-semibold">{inr(d.total)}</span>
-              <a href={`/api/pdf/invoice/${d.invoiceId}`} target="_blank" rel="noopener" className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-on-fill">Print</a>
-              <a href={`/api/pdf/invoice/${d.invoiceId}?download=1`} className="rounded-lg px-3 py-1.5 text-sm font-semibold ring-1 ring-slate-300">PDF</a>
-              <Link href={`/sales/invoices/${d.invoiceId}`} className="rounded-lg px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">Open</Link>
-            </li>
-          ))}
-        </ul>
-      )}
-      <div className={cn("mt-6 grid gap-3 sm:grid-cols-3", done.docs.length > 1 && "hidden")}>
-        <a href={pdf} target="_blank" rel="noopener" className="flex h-14 items-center justify-center gap-2 rounded-xl bg-primary font-semibold text-on-fill hover:bg-primary-hover"><Printer className="size-5" /> Print</a>
-        <a href={`${pdf}?download=1`} className="flex h-14 items-center justify-center gap-2 rounded-xl bg-surface font-semibold ring-1 ring-slate-300 hover:bg-slate-50"><Download className="size-5" /> PDF</a>
-        <button type="button" disabled={sharing} onClick={() => start(async () => { setShareError(null); const r = await shareOnWhatsApp("invoice", done.invoiceId, ""); if (r.url) window.open(r.url, "_blank", "noopener"); else setShareError(r.error ?? "Could not share"); })}
-          className="flex h-14 items-center justify-center gap-2 rounded-xl bg-[#25D366] font-semibold text-on-fill hover:bg-[#1ebe5b] disabled:opacity-60"><MessageCircle className="size-5" /> {sharing ? "Preparing…" : "WhatsApp"}</button>
-      </div>
-      {shareError && <p className="mt-2 text-sm text-red-700">{shareError}</p>}
-      <div className="mt-4 flex flex-col justify-center gap-2 sm:flex-row">
-        <Button className="h-12 bg-primary px-6 text-base font-bold hover:bg-primary-hover" onClick={onNew}><Plus className="size-5" /> New invoice</Button>
-        <Link href={`/sales/invoices/${done.invoiceId}`} className="flex h-12 items-center justify-center rounded-lg px-4 text-sm font-medium text-slate-600 hover:bg-slate-100">Open invoice</Link>
-      </div>
-      <p className="mt-3 text-xs text-slate-400">Ctrl+Enter starts the next invoice.</p>
     </div>
   );
 }
