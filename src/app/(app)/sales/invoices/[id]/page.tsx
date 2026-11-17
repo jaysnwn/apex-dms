@@ -29,7 +29,8 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
     supabase.from("dispatches").select("*").eq("invoice_id", id).maybeSingle(),
     supabase.from("payment_allocations").select("amount, payment_id, payments(receipt_no, payment_date, method, status)").eq("invoice_id", id),
     supabase.from("credit_notes").select("id, credit_note_no, note_date, reason, grand_total, status").eq("invoice_id", id).order("created_at"),
-    supabase.from("orders").select("order_no, notes").eq("id", inv.order_id).maybeSingle(),
+    // opening-balance invoices (carried over from Odoo) have no order
+    inv.order_id ? supabase.from("orders").select("order_no, notes").eq("id", inv.order_id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   const { data: cnl } = (cns ?? []).length
     ? await supabase.from("credit_note_lines").select("invoice_line_id, qty").in("credit_note_id", (cns ?? []).map((c) => c.id))

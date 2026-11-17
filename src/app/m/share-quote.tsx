@@ -8,7 +8,7 @@ import { shareOnWhatsApp } from "@/lib/share-actions";
 //  • "Send PDF on WhatsApp" (main, on phones that can share files): the shop gets the
 //    PDF document itself — no link. The salesman picks WhatsApp, then the shop.
 //  • "Send as link": opens the shop's WhatsApp chat directly with a short PDF link.
-export function ShareQuote({ orderId, orderNo, mobile, fallbackText, compact = false }: { orderId: string; orderNo: string; mobile: string; fallbackText: string; compact?: boolean }) {
+export function ShareQuote({ orderId, orderNo, mobile, fallbackText, compact = false }: { orderId: string; orderNo: string; mobile: string | null; fallbackText: string; compact?: boolean }) {
   const [busy, setBusy] = useState<"link" | "file" | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [canShareFile, setCanShareFile] = useState(false);
@@ -32,7 +32,8 @@ export function ShareQuote({ orderId, orderNo, mobile, fallbackText, compact = f
     const res = await shareOnWhatsApp("quotation", orderId).catch(() => ({ url: undefined, error: "Network problem", localLink: false }));
     let url = res.url;
     if (!url) {
-      url = `https://wa.me/91${mobile}?text=${encodeURIComponent(fallbackText)}`;
+      // no number saved for the shop: WhatsApp asks whom to send it to
+      url = mobile ? `https://wa.me/91${mobile}?text=${encodeURIComponent(fallbackText)}` : `https://wa.me/?text=${encodeURIComponent(fallbackText)}`;
       setNote("The PDF link could not be made, so a text summary was sent instead.");
     } else if (res.localLink) {
       setNote("The link is long because the app is running on your computer. Once the app is online, links look like apex…/d/k3Xa9QpL.");

@@ -22,7 +22,7 @@ import { Sheet, Stepper } from "../ui";
 
 type Catalogue = { items: CatalogueItem[]; maxDiscount: number; loadedAt: string };
 type Cart = Record<string, { qty: number; discount: number }>;
-type DoneResult = { orderId?: string; orderNo?: string; total: number; offline: boolean; shop: string; mobile: string; lines: string[]; orders?: { orderId: string; orderNo: string; total: number; brand: string }[] };
+type DoneResult = { orderId?: string; orderNo?: string; total: number; offline: boolean; shop: string; mobile: string | null; lines: string[]; orders?: { orderId: string; orderNo: string; total: number; brand: string }[] };
 
 const CAT_KEY = "dms-m-catalogue";
 const OUT_KEY = "dms-m-outlets";
@@ -478,7 +478,7 @@ function Done({ result, onNew, onHome, companyName }: { result: DoneResult; onNe
         ) : result.orderId && result.orderNo ? (
           <ShareQuote orderId={result.orderId} orderNo={result.orderNo} mobile={result.mobile} fallbackText={text} />
         ) : (
-          <a href={`https://wa.me/91${result.mobile}?text=${encodeURIComponent(text)}`} target="_blank" rel="noopener" className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-[#25D366] text-lg font-bold text-on-fill">
+          <a href={result.mobile ? `https://wa.me/91${result.mobile}?text=${encodeURIComponent(text)}` : `https://wa.me/?text=${encodeURIComponent(text)}`} target="_blank" rel="noopener" className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-[#25D366] text-lg font-bold text-on-fill">
             <MessageCircle className="size-5" /> Send order summary on WhatsApp
           </a>
         )}

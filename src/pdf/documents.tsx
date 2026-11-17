@@ -8,7 +8,7 @@ import { amountInWords } from "@/lib/gst";
 export type ReceiptPdfData = {
   company: Company;
   payment: { receipt_no: string; payment_date: string; amount: number; method: string; reference_no: string | null; cheque_date: string | null; bank_name: string | null; status: string; notes: string | null };
-  retailer: { shop_name: string; code: string; mobile: string; billing_city: string | null };
+  retailer: { shop_name: string; code: string; mobile: string | null; billing_city: string | null };
   allocations: { invoice_no: string; invoice_date: string; amount: number }[];
   collectedBy: string | null;
 };
@@ -27,7 +27,7 @@ export function ReceiptPdf({ data }: { data: ReceiptPdfData }) {
           <View style={[s.box, { flex: 1 }]}>
             <Text style={[s.small, s.muted]}>RECEIVED FROM</Text>
             <Text style={s.h2}>{r.shop_name}</Text>
-            <Text>{r.code} · {r.mobile}{r.billing_city ? ` · ${r.billing_city}` : ""}</Text>
+            <Text>{r.code}{r.mobile ? ` · ${r.mobile}` : ""}{r.billing_city ? ` · ${r.billing_city}` : ""}</Text>
           </View>
           <View style={[s.box, { flex: 1 }]}>
             <Text style={[s.small, s.muted]}>AMOUNT</Text>
@@ -69,7 +69,7 @@ export function ReceiptPdf({ data }: { data: ReceiptPdfData }) {
 // ---------------------------------------------------------------------------
 export type StatementPdfData = {
   company: Company;
-  retailer: { shop_name: string; code: string; mobile: string; gstin: string | null; billing_address: string | null; billing_city: string | null; credit_days: number; credit_limit: number };
+  retailer: { shop_name: string; code: string; mobile: string | null; gstin: string | null; billing_address: string | null; billing_city: string | null; credit_days: number; credit_limit: number };
   from: string;
   to: string;
   opening: number;
@@ -93,7 +93,7 @@ export function StatementPdf({ data }: { data: StatementPdfData }) {
         <View style={[s.row, { gap: 8, marginBottom: 10 }]}>
           <View style={[s.box, { flex: 1.4 }]}>
             <Text style={s.h2}>{r.shop_name}</Text>
-            <Text>{r.code} · {r.mobile}</Text>
+            <Text>{r.code}{r.mobile ? ` · ${r.mobile}` : ""}</Text>
             {r.billing_address && <Text>{r.billing_address}{r.billing_city ? `, ${r.billing_city}` : ""}</Text>}
             <Text>GSTIN: {r.gstin ?? "Unregistered"}</Text>
             <Text style={s.muted}>Credit: {r.credit_days} days{Number(r.credit_limit) > 0 ? ` · limit ${money(r.credit_limit, false)}` : ""}</Text>

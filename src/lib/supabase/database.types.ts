@@ -1049,7 +1049,8 @@ export type Database = {
           invoice_date: string;
           invoice_no: string;
           is_igst: boolean;
-          order_id: string;
+          is_opening: boolean;
+          order_id: string | null;
           place_of_supply: string;
           retailer_id: string;
           retailer_snapshot: NonNullable<Json>;
@@ -1080,7 +1081,8 @@ export type Database = {
           invoice_date: string;
           invoice_no: string;
           is_igst: boolean;
-          order_id: string;
+          is_opening?: boolean;
+          order_id?: string | null;
           place_of_supply: string;
           retailer_id: string;
           retailer_snapshot: NonNullable<Json>;
@@ -1110,7 +1112,8 @@ export type Database = {
           invoice_date?: string;
           invoice_no?: string;
           is_igst?: boolean;
-          order_id?: string;
+          is_opening?: boolean;
+          order_id?: string | null;
           place_of_supply?: string;
           retailer_id?: string;
           retailer_snapshot?: NonNullable<Json>;
@@ -2683,7 +2686,7 @@ export type Database = {
           latitude: number | null;
           location_id: string | null;
           longitude: number | null;
-          mobile: string;
+          mobile: string | null;
           notes: string | null;
           owner_name: string | null;
           route_id: string | null;
@@ -2717,7 +2720,7 @@ export type Database = {
           latitude?: number | null;
           location_id?: string | null;
           longitude?: number | null;
-          mobile: string;
+          mobile?: string | null;
           notes?: string | null;
           owner_name?: string | null;
           route_id?: string | null;
@@ -2750,7 +2753,7 @@ export type Database = {
           latitude?: number | null;
           location_id?: string | null;
           longitude?: number | null;
-          mobile?: string;
+          mobile?: string | null;
           notes?: string | null;
           owner_name?: string | null;
           route_id?: string | null;
@@ -3863,6 +3866,8 @@ export type Database = {
           created_at: string;
           created_by: string | null;
           is_active: boolean;
+          removed_at: string | null;
+          removed_by: string | null;
           role: Database["public"]["Enums"]["app_role"];
           tenant_id: string;
           updated_at: string;
@@ -3874,6 +3879,8 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           is_active?: boolean;
+          removed_at?: string | null;
+          removed_by?: string | null;
           role: Database["public"]["Enums"]["app_role"];
           tenant_id: string;
           updated_at?: string;
@@ -3884,6 +3891,8 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           is_active?: boolean;
+          removed_at?: string | null;
+          removed_by?: string | null;
           role?: Database["public"]["Enums"]["app_role"];
           tenant_id?: string;
           updated_at?: string;
@@ -4273,7 +4282,7 @@ export type Database = {
         ComputedFields: never;
         Insert: {
           address?: string | null;
-          brand_id: string | null;
+          brand_id?: string | null;
           created_at?: string;
           id?: string;
           is_active?: boolean;
@@ -4536,7 +4545,7 @@ export type Database = {
           delivery_pincode: string | null;
           gstin: string | null;
           id: string;
-          mobile: string;
+          mobile: string | null;
           notes: string | null;
           owner_name: string | null;
           route_id: string | null;
@@ -5043,7 +5052,6 @@ export type Database = {
         };
         Returns: string;
       };
-      remove_member: { Args: { p_user: string }; Returns: string };
       record_supplier_payment: {
         Args: {
           p_allocations?: Json;
@@ -5069,6 +5077,7 @@ export type Database = {
         Returns: string;
       };
       reject_payment: { Args: { p_id: string; p_reason: string }; Returns: undefined };
+      remove_member: { Args: { p_user: string }; Returns: string };
       reopen_incentive: { Args: { p_payout_id: string }; Returns: undefined };
       reorder_suggestions: {
         Args: { p_brand: string };
@@ -5286,7 +5295,8 @@ export type Database = {
           invoice_date: string;
           invoice_no: string;
           is_igst: boolean;
-          order_id: string;
+          is_opening: boolean;
+          order_id: string | null;
           place_of_supply: string;
           retailer_id: string;
           retailer_snapshot: NonNullable<Json>;
@@ -5363,7 +5373,7 @@ export type Database = {
           delivery_pincode: string | null;
           gstin: string | null;
           id: string;
-          mobile: string;
+          mobile: string | null;
           notes: string | null;
           owner_name: string | null;
           route_id: string | null;
@@ -5406,7 +5416,7 @@ export type Database = {
           latitude: number | null;
           location_id: string | null;
           longitude: number | null;
-          mobile: string;
+          mobile: string | null;
           notes: string | null;
           owner_name: string | null;
           route_id: string | null;
@@ -5450,7 +5460,10 @@ export type Database = {
         Returns: undefined;
       };
       set_user_brands: { Args: { p_brands: string[]; p_user: string }; Returns: undefined };
-      start_stock_count: { Args: { p_brand_id?: string; p_notes?: string; p_warehouse_id: string }; Returns: string };
+      start_stock_count: {
+        Args: { p_brand_id?: string; p_notes?: string; p_warehouse_id: string };
+        Returns: string;
+      };
       storage_object_tenant: { Args: { p_name: string }; Returns: string };
       storage_user_folder: { Args: { p_name: string }; Returns: string };
       supplier_allocate_unallocated: { Args: { p_supplier_id: string }; Returns: number };

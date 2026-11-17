@@ -134,7 +134,7 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
     return {
       buffer,
       filename: `${safe(p.receipt_no)}.pdf`,
-      phone: r?.mobile,
+      phone: r?.mobile ?? undefined,
       shareText: `Received with thanks ₹${Number(p.amount).toLocaleString("en-IN")} from ${r?.shop_name} (receipt ${p.receipt_no}). — ${co.legal_name}`,
     };
   }
@@ -182,7 +182,7 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
     return {
       buffer,
       filename: `Statement_${safe(r.code)}_${to}.pdf`,
-      phone: r.mobile,
+      phone: r.mobile ?? undefined,
       shareText: `Dear ${r.shop_name}, your account statement up to ${to}: outstanding ₹${Number(bal?.outstanding ?? 0).toLocaleString("en-IN")}. — ${co.legal_name}`,
     };
   }
