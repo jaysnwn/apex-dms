@@ -194,7 +194,7 @@ function AdjustmentForm({ brandId, warehouses, onDone }: { brandId: string | nul
           <div className={cn("tabular mt-1 text-2xl font-bold", diff !== null && diff < 0 && "text-red-700", diff !== null && diff > 0 && "text-emerald-700")}>
             {diff === null ? "—" : `${diff > 0 ? "+" : ""}${fmtQty(diff)}`}
           </div>
-          {diff !== null && diff !== 0 && <div className="text-[11px] text-slate-500">{diff < 0 ? "shortage" : "extra stock"}</div>}
+          {diff !== null && diff !== 0 && <div className="text-xs text-slate-500">{diff < 0 ? "shortage" : "extra stock"}</div>}
         </div>
       </div>
 

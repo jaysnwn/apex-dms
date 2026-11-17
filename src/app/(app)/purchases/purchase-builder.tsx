@@ -206,15 +206,15 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, d
                       </div>
                       <div className="mt-2 flex flex-wrap items-end gap-3">
                         <div>
-                          <div className="mb-1 text-[11px] font-medium text-slate-500">Qty ({l.product.unit_code})</div>
+                          <div className="mb-1 text-xs font-medium text-slate-500">Qty ({l.product.unit_code})</div>
                           <Input type="number" min={0} step="any" inputMode="decimal" value={l.qty || ""} onChange={(e) => update(i, { qty: Number(e.target.value) })} className="tabular h-9 w-24" />
                         </div>
                         <div>
-                          <div className="mb-1 text-[11px] font-medium text-slate-500">Cost per unit</div>
+                          <div className="mb-1 text-xs font-medium text-slate-500">Cost per unit</div>
                           <Input type="number" min={0} step="0.01" value={Number.isNaN(l.cost) ? "" : l.cost} onChange={(e) => update(i, { cost: e.target.value === "" ? NaN : Number(e.target.value) })} className={cn("tabular h-9 w-28", changed && "border-amber-400 bg-amber-50")} />
                         </div>
                         <div>
-                          <div className="mb-1 text-[11px] font-medium text-slate-500">Cost is</div>
+                          <div className="mb-1 text-xs font-medium text-slate-500">Cost is</div>
                           <div className="flex h-9 rounded-lg border border-slate-300 p-0.5 text-xs">
                             {(["exclusive", "inclusive"] as const).map((m) => (
                               <button key={m} type="button" onClick={() => update(i, { mode: m })} className={cn("rounded-md px-2", l.mode === m ? "bg-primary text-on-fill" : "text-slate-600")}>
@@ -224,11 +224,11 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, d
                           </div>
                         </div>
                         <div>
-                          <div className="mb-1 text-[11px] font-medium text-slate-500">Disc. %</div>
+                          <div className="mb-1 text-xs font-medium text-slate-500">Disc. %</div>
                           <Input type="number" min={0} max={100} step="0.01" value={l.discount || ""} onChange={(e) => update(i, { discount: Number(e.target.value) })} className="tabular h-9 w-20" />
                         </div>
                       </div>
-                      {changed && <div className="mt-1 text-[11px] text-amber-700">Last cost {inr(l.product.purchase_cost)} {l.product.purchase_cost_mode === "inclusive" ? "incl." : "+"} GST</div>}
+                      {changed && <div className="mt-1 text-xs text-amber-700">Last cost {inr(l.product.purchase_cost)} {l.product.purchase_cost_mode === "inclusive" ? "incl." : "+"} GST</div>}
                     </div>
                     <div className="tabular text-right text-sm sm:min-w-32">
                       <div className="text-slate-500">Taxable {inr(c.taxable)}</div>

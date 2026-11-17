@@ -57,7 +57,7 @@ export default async function MyIncentivePage({ searchParams }: { searchParams: 
           </ul>
         </section>
       )}
-      <p className="px-2 text-center text-[11px] text-slate-400">Shops on your routes and shops you added count as yours. Payments count when received (cheques once cleared) and are applied to the oldest bills first.</p>
+      <p className="px-2 text-center text-xs text-slate-400">Shops on your routes and shops you added count as yours. Payments count when received (cheques once cleared) and are applied to the oldest bills first.</p>
     </div>
   );
 }

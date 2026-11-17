@@ -96,7 +96,7 @@ export function VerifyBoard({ payments }: { payments: PendingPayment[] }) {
                       <td className="px-3 py-2.5">
                         <span className={cn("inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold", TONE[p.method])}><I className="size-3.5" /> {PAYMENT_METHOD[p.method]}</span>
                         {p.reference_no && <div className="mt-0.5 font-mono text-xs text-slate-600">{p.reference_no}{p.bank_name ? ` · ${p.bank_name}` : ""}</div>}
-                        <div className="text-[11px] text-slate-400">{HINT[p.method]}</div>
+                        <div className="text-xs text-slate-400">{HINT[p.method]}</div>
                         {p.status === "cheque_pending" && <Badge tone="amber">Cheque not cleared yet</Badge>}
                       </td>
                       <td className="tabular px-3 py-2.5 text-right text-base font-semibold">{inr(p.amount)}</td>

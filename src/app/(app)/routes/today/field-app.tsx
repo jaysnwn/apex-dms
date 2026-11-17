@@ -357,11 +357,11 @@ export function FieldApp({ initial, mobile = false }: { initial: FieldDay | null
                 )}
 
                 <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                  <div className="rounded-lg bg-slate-50 p-2"><div className="text-[11px] text-slate-500">Outstanding</div><div className="tabular text-sm font-semibold">{inr(v.outstanding, { decimals: false })}</div></div>
-                  <div className={cn("rounded-lg p-2", v.overdue > 0 ? "bg-red-50" : "bg-slate-50")}><div className="text-[11px] text-slate-500">Overdue</div><div className={cn("tabular text-sm font-semibold", v.overdue > 0 ? "text-red-700" : "text-slate-400")}>{inr(v.overdue, { decimals: false })}</div></div>
-                  <div className="rounded-lg bg-slate-50 p-2"><div className="text-[11px] text-slate-500">Last paid</div><div className="text-xs font-medium">{v.last_payment ? `${inr(v.last_payment.amount, { decimals: false })} · ${date(v.last_payment.date)}` : "—"}</div></div>
+                  <div className="rounded-lg bg-slate-50 p-2"><div className="text-xs text-slate-500">Outstanding</div><div className="tabular text-sm font-semibold">{inr(v.outstanding, { decimals: false })}</div></div>
+                  <div className={cn("rounded-lg p-2", v.overdue > 0 ? "bg-red-50" : "bg-slate-50")}><div className="text-xs text-slate-500">Overdue</div><div className={cn("tabular text-sm font-semibold", v.overdue > 0 ? "text-red-700" : "text-slate-400")}>{inr(v.overdue, { decimals: false })}</div></div>
+                  <div className="rounded-lg bg-slate-50 p-2"><div className="text-xs text-slate-500">Last paid</div><div className="text-xs font-medium">{v.last_payment ? `${inr(v.last_payment.amount, { decimals: false })} · ${date(v.last_payment.date)}` : "—"}</div></div>
                 </div>
-                <div className="mt-1.5 text-[11px] text-slate-500">Last visit {v.last_visit ? date(v.last_visit) : "—"} · last order {v.last_order ? `${inr(v.last_order.amount, { decimals: false })} on ${date(v.last_order.date)}` : "—"}</div>
+                <div className="mt-1.5 text-xs text-slate-500">Last visit {v.last_visit ? date(v.last_visit) : "—"} · last order {v.last_order ? `${inr(v.last_order.amount, { decimals: false })} on ${date(v.last_order.date)}` : "—"}</div>
 
                 {v.overdue_bills.length > 0 && (
                   <ul className="mt-2 space-y-0.5 text-xs">
@@ -434,7 +434,7 @@ export function FieldApp({ initial, mobile = false }: { initial: FieldDay | null
 function Mini({ label, value, tone }: { label: string; value: string; tone: string }) {
   return (
     <div className="p-3">
-      <div className="text-[11px] text-slate-500">{label}</div>
+      <div className="text-xs text-slate-500">{label}</div>
       <div className={cn("tabular text-sm font-semibold", tone)}>{value}</div>
     </div>
   );

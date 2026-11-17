@@ -111,10 +111,10 @@ export default async function PurchasePage({ params, searchParams }: { params: P
                   <tr key={l.id}>
                     <td className="px-4 py-2.5"><div className="font-medium">{pr.name}</div><div className="font-mono text-xs text-slate-500">{pr.sku}{pr.hsn_code ? ` · HSN ${pr.hsn_code}` : ""}</div></td>
                     <td className="tabular px-3 py-2.5 text-right">{qty(l.qty)} {pr.unit_code}</td>
-                    <td className="tabular px-3 py-2.5 text-right">{inr(l.unit_cost)}<div className="text-[11px] text-slate-400">{l.cost_mode === "inclusive" ? "incl. GST" : "+ GST"}</div></td>
+                    <td className="tabular px-3 py-2.5 text-right">{inr(l.unit_cost)}<div className="text-xs text-slate-400">{l.cost_mode === "inclusive" ? "incl. GST" : "+ GST"}</div></td>
                     <td className="tabular px-3 py-2.5 text-right">{Number(l.discount_pct) ? `${Number(l.discount_pct)}%` : "—"}</td>
                     <td className="tabular px-3 py-2.5 text-right">{inr(l.taxable_value)}</td>
-                    <td className="tabular px-3 py-2.5 text-right">{inr(Number(l.cgst) + Number(l.sgst) + Number(l.igst))}<div className="text-[11px] text-slate-400">{Number(l.gst_rate)}%</div></td>
+                    <td className="tabular px-3 py-2.5 text-right">{inr(Number(l.cgst) + Number(l.sgst) + Number(l.igst))}<div className="text-xs text-slate-400">{Number(l.gst_rate)}%</div></td>
                     <td className="tabular px-4 py-2.5 text-right font-semibold">{inr(l.line_total)}</td>
                   </tr>
                 );

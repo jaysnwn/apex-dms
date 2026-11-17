@@ -114,7 +114,7 @@ export function DispatchBoard({
                         <Badge tone={waitDays >= 2 ? "red" : waitDays >= 1 ? "amber" : "blue"}>{waitDays === 0 ? "Invoiced today" : `Waiting ${waitDays}d`}</Badge>
                       </div>
                       <div className="text-sm text-slate-500">
-                        <span className="mr-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-700">{p.brand_name}</span>
+                        <span className="mr-1 rounded bg-slate-100 px-1.5 py-0.5 text-xs font-semibold text-slate-700">{p.brand_name}</span>
                         <Link href={`/sales/invoices/${p.id}`} className="font-mono hover:underline">{p.invoice_no}</Link> · {p.city ?? ""} · {inr(p.grand_total, { decimals: false })}
                         {wh && wh.id !== warehouse && <span className="block text-xs text-slate-400">from {wh.name}</span>}
                       </div>

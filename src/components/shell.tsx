@@ -147,7 +147,7 @@ export function Shell({ modules, role, userName, roleLabel, orgName, logoUrl, ca
       )}
       <span className={cn("min-w-0 leading-tight", collapsed && "lg:hidden")}>
         <span className="block truncate text-[14px] font-semibold text-text">{orgName}</span>
-        <span className="block text-[11.5px] text-text-2">{PLATFORM_NAME}</span>
+        <span className="block text-xs text-text-2">{PLATFORM_NAME}</span>
       </span>
     </Link>
   );
@@ -292,7 +292,7 @@ export function Shell({ modules, role, userName, roleLabel, orgName, logoUrl, ca
                 key={t.key}
                 href={t.href}
                 aria-current={active ? "page" : undefined}
-                className={cn("relative flex min-h-14 flex-1 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors", active ? "text-primary-text" : "text-text-2")}
+                className={cn("relative flex min-h-14 flex-1 flex-col items-center justify-center gap-1 text-xs font-medium transition-colors", active ? "text-primary-text" : "text-text-2")}
               >
                 {active && <m.span layoutId="tabbar-pill" className="absolute top-1.5 h-8 w-14 rounded-full bg-primary-soft" transition={spring.snappy} />}
                 <Icon className="relative size-[22px]" aria-hidden />
@@ -300,7 +300,7 @@ export function Shell({ modules, role, userName, roleLabel, orgName, logoUrl, ca
               </Link>
             );
           })}
-          <button onClick={() => setDrawer(true)} className="flex min-h-14 flex-1 flex-col items-center justify-center gap-1 text-[11px] font-medium text-text-2">
+          <button onClick={() => setDrawer(true)} className="flex min-h-14 flex-1 flex-col items-center justify-center gap-1 text-xs font-medium text-text-2">
             <Menu className="size-[22px]" aria-hidden />
             More
           </button>
@@ -318,7 +318,7 @@ function SideNav({ groups, pathname, collapsed, pinned, recent }: { groups: NavG
     <div className={cn("no-scrollbar flex-1 overflow-y-auto px-3 pb-4", collapsed && "px-2")}>
       {groups.map((g, gi) => (
         <div key={g.label ?? "home"} className={cn(gi > 0 && "mt-4")}>
-          {g.label && !collapsed && <div className="px-3 pb-1.5 text-[11.5px] font-medium text-text-2">{g.label}</div>}
+          {g.label && !collapsed && <div className="px-3 pb-1.5 text-xs font-medium text-text-2">{g.label}</div>}
           {g.label && collapsed && <div className="mx-auto mb-2 h-px w-6 bg-line" aria-hidden />}
           <ul className="space-y-0.5">
             {g.items.map((item) => (
@@ -369,7 +369,7 @@ function SideLink({ item, active, collapsed }: { item: NavItem; active: boolean;
 function MiniList({ label, items, pathname }: { label: string; items: { href: string; title: string }[]; pathname: string }) {
   return (
     <div className="mt-5">
-      <div className="px-3 pb-1 text-[11.5px] font-medium text-text-2">{label}</div>
+      <div className="px-3 pb-1 text-xs font-medium text-text-2">{label}</div>
       <ul>
         {items.map((p) => (
           <li key={p.href}>

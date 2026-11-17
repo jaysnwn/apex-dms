@@ -72,12 +72,12 @@ export default async function OutletPage({ params }: { params: Promise<{ id: str
         <div className="rounded-2xl bg-surface p-4 shadow-sm ring-1 ring-slate-200/70">
           <div className="text-xs text-slate-500">Outstanding</div>
           <div className="tabular text-xl font-bold">{inr(outstanding, { decimals: false })}</div>
-          <div className="text-[11px] text-slate-400">{r.credit_days} days credit{Number(r.credit_limit) > 0 ? ` · limit ${inr(r.credit_limit, { decimals: false })}` : ""}</div>
+          <div className="text-xs text-slate-400">{r.credit_days} days credit{Number(r.credit_limit) > 0 ? ` · limit ${inr(r.credit_limit, { decimals: false })}` : ""}</div>
         </div>
         <div className={cn("rounded-2xl p-4 shadow-sm ring-1", overdue > 0 ? "bg-red-50 ring-red-200" : "bg-emerald-50 ring-emerald-200")}>
           <div className={cn("text-xs", overdue > 0 ? "text-red-700" : "text-emerald-700")}>Overdue</div>
           <div className={cn("tabular text-xl font-bold", overdue > 0 ? "text-red-700" : "text-emerald-700")}>{inr(overdue, { decimals: false })}</div>
-          <div className="text-[11px] text-slate-500">{overdue > 0 ? "collect today" : "nothing overdue"}</div>
+          <div className="text-xs text-slate-500">{overdue > 0 ? "collect today" : "nothing overdue"}</div>
         </div>
       </section>
 
@@ -124,10 +124,10 @@ export default async function OutletPage({ params }: { params: Promise<{ id: str
             {(pays ?? []).map((p) => (
               <li key={p.receipt_no} className="flex items-center justify-between px-4 py-2.5 text-sm">
                 <span>{date(p.payment_date)}<span className="block text-xs text-slate-500 capitalize">{p.method.replace("_", " ")}{p.status === "cheque_pending" ? " · cheque not cleared" : p.status === "bounced" ? " · bounced" : ""}</span>
-                  {p.status === "cancelled" && p.notes?.includes("Rejected at verification") ? <span className="mt-0.5 inline-block rounded bg-red-100 px-1.5 text-[11px] font-semibold text-red-800">Rejected by office</span>
+                  {p.status === "cancelled" && p.notes?.includes("Rejected at verification") ? <span className="mt-0.5 inline-block rounded bg-red-100 px-1.5 text-xs font-semibold text-red-800">Rejected by office</span>
                     : (p.status === "received" || p.status === "cheque_pending") && (p.verified_at
-                      ? <span className="mt-0.5 inline-block rounded bg-emerald-100 px-1.5 text-[11px] font-semibold text-emerald-800">Verified</span>
-                      : <span className="mt-0.5 inline-block rounded bg-amber-100 px-1.5 text-[11px] font-semibold text-amber-900">Hand over to office</span>)}
+                      ? <span className="mt-0.5 inline-block rounded bg-emerald-100 px-1.5 text-xs font-semibold text-emerald-800">Verified</span>
+                      : <span className="mt-0.5 inline-block rounded bg-amber-100 px-1.5 text-xs font-semibold text-amber-900">Hand over to office</span>)}
                 </span>
                 <span className={cn("tabular font-semibold", p.status === "bounced" || p.status === "cancelled" ? "text-red-600 line-through" : "text-emerald-700")}>{inr(p.amount, { decimals: false })}</span>
               </li>

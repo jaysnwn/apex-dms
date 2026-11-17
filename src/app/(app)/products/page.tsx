@@ -146,7 +146,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                     {img ? <img src={img} alt={p.name} className="h-full w-full object-contain p-3" loading="lazy" /> : <div className="grid h-full place-items-center text-slate-300"><ImageOff className="size-10" /></div>}
                   </div>
                   <div className="flex flex-1 flex-col p-3">
-                    <div className="text-[11px] font-semibold tracking-wide text-accent-700 uppercase">{p.category_name ?? p.brand_name}</div>
+                    <div className="text-xs font-semibold tracking-wide text-accent-700 uppercase">{p.category_name ?? p.brand_name}</div>
                     <div className="mt-0.5 line-clamp-2 text-sm font-medium text-slate-900">{p.name}</div>
                     <div className="mt-0.5 font-mono text-xs text-slate-500">{p.sku}</div>
                     <div className="mt-auto flex items-end justify-between gap-2 pt-3">
@@ -196,8 +196,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                     </td>
                     <td className="px-3 py-2 font-mono text-xs text-slate-600">{p.sku}</td>
                     <td className="px-3 py-2 text-slate-600">{p.category_name ?? "—"}</td>
-                    {seesCost && <td className="tabular px-3 py-2 text-right text-slate-600">{c ? inr(c.purchase_cost) : "—"}{c?.purchase_cost_mode === "inclusive" && <span className="text-[10px] text-slate-400"> incl.</span>}</td>}
-                    <td className="tabular px-3 py-2 text-right font-semibold">{inr(p.retailer_price)}{p.retailer_price_mode === "inclusive" && <span className="text-[10px] font-normal text-slate-400"> incl.</span>}</td>
+                    {seesCost && <td className="tabular px-3 py-2 text-right text-slate-600">{c ? inr(c.purchase_cost) : "—"}{c?.purchase_cost_mode === "inclusive" && <span className="text-xs text-slate-400"> incl.</span>}</td>}
+                    <td className="tabular px-3 py-2 text-right font-semibold">{inr(p.retailer_price)}{p.retailer_price_mode === "inclusive" && <span className="text-xs font-normal text-slate-400"> incl.</span>}</td>
                     <td className="tabular px-3 py-2 text-right text-slate-600">{p.gst_rate}%</td>
                     <td className="tabular px-3 py-2 text-right font-semibold">{qty(avail(p.id))}</td>
                     <td className="px-3 py-2">{archivedView ? <Badge>Archived</Badge> : <StockPill st={st} />}</td>

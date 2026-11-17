@@ -59,18 +59,18 @@ export function RouteOutlets({ towns, outlets }: { towns: Town[]; outlets: Outle
                         <Link href={`/m/outlets/${o.retailer_id}`} className="font-semibold">{o.shop_name}</Link>
                         <div className="truncate text-xs text-slate-500">{[o.mobile, o.address].filter(Boolean).join(" · ")}</div>
                       </div>
-                      {st ? <Badge tone={st.tone}>{st.label}</Badge> : <span className="text-[11px] text-slate-400">not today</span>}
+                      {st ? <Badge tone={st.tone}>{st.label}</Badge> : <span className="text-xs text-slate-400">not today</span>}
                     </div>
                     {t?.geo_status && <div className="mt-1 pl-8"><Badge tone={GEO_STATUS[t.geo_status].tone}>{GEO_STATUS[t.geo_status].label}</Badge></div>}
                     <div className="mt-2.5 grid grid-cols-2 gap-1.5 text-center">
-                      <div className="rounded-lg bg-slate-50 p-1.5"><div className="text-[10px] text-slate-500">Outstanding</div><div className="tabular text-sm font-semibold">{inr(o.outstanding, { decimals: false })}</div></div>
-                      <div className={cn("rounded-lg p-1.5", o.overdue > 0 ? "bg-red-50" : "bg-slate-50")}><div className="text-[10px] text-slate-500">Overdue</div><div className={cn("tabular text-sm font-semibold", o.overdue > 0 ? "text-red-700" : "text-slate-400")}>{inr(o.overdue, { decimals: false })}</div></div>
+                      <div className="rounded-lg bg-slate-50 p-1.5"><div className="text-xs text-slate-500">Outstanding</div><div className="tabular text-sm font-semibold">{inr(o.outstanding, { decimals: false })}</div></div>
+                      <div className={cn("rounded-lg p-1.5", o.overdue > 0 ? "bg-red-50" : "bg-slate-50")}><div className="text-xs text-slate-500">Overdue</div><div className={cn("tabular text-sm font-semibold", o.overdue > 0 ? "text-red-700" : "text-slate-400")}>{inr(o.overdue, { decimals: false })}</div></div>
                     </div>
-                    <div className="mt-1.5 text-[11px] text-slate-500">
+                    <div className="mt-1.5 text-xs text-slate-500">
                       Visited {o.last_visit ? date(o.last_visit) : "—"} · ordered {o.last_order ? `${date(o.last_order.date)} (${inr(o.last_order.amount, { decimals: false })})` : "—"} · paid {o.last_payment ? `${date(o.last_payment.date)} (${inr(o.last_payment.amount, { decimals: false })})` : "—"}
                     </div>
                   </div>
-                  <div className="grid grid-cols-5 border-t border-slate-100 text-[11px] font-medium">
+                  <div className="grid grid-cols-5 border-t border-slate-100 text-xs font-medium">
                     {o.mobile
                       ? <a href={`tel:${o.mobile}`} className="flex flex-col items-center gap-0.5 py-2 text-slate-700"><Phone className="size-4" /> Call</a>
                       : <span title="No number on file" className="flex flex-col items-center gap-0.5 py-2 text-slate-300"><Phone className="size-4" /> Call</span>}

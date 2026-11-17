@@ -112,7 +112,7 @@ function Criterion({ icon: Icon, title, amount, amountLabel, met, value, target,
             <div className={cn("h-full rounded-full", met ? "bg-emerald-500" : p >= 60 ? "bg-primary" : "bg-amber-500")} style={{ width: `${p}%` }} />
           </div>
           <p className={cn("mt-1.5 text-xs font-medium", met ? "text-emerald-700" : "text-slate-600")}>{hint}</p>
-          {note && <p className="mt-0.5 text-[11px] text-slate-400">{note}</p>}
+          {note && <p className="mt-0.5 text-xs text-slate-400">{note}</p>}
         </div>
       </div>
       {children && <div className="mt-3 space-y-2">{children}</div>}
@@ -123,7 +123,7 @@ function Criterion({ icon: Icon, title, amount, amountLabel, met, value, target,
 function SlabChip({ label, amount, active }: { label: string; amount: number; active: boolean }) {
   return (
     <div className={cn("rounded-xl px-1 py-1.5 text-center", active ? (amount > 0 ? "bg-primary text-on-fill shadow-sm" : "bg-slate-700 text-on-fill") : "bg-slate-100 text-slate-500")}>
-      <div className="tabular text-[10px] leading-tight">{label}</div>
+      <div className="tabular text-xs leading-tight">{label}</div>
       <div className="tabular text-xs font-bold">{inr(amount, { decimals: false })}</div>
     </div>
   );
@@ -146,7 +146,7 @@ function ShopList({ title, rows, tone = "slate", open, shopHref, orderHref }: {
           <li key={x.retailer_id} className="flex items-center gap-2 px-3 py-2">
             <Link href={shopHref(x.retailer_id)} className="min-w-0 flex-1">
               <span className="block truncate text-sm font-medium">{x.shop_name}</span>
-              {sub && <span className="block truncate text-[11px] text-slate-500">{sub}</span>}
+              {sub && <span className="block truncate text-xs text-slate-500">{sub}</span>}
             </Link>
             {right && <span className="tabular text-sm font-semibold">{right}</span>}
             {orderHref && <Link href={orderHref(x.retailer_id)} className="rounded-lg bg-primary px-2.5 py-1 text-xs font-bold text-on-fill">Order</Link>}

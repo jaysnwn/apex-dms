@@ -102,7 +102,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
               <li key={s.label} className="flex flex-col items-center text-center">
                 {s.done ? <CheckCircle2 className="size-6 text-emerald-600" /> : <Circle className="size-6 text-slate-300" />}
                 <span className={cn("mt-1 text-sm font-medium", s.done ? "text-slate-900" : "text-slate-400")}>{s.label}</span>
-                {s.when && <span className="text-[11px] text-slate-500">{s.when}</span>}
+                {s.when && <span className="text-xs text-slate-500">{s.when}</span>}
               </li>
             ))}
           </ol>

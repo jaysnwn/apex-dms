@@ -82,7 +82,7 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
             ))}
           </tbody>
         </table>
-        <div className="flex flex-wrap gap-3 border-t border-slate-100 px-3 py-2 text-[11px] text-slate-500">
+        <div className="flex flex-wrap gap-3 border-t border-slate-100 px-3 py-2 text-xs text-slate-500">
           <span><span className="rounded bg-emerald-50 px-1 ring-1 ring-emerald-200">CODE · n</span> planned, n outlets</span>
           <span><span className="rounded bg-violet-50 px-1 ring-1 ring-violet-200">extra</span> one-time day</span>
           <span><span className="rounded bg-amber-50 px-1 ring-1 ring-amber-200">skipped / paused</span></span>

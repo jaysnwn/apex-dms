@@ -35,20 +35,20 @@ export function HomeView({ h, firstName }: { h: HomeData; firstName: string }) {
               <div className="absolute inset-0 grid place-items-center text-center">
                 <div>
                   <div className="tabular text-3xl font-bold">{Math.floor(pct)}%</div>
-                  <div className="text-[11px] text-on-fill/85">achieved</div>
+                  <div className="text-xs text-on-fill/85">achieved</div>
                 </div>
               </div>
             </div>
             <div className="min-w-0 flex-1 space-y-2">
               <div>
-                <div className="text-[11px] tracking-wide text-on-fill/75 uppercase">Achieved</div>
+                <div className="text-xs tracking-wide text-on-fill/75 uppercase">Achieved</div>
                 <div className="tabular text-2xl leading-tight font-bold">{inr(h.achieved, { decimals: false })}</div>
                 <div className="tabular text-xs text-on-fill/85">of {inr(goal, { decimals: false })}</div>
               </div>
               {remaining > 0 ? (
                 <div className="rounded-xl bg-white/10 px-3 py-2">
                   <div className="tabular text-sm font-semibold text-on-fill">{inr(remaining, { decimals: false })} to go</div>
-                  <div className="tabular text-[11px] text-on-fill/85">≈ {inr(perDay, { decimals: false })} per day</div>
+                  <div className="tabular text-xs text-on-fill/85">≈ {inr(perDay, { decimals: false })} per day</div>
                 </div>
               ) : (
                 <div className="rounded-xl bg-emerald-400/20 px-3 py-2 text-sm font-semibold text-on-fill">Target reached! 🎉</div>
@@ -65,11 +65,11 @@ export function HomeView({ h, firstName }: { h: HomeData; firstName: string }) {
         <div className="grid grid-cols-2 divide-x divide-white/10 border-t border-white/10 text-center">
           <Link href="/m/orders?status=quotation" className="px-3 py-3 active:bg-white/5">
             <div className="tabular text-base font-semibold text-on-fill">{inr(h.pendingQuotes.value, { decimals: false })}</div>
-            <div className="text-[11px] text-on-fill/75">{h.pendingQuotes.count} quotation{h.pendingQuotes.count === 1 ? "" : "s"} with office</div>
+            <div className="text-xs text-on-fill/75">{h.pendingQuotes.count} quotation{h.pendingQuotes.count === 1 ? "" : "s"} with office</div>
           </Link>
           <div className="px-3 py-3">
             <div className="tabular text-base font-semibold text-on-fill">{inr(h.collected, { decimals: false })}</div>
-            <div className="text-[11px] text-on-fill/75">collected{h.target?.collection ? ` of ${inr(h.target.collection, { decimals: false })}` : ""}</div>
+            <div className="text-xs text-on-fill/75">collected{h.target?.collection ? ` of ${inr(h.target.collection, { decimals: false })}` : ""}</div>
           </div>
         </div>
       </section>
@@ -218,7 +218,7 @@ function Tile({ icon: Icon, tone, value, label }: { icon: typeof MapPin; tone: s
     <div className={cn("rounded-2xl p-2.5", tone)}>
       <Icon className="mx-auto mb-1 size-4 opacity-80" />
       <div className="tabular truncate text-sm font-bold">{value}</div>
-      <div className="text-[11px] opacity-80">{label}</div>
+      <div className="text-xs opacity-80">{label}</div>
     </div>
   );
 }
@@ -228,7 +228,7 @@ function Quick({ href, icon: Icon, label, tone, badge }: { href: string; icon: t
     <Link href={href} className="relative flex flex-col items-center gap-2 rounded-3xl bg-surface p-3 text-center shadow-sm ring-1 ring-slate-200/70 active:scale-[0.98]">
       <span className={cn("grid size-12 place-items-center rounded-2xl", tone)}><Icon className="size-6" /></span>
       <span className="text-xs font-semibold text-slate-800">{label}</span>
-      {badge && <span className="absolute top-2 right-2 rounded-full bg-rose-100 px-1.5 text-[10px] font-semibold text-rose-700">{badge}</span>}
+      {badge && <span className="absolute top-2 right-2 rounded-full bg-rose-100 px-1.5 text-xs font-semibold text-rose-700">{badge}</span>}
     </Link>
   );
 }

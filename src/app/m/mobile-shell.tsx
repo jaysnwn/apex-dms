@@ -129,14 +129,14 @@ export function MobileShell({ name, roleLabel, orgName, logoUrl, tenantId, child
                       <span className={cn("grid size-16 place-items-center rounded-full bg-gradient-to-br from-blue-700 to-blue-600 text-on-fill shadow-lg ring-4 ring-surface transition active:scale-95", active && "ring-accent-100")}>
                         <Plus className="size-8" strokeWidth={2.5} />
                       </span>
-                      <span className={cn("text-[11px] font-semibold", active ? "text-accent-600" : "text-slate-600")}>New order</span>
+                      <span className={cn("text-xs font-semibold", active ? "text-accent-600" : "text-slate-600")}>New order</span>
                     </Link>
                   </li>
                 );
               }
               return (
                 <li key={t.href}>
-                  <Link href={t.href} className={cn("flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium", active ? "text-ink-900" : "text-slate-500")}>
+                  <Link href={t.href} className={cn("flex flex-col items-center gap-1 py-2.5 text-xs font-medium", active ? "text-ink-900" : "text-slate-500")}>
                     <span className={cn("grid h-7 w-12 place-items-center rounded-full transition", active && "bg-accent-100 text-accent-700")}><t.icon className="size-5" /></span>
                     {t.label}
                   </Link>

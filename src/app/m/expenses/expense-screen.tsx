@@ -134,7 +134,7 @@ export function ExpenseScreen(p: Props) {
 function Tile({ k, v, strong }: { k: string; v: number; strong?: boolean }) {
   return (
     <div className={cn("rounded-xl px-2.5 py-2", strong ? "bg-surface text-rose-800" : "bg-white/15")}>
-      <div className={cn("text-[10px] leading-tight", strong ? "text-rose-700" : "text-on-fill/85")}>{k}</div>
+      <div className={cn("text-xs leading-tight", strong ? "text-rose-700" : "text-on-fill/85")}>{k}</div>
       <div className="tabular font-semibold">{inr(v, { decimals: false })}</div>
     </div>
   );
@@ -213,7 +213,7 @@ function ExpenseSheet({ userId, categories, routes, brands, defaultRoute, edit, 
             {categories.map((c) => {
               const ic = iconOf(c.code);
               return (
-                <button key={c.id} onClick={() => setCategory(c.id)} className={cn("flex flex-col items-center gap-1 rounded-2xl px-1 py-2 text-center text-[10.5px] leading-tight font-semibold ring-1", category === c.id ? "bg-rose-50 text-rose-800 ring-2 ring-rose-500" : "bg-surface text-slate-700 ring-slate-200")}>
+                <button key={c.id} onClick={() => setCategory(c.id)} className={cn("flex flex-col items-center gap-1 rounded-2xl px-1 py-2 text-center text-xs leading-tight font-semibold ring-1", category === c.id ? "bg-rose-50 text-rose-800 ring-2 ring-rose-500" : "bg-surface text-slate-700 ring-slate-200")}>
                   <span className={cn("grid size-9 place-items-center rounded-xl", ic.tone)}><ic.icon className="size-[18px]" /></span>{c.name}
                 </button>
               );
@@ -319,9 +319,9 @@ function DetailSheet({ id, catCode, onClose, onEdit }: { id: string; catCode: Ma
           {e.status === "cancelled" && <p className="rounded-xl bg-slate-100 p-3 text-sm">Cancelled: {e.cancel_reason}</p>}
           {e.status === "approved" && e.paid_by === "employee" && (
             <div className="grid grid-cols-3 gap-2 text-center text-sm">
-              <div className="rounded-xl bg-slate-50 p-2"><div className="text-[11px] text-slate-500">Approved</div><div className="tabular font-semibold">{inr(e.approved_amount, { decimals: false })}</div></div>
-              <div className="rounded-xl bg-emerald-50 p-2"><div className="text-[11px] text-slate-500">Paid to you</div><div className="tabular font-semibold">{inr(e.reimbursed_amount, { decimals: false })}</div></div>
-              <div className="rounded-xl bg-amber-50 p-2"><div className="text-[11px] text-slate-500">Still due</div><div className="tabular font-semibold">{inr(e.outstanding, { decimals: false })}</div></div>
+              <div className="rounded-xl bg-slate-50 p-2"><div className="text-xs text-slate-500">Approved</div><div className="tabular font-semibold">{inr(e.approved_amount, { decimals: false })}</div></div>
+              <div className="rounded-xl bg-emerald-50 p-2"><div className="text-xs text-slate-500">Paid to you</div><div className="tabular font-semibold">{inr(e.reimbursed_amount, { decimals: false })}</div></div>
+              <div className="rounded-xl bg-amber-50 p-2"><div className="text-xs text-slate-500">Still due</div><div className="tabular font-semibold">{inr(e.outstanding, { decimals: false })}</div></div>
             </div>
           )}
           <dl className="grid grid-cols-2 gap-3 text-sm">

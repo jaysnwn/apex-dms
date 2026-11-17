@@ -69,17 +69,17 @@ export function OutletList({ initial }: { initial: Outlet[] | null }) {
                   </span>
                   <span className="block truncate text-xs text-slate-500">{[o.owner_name, o.city, o.route_name].filter(Boolean).join(" · ")}</span>
                   <span className="mt-0.5 flex flex-wrap gap-1">
-                    {o.onRouteToday && <span className="flex items-center gap-0.5 rounded-full bg-sky-100 px-1.5 text-[10px] font-semibold text-sky-800"><MapPin className="size-2.5" /> Today</span>}
-                    {o.status === "on_hold" && <span className="rounded-full bg-amber-100 px-1.5 text-[10px] font-semibold text-amber-800">On hold</span>}
-                    {o.status === "blocked" && <span className="rounded-full bg-red-100 px-1.5 text-[10px] font-semibold text-red-800">Blocked</span>}
-                    {cls && o.classification !== "star" && o.classification !== "average" && <span className="rounded-full bg-orange-100 px-1.5 text-[10px] font-semibold text-orange-800">{cls.label}</span>}
+                    {o.onRouteToday && <span className="flex items-center gap-0.5 rounded-full bg-sky-100 px-1.5 text-xs font-semibold text-sky-800"><MapPin className="size-2.5" /> Today</span>}
+                    {o.status === "on_hold" && <span className="rounded-full bg-amber-100 px-1.5 text-xs font-semibold text-amber-800">On hold</span>}
+                    {o.status === "blocked" && <span className="rounded-full bg-red-100 px-1.5 text-xs font-semibold text-red-800">Blocked</span>}
+                    {cls && o.classification !== "star" && o.classification !== "average" && <span className="rounded-full bg-orange-100 px-1.5 text-xs font-semibold text-orange-800">{cls.label}</span>}
                   </span>
                 </span>
                 <span className="text-right">
                   {o.outstanding > 0 ? (
                     <>
                       <span className={cn("tabular block text-sm font-semibold", o.overdue > 0 ? "text-red-700" : "text-slate-800")}>{inr(o.outstanding, { decimals: false })}</span>
-                      <span className="block text-[10px] text-slate-400">{o.overdue > 0 ? "has overdue" : "balance"}</span>
+                      <span className="block text-xs text-slate-400">{o.overdue > 0 ? "has overdue" : "balance"}</span>
                     </>
                   ) : <ChevronRight className="size-5 text-slate-300" />}
                 </span>

@@ -425,7 +425,7 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
                         <div className="flex items-start gap-2">
                           <div className="min-w-0 flex-1">
                             <div className="truncate text-sm font-medium">{l.product.name}</div>
-                            <div className="text-[11px] text-slate-500">
+                            <div className="text-xs text-slate-500">
                               <span className="font-mono">{l.product.sku}</span> ·{" "}
                               {isMgr ? (
                                 <input type="number" min={0} step="0.01" value={l.price ?? l.product.retailer_price} onChange={(e) => setLine(l.product.id, { price: e.target.value === "" ? null : Number(e.target.value) })}
@@ -444,7 +444,7 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
                             <button onClick={() => setLine(l.product.id, { qty: l.qty + 1 })} className="grid size-8 place-items-center text-slate-600 hover:bg-slate-100" aria-label="More"><Plus className="size-4" /></button>
                           </div>
                           {maxDisc > 0 && (
-                            <label className="flex items-center gap-1 text-[11px] text-slate-500">
+                            <label className="flex items-center gap-1 text-xs text-slate-500">
                               <input type="number" min={0} max={maxDisc} step="0.5" value={l.discount || ""} placeholder="0" onChange={(e) => setLine(l.product.id, { discount: Number(e.target.value) })}
                                 className={cn("tabular h-8 w-12 rounded border border-slate-200 px-1 text-center text-xs", effDisc(l) > maxDisc && "border-red-400 bg-red-50")} aria-label={`Discount on ${l.product.name}`} />%
                             </label>
@@ -619,11 +619,11 @@ function ProductCard({ p, qty, fav, onAdd, onFav }: { p: PickerProduct; qty: num
       </div>
       <div className="flex flex-1 flex-col p-2.5">
         <div className="line-clamp-2 min-h-[2.5rem] text-sm leading-tight font-medium">{p.name}</div>
-        <div className="mt-0.5 truncate font-mono text-[11px] text-slate-500">{p.sku}</div>
+        <div className="mt-0.5 truncate font-mono text-xs text-slate-500">{p.sku}</div>
         <div className="mt-auto flex items-end justify-between gap-1 pt-2">
           <div>
             <div className="tabular text-sm font-bold">{inr(p.retailer_price)}</div>
-            <div className={cn("text-[11px] font-semibold", out ? "text-red-600" : p.available < 10 ? "text-amber-700" : "text-emerald-700")}>{out ? "Out of stock" : `${fmtQty(p.available)} in stock`}</div>
+            <div className={cn("text-xs font-semibold", out ? "text-red-600" : p.available < 10 ? "text-amber-700" : "text-emerald-700")}>{out ? "Out of stock" : `${fmtQty(p.available)} in stock`}</div>
           </div>
           <span className="grid size-9 place-items-center rounded-full bg-primary text-on-fill shadow transition group-hover:bg-primary-hover" aria-hidden><ShoppingCart className="size-4" /></span>
         </div>

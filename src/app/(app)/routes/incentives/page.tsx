@@ -134,7 +134,7 @@ function Cell({ ok, v, t }: { ok: boolean; v: string; t: string }) {
       <span className={cn("tabular inline-flex items-center gap-1 font-semibold", ok ? "text-emerald-700" : "text-slate-700")}>
         {ok ? <CheckCircle2 className="size-3.5" /> : <CircleDashed className="size-3.5 text-slate-300" />} {v}
       </span>
-      <span className="tabular block text-[11px] text-slate-400">of {t}</span>
+      <span className="tabular block text-xs text-slate-400">of {t}</span>
     </td>
   );
 }

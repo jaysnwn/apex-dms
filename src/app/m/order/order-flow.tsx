@@ -107,7 +107,7 @@ export function OrderFlow({ initialOutlets, initialCatalogue, presetRetailer, co
         className="mb-3 flex w-full items-center gap-3 rounded-2xl bg-surface p-3 text-left shadow-sm ring-1 ring-slate-200/70 active:bg-slate-50">
         <span className="grid size-10 place-items-center rounded-xl bg-violet-100 text-violet-700"><Store className="size-5" /></span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[11px] font-medium text-slate-500 uppercase">Order for</span>
+          <span className="block text-xs font-medium text-slate-500 uppercase">Order for</span>
           <span className="block truncate font-semibold">{outlet.shop_name}</span>
           <span className="block truncate text-xs text-slate-500">{[outlet.city, outlet.overdue > 0 ? `overdue ${inr(outlet.overdue, { decimals: false })}` : null].filter(Boolean).join(" · ")}</span>
         </span>
@@ -129,7 +129,7 @@ export function OrderFlow({ initialOutlets, initialCatalogue, presetRetailer, co
           <button onClick={() => setReviewing(true)} className="flex w-full items-center gap-3 rounded-2xl bg-primary p-3 pl-4 text-on-fill shadow-xl active:scale-[0.99]">
             <span className="relative grid size-10 place-items-center rounded-xl bg-white/10">
               <ShoppingCart className="size-5" />
-              <span className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-full bg-primary text-[11px] font-bold">{cartLines.length}</span>
+              <span className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-full bg-primary text-xs font-bold">{cartLines.length}</span>
             </span>
             <span className="flex-1 text-left">
               <span className="tabular block text-lg leading-tight font-bold">{inr(grand, { decimals: false })}</span>
@@ -199,9 +199,9 @@ function Group({ title, icon: Icon, list, onPick }: { title: string; icon: typeo
                   <span className="block truncate font-semibold">{o.shop_name}</span>
                   <span className="block truncate text-xs text-slate-500">{[o.owner_name, o.city].filter(Boolean).join(" · ")}</span>
                 </span>
-                {blocked ? <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700">Blocked</span>
-                  : o.status === "on_hold" ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">On hold</span>
-                  : o.overdue > 0 ? <span className="tabular rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700">Due {inr(o.overdue, { decimals: false })}</span>
+                {blocked ? <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">Blocked</span>
+                  : o.status === "on_hold" ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">On hold</span>
+                  : o.overdue > 0 ? <span className="tabular rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700">Due {inr(o.overdue, { decimals: false })}</span>
                   : <ChevronRight className="size-5 text-slate-300" />}
               </button>
             </li>
@@ -241,7 +241,7 @@ function Catalogue({ items, cart, setQty, loadedAt, onRefresh, refreshing }: {
           ))}
         </div>
       </div>
-      <p className="mb-2 flex items-center justify-between px-1 text-[11px] text-slate-500">
+      <p className="mb-2 flex items-center justify-between px-1 text-xs text-slate-500">
         <span>Step 2 of 3 · Only items in stock are shown</span>
         <button onClick={onRefresh} className="flex items-center gap-1 font-medium text-sky-700"><RefreshCw className={cn("size-3", refreshing && "animate-spin")} /> {mins < 1 ? "stock just now" : `stock ${mins} min ago`}</button>
       </p>
@@ -259,12 +259,12 @@ function Catalogue({ items, cart, setQty, loadedAt, onRefresh, refreshing }: {
               )}
               <div className="min-w-0 flex-1">
                 <div className="line-clamp-2 text-sm leading-snug font-semibold">{i.name}</div>
-                <div className="truncate text-[11px] text-slate-500">{i.brand_name} · {i.sku}</div>
+                <div className="truncate text-xs text-slate-500">{i.brand_name} · {i.sku}</div>
                 <div className="mt-1 flex items-center gap-2">
                   <span className="tabular text-base font-bold">{inr(i.price, { decimals: i.price % 1 !== 0 })}</span>
-                  <span className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-semibold", i.available <= 5 ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800")}>{i.available} in stock</span>
+                  <span className={cn("rounded-full px-1.5 py-0.5 text-xs font-semibold", i.available <= 5 ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800")}>{i.available} in stock</span>
                 </div>
-                {i.mrp > 0 && <div className="tabular text-[10px] text-slate-400">MRP {inr(i.mrp, { decimals: false })} · {i.price_mode === "inclusive" ? "incl." : "+"} GST</div>}
+                {i.mrp > 0 && <div className="tabular text-xs text-slate-400">MRP {inr(i.mrp, { decimals: false })} · {i.price_mode === "inclusive" ? "incl." : "+"} GST</div>}
               </div>
               <div className="shrink-0">
                 {qty === 0 ? (
@@ -340,7 +340,7 @@ function Review({ outlet, lines, calc, totals, maxDiscount, setQty, setDiscount,
           <button disabled={busy || !lines.length} onClick={send} className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-600 text-lg font-bold text-on-fill shadow-lg active:scale-[0.99] disabled:opacity-60">
             <Send className="size-5" /> {busy ? "Sending…" : `Send quotation · ${inr(totals.grand, { decimals: false })}`}
           </button>
-          <p className="mt-2 text-center text-[11px] text-slate-500">This goes to the office as a quotation. The office confirms the invoice.</p>
+          <p className="mt-2 text-center text-xs text-slate-500">This goes to the office as a quotation. The office confirms the invoice.</p>
         </>
       }
     >

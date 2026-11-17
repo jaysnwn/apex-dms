@@ -77,18 +77,18 @@ export function ExpenseTable({ rows, me, office, options, selectable, showEmploy
                   )}
                   <td className="px-4 py-2.5 whitespace-nowrap">
                     {date(r.expense_date)}
-                    <div className="text-[11px] text-slate-400">{r.expense_no ?? "Draft"}</div>
+                    <div className="text-xs text-slate-400">{r.expense_no ?? "Draft"}</div>
                   </td>
                   {showEmployee && (
                     <td className="px-3 py-2.5 whitespace-nowrap">
                       <span className="font-medium">{r.employee_name}</span>
-                      <div className="text-[11px] text-slate-500">{r.created_by === r.employee_id ? (r.source === "salesman_app" ? "self · salesman app" : "self · office") : `by ${r.created_by_name ?? "office"} · office`}</div>
+                      <div className="text-xs text-slate-500">{r.created_by === r.employee_id ? (r.source === "salesman_app" ? "self · salesman app" : "self · office") : `by ${r.created_by_name ?? "office"} · office`}</div>
                     </td>
                   )}
                   <td className="max-w-60 px-3 py-2.5">
                     <span className="font-medium">{r.category_name}</span>
-                    {r.receipt_path ? <Paperclip className="ml-1 inline size-3.5 text-emerald-600" aria-label="Has receipt" /> : <span className="ml-1 text-[11px] text-slate-400">no receipt</span>}
-                    {r.possible_duplicate && <span className="ml-1.5 inline-flex items-center gap-0.5 text-[11px] font-medium text-amber-700"><AlertTriangle className="size-3" /> possible duplicate</span>}
+                    {r.receipt_path ? <Paperclip className="ml-1 inline size-3.5 text-emerald-600" aria-label="Has receipt" /> : <span className="ml-1 text-xs text-slate-400">no receipt</span>}
+                    {r.possible_duplicate && <span className="ml-1.5 inline-flex items-center gap-0.5 text-xs font-medium text-amber-700"><AlertTriangle className="size-3" /> possible duplicate</span>}
                     <div className="truncate text-xs text-slate-500">{r.description ?? "—"}</div>
                     {(r.status === "rejected" || r.status === "returned") && r.rejection_reason && <div className="truncate text-xs text-red-700">{r.rejection_reason}</div>}
                   </td>
@@ -98,9 +98,9 @@ export function ExpenseTable({ rows, me, office, options, selectable, showEmploy
                   </td>
                   <td className="tabular px-3 py-2.5 text-right whitespace-nowrap">
                     <span className="font-medium">{inr(r.amount)}</span>
-                    {r.approved_amount !== null && Number(r.approved_amount) !== Number(r.amount) && <div className="text-[11px] text-slate-500">approved {inr(r.approved_amount)}</div>}
-                    {Number(r.outstanding) > 0 && Number(r.reimbursed_amount) > 0 && <div className="text-[11px] text-violet-700">due {inr(r.outstanding)}</div>}
-                    <div className="text-[11px] text-slate-500">{r.paid_by === "company" ? "Company" : "Employee"}{r.payment_method ? ` · ${EXPENSE_PAYMENT_METHOD[r.payment_method]}` : ""}</div>
+                    {r.approved_amount !== null && Number(r.approved_amount) !== Number(r.amount) && <div className="text-xs text-slate-500">approved {inr(r.approved_amount)}</div>}
+                    {Number(r.outstanding) > 0 && Number(r.reimbursed_amount) > 0 && <div className="text-xs text-violet-700">due {inr(r.outstanding)}</div>}
+                    <div className="text-xs text-slate-500">{r.paid_by === "company" ? "Company" : "Employee"}{r.payment_method ? ` · ${EXPENSE_PAYMENT_METHOD[r.payment_method]}` : ""}</div>
                   </td>
                   <td className="px-4 py-2.5"><StatusBadges e={r} /></td>
                 </tr>

@@ -87,7 +87,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
                     <div className="font-mono text-xs text-slate-500">{b?.product.sku}</div>
                   </td>
                   <td className="tabular px-3 py-2.5 text-right">{qty(l.qty)}</td>
-                  <td className="tabular px-3 py-2.5 text-right">{inr(l.unit_price)}<div className="text-[11px] text-slate-400">{l.price_mode === "inclusive" ? "incl." : "+"} {Number(l.gst_rate)}%</div></td>
+                  <td className="tabular px-3 py-2.5 text-right">{inr(l.unit_price)}<div className="text-xs text-slate-400">{l.price_mode === "inclusive" ? "incl." : "+"} {Number(l.gst_rate)}%</div></td>
                   <td className="tabular px-3 py-2.5 text-right">{Number(l.discount_pct) > 0 ? `${Number(l.discount_pct)}%` : "—"}</td>
                   <td className="tabular px-3 py-2.5 text-right">{inr(l.taxable_value)}</td>
                   <td className="tabular px-3 py-2.5 text-right">{inr(l.tax_amount)}</td>
