@@ -31,11 +31,11 @@ export function ActionTile({
     >
       <div className="flex items-center justify-between gap-2">
         <Badge tone={clear ? "green" : tone}>{clear ? `No ${label.toLowerCase()}` : label}</Badge>
-        <ChevronRight className="size-4 text-text-3 transition-transform duration-[160ms] group-hover:translate-x-0.5" aria-hidden />
+        <ChevronRight className="hidden size-4 shrink-0 text-text-3 transition-transform duration-[160ms] group-hover:translate-x-0.5 sm:block" aria-hidden />
       </div>
       <div className="min-w-0">
         <CountUp id={id} value={value} format={format} className={cn("tabular block text-[26px] leading-tight font-semibold tracking-[-0.02em]", clear ? "text-text-2" : "text-text")} />
-        <p className="mt-0.5 truncate text-[13px] text-text-2">{clear ? "All clear" : hint}</p>
+        <p className="mt-0.5 line-clamp-2 text-[13px] text-text-2">{clear ? "All clear" : hint}</p>
       </div>
       <span className="mt-auto text-[13px] font-medium text-primary-text">{cta}</span>
     </Link>
@@ -55,15 +55,15 @@ export function KpiTile({
   trend?: number[];
 }) {
   const body = (
-    <div className="flex h-full flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-[var(--shadow-card)] transition-[border-color,box-shadow] duration-[160ms] hover:border-field/40">
+    <div className="flex h-full flex-col gap-1.5 rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-[var(--shadow-card)] transition-[border-color,box-shadow] duration-[160ms] hover:border-field/40">
       <div className="text-[13px] text-text-2">{label}</div>
-      <div className="flex items-end justify-between gap-3">
-        <div className="min-w-0" title={full}>
-          <CountUp id={id} value={value} format="inrCompact" className="tabular block truncate text-[28px] leading-none font-semibold tracking-[-0.025em] text-text" />
-          <span className="sr-only">{full}</span>
-          {sub && <p className="mt-1.5 truncate text-xs text-text-2">{sub}</p>}
-        </div>
-        {trend && trend.length > 1 && <Sparkline values={trend} className="h-8 w-28 shrink-0" />}
+      <div title={full}>
+        <CountUp id={id} value={value} format="inrCompact" className="tabular block text-[28px] leading-tight font-semibold tracking-[-0.025em] whitespace-nowrap text-text" />
+        <span className="sr-only">{full}</span>
+      </div>
+      <div className="mt-auto flex items-end justify-between gap-3">
+        {sub ? <p className="min-w-0 truncate text-xs text-text-2">{sub}</p> : <span />}
+        {trend && trend.length > 1 && <Sparkline values={trend} className="h-7 w-24 shrink-0" />}
       </div>
     </div>
   );

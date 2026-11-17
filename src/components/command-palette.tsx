@@ -100,7 +100,7 @@ export function CommandPalette({ open, onOpenChange, groups, actions, recent }: 
                         value={q}
                         onValueChange={setQ}
                         placeholder="Search invoices, retailers, products, phone… or type a page"
-                        className="h-14 flex-1 bg-transparent text-[15px] text-text outline-none placeholder:text-text-3"
+                        className="h-14 flex-1 bg-transparent text-[15px] text-text outline-none placeholder:text-text-3 focus-visible:outline-none"
                       />
                       {pending ? <Loader2 className="size-4 animate-spin text-text-2" aria-label="Searching" /> : <Kbd>Esc</Kbd>}
                     </div>

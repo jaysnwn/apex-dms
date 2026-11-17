@@ -5,19 +5,19 @@ import {
 import type { AppRole, ModuleDef, ModuleKey } from "@/lib/roles";
 
 // How the menu is laid out. Which items each role sees still comes from src/lib/roles.ts.
-export type NavItem = { key: string; module: ModuleKey; label: string; href: string; icon: LucideIcon; match: (p: string) => boolean };
+export type NavItem = { key: string; module: ModuleKey; label: string; short?: string; href: string; icon: LucideIcon; match: (p: string) => boolean };
 export type NavGroup = { label: string | null; items: NavItem[] };
 
 const starts = (base: string) => (p: string) => p === base || p.startsWith(base + "/");
 
 const ITEMS: (Omit<NavItem, "match"> & { match?: NavItem["match"]; group: string | null })[] = [
-  { key: "dashboard", module: "dashboard", label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, group: null },
+  { key: "dashboard", module: "dashboard", label: "Dashboard", short: "Home", href: "/dashboard", icon: LayoutDashboard, group: null },
   { key: "sales", module: "sales", label: "Billing", href: "/sales/new", icon: ShoppingCart, group: "Sales",
     match: (p) => p.startsWith("/sales") && !p.startsWith("/sales/invoices") },
   { key: "invoices", module: "sales", label: "Invoices", href: "/sales/invoices", icon: FileText, group: "Sales" },
   { key: "retailers", module: "retailers", label: "Retailers", href: "/retailers", icon: Store, group: "Sales" },
   { key: "routes", module: "routes", label: "Routes", href: "/routes", icon: Route, group: "Sales" },
-  { key: "stock", module: "stock", label: "Inventory", href: "/stock", icon: Boxes, group: "Inventory" },
+  { key: "stock", module: "stock", label: "Inventory", short: "Stock", href: "/stock", icon: Boxes, group: "Inventory" },
   { key: "products", module: "products", label: "Products", href: "/products", icon: Package, group: "Inventory" },
   { key: "purchases", module: "purchases", label: "Purchases", href: "/purchases", icon: PackagePlus, group: "Inventory" },
   { key: "dispatch", module: "dispatch", label: "Dispatch", href: "/dispatch", icon: Truck, group: "Dispatch" },

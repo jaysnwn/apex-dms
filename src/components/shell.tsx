@@ -296,7 +296,7 @@ export function Shell({ modules, role, userName, roleLabel, orgName, logoUrl, ca
               >
                 {active && <m.span layoutId="tabbar-pill" className="absolute top-1.5 h-8 w-14 rounded-full bg-primary-soft" transition={spring.snappy} />}
                 <Icon className="relative size-[22px]" aria-hidden />
-                <span className="relative">{t.label}</span>
+                <span className="relative">{t.short ?? t.label}</span>
               </Link>
             );
           })}

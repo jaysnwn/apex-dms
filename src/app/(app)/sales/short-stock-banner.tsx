@@ -63,7 +63,7 @@ export function ShortStockBanner({
             <tbody className="divide-y divide-red-600/15">
               {lines.slice(0, compact ? 4 : 20).map((l) => (
                 <tr key={l.id}>
-                  <td className="max-w-0 truncate py-1.5 pr-2 text-red-950">{l.name}</td>
+                  <td className="py-1.5 pr-2 break-words text-red-950">{l.name}</td>
                   <td className="tabular py-1.5 text-right text-red-900/80">{fmtQty(l.need)}</td>
                   <td className="tabular py-1.5 text-right text-red-900/80">{fmtQty(Math.max(l.have, 0))}</td>
                   <td className="tabular py-1.5 text-right font-bold text-red-700">{fmtQty(l.need - Math.max(l.have, 0))}</td>
