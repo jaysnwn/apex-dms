@@ -36,7 +36,7 @@ function Header({ actions = 1 }: { actions?: number }) {
 
 export function TableSkeleton({ rows = 8, cols = 5 }: { rows?: number; cols?: number }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-surface">
       <div className="flex gap-4 border-b border-slate-100 bg-slate-50 px-4 py-3">
         {Array.from({ length: cols }, (_, i) => (
           <Skeleton key={i} className={cn("h-3", i === 0 ? "w-40" : "w-20")} />
@@ -75,7 +75,7 @@ export function DetailSkeleton({ label = "Loading" }: { label?: string }) {
       <Header actions={2} />
       <div className="mb-6 grid gap-4 md:grid-cols-3">
         {Array.from({ length: 3 }, (_, i) => (
-          <div key={i} className="space-y-3 rounded-xl border border-slate-200 bg-white p-5">
+          <div key={i} className="space-y-3 rounded-xl border border-slate-200 bg-surface p-5">
             <Skeleton className="h-3 w-24" />
             <Skeleton className="h-5 w-40" />
             <Skeleton className="h-4 w-32" />
@@ -92,7 +92,7 @@ export function FormSkeleton({ label = "Loading" }: { label?: string }) {
   return (
     <Screen label={label}>
       <Header actions={0} />
-      <div className="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:grid-cols-2">
+      <div className="grid gap-4 rounded-xl border border-slate-200 bg-surface p-5 sm:grid-cols-2">
         {Array.from({ length: 8 }, (_, i) => (
           <div key={i} className="space-y-2">
             <Skeleton className="h-3 w-24" />
@@ -114,7 +114,7 @@ export function DashboardSkeleton() {
       <Header actions={0} />
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }, (_, i) => (
-          <div key={i} className="space-y-3 rounded-xl border border-slate-200 bg-white p-5">
+          <div key={i} className="space-y-3 rounded-xl border border-slate-200 bg-surface p-5">
             <Skeleton className="h-3 w-24" />
             <Skeleton className="h-7 w-32" />
             <Skeleton className="h-3 w-20" />
@@ -123,7 +123,7 @@ export function DashboardSkeleton() {
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         {Array.from({ length: 2 }, (_, i) => (
-          <div key={i} className="rounded-xl border border-slate-200 bg-white p-5">
+          <div key={i} className="rounded-xl border border-slate-200 bg-surface p-5">
             <Skeleton className="mb-4 h-4 w-40" />
             <div className="flex h-48 items-end gap-2">
               {[40, 65, 50, 80, 55, 70, 45, 90, 60, 75].map((h, j) => (
@@ -144,7 +144,7 @@ export function MobileListSkeleton({ label = "Loading" }: { label?: string }) {
       <div className="space-y-3 p-4">
         <Skeleton className="h-12 w-full rounded-2xl" />
         {Array.from({ length: 6 }, (_, i) => (
-          <div key={i} className="space-y-2 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+          <div key={i} className="space-y-2 rounded-2xl bg-surface p-4 ring-1 ring-slate-200">
             <Skeleton className="h-4 w-2/3" />
             <Skeleton className="h-3 w-1/2" />
             <div className="flex justify-between pt-1">

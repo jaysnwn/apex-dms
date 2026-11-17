@@ -138,8 +138,8 @@ export default async function MovementsPage({
       <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
         <span className="tabular">{(count ?? 0).toLocaleString("en-IN")} movements · page {page} of {pages}</span>
         <div className="flex gap-2">
-          {page > 1 && <Link className="rounded-lg border bg-white px-3 py-1.5" href={qs(page - 1)}>Newer</Link>}
-          {page < pages && <Link className="rounded-lg border bg-white px-3 py-1.5" href={qs(page + 1)}>Older</Link>}
+          {page > 1 && <Link className="rounded-lg border bg-surface px-3 py-1.5" href={qs(page - 1)}>Newer</Link>}
+          {page < pages && <Link className="rounded-lg border bg-surface px-3 py-1.5" href={qs(page + 1)}>Older</Link>}
         </div>
       </div>
     </>

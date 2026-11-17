@@ -142,7 +142,7 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, d
               <div className="flex flex-wrap gap-2">
                 {suppliers.slice(0, 6).map((s) => (
                   <button key={s.id} type="button" onClick={() => chooseSupplier(s.id)}
-                    className={cn("rounded-lg border px-3 py-2 text-sm font-semibold", supplierId === s.id ? "border-fuchsia-600 bg-fuchsia-50 text-fuchsia-800 ring-2 ring-fuchsia-600/20" : "border-slate-300 bg-white hover:border-slate-400")}>
+                    className={cn("rounded-lg border px-3 py-2 text-sm font-semibold", supplierId === s.id ? "border-fuchsia-600 bg-fuchsia-50 text-fuchsia-800 ring-2 ring-fuchsia-600/20" : "border-slate-300 bg-surface hover:border-slate-400")}>
                     {s.name}
                   </button>
                 ))}
@@ -217,7 +217,7 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, d
                           <div className="mb-1 text-[11px] font-medium text-slate-500">Cost is</div>
                           <div className="flex h-9 rounded-lg border border-slate-300 p-0.5 text-xs">
                             {(["exclusive", "inclusive"] as const).map((m) => (
-                              <button key={m} type="button" onClick={() => update(i, { mode: m })} className={cn("rounded-md px-2", l.mode === m ? "bg-ink-900 text-white" : "text-slate-600")}>
+                              <button key={m} type="button" onClick={() => update(i, { mode: m })} className={cn("rounded-md px-2", l.mode === m ? "bg-primary text-on-fill" : "text-slate-600")}>
                                 {m === "exclusive" ? "+ GST" : "incl. GST"}
                               </button>
                             ))}
@@ -250,7 +250,7 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, d
           <div className="flex flex-wrap gap-2">
             {CREDIT.map((d) => (
               <button key={d} type="button" onClick={() => setCreditDays(d)}
-                className={cn("rounded-lg border px-3 py-1.5 text-sm font-medium", creditDays === d ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300 bg-white hover:border-slate-400")}>
+                className={cn("rounded-lg border px-3 py-1.5 text-sm font-medium", creditDays === d ? "border-primary bg-primary text-on-fill" : "border-slate-300 bg-surface hover:border-slate-400")}>
                 {d === 0 ? "Cash" : `${d} days`}
               </button>
             ))}
@@ -268,7 +268,7 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, d
         </Card>
 
         <Card className="overflow-hidden">
-          <div className="bg-gradient-to-br from-fuchsia-700 to-fuchsia-900 px-5 py-4 text-white">
+          <div className="bg-gradient-to-br from-fuchsia-700 to-fuchsia-900 px-5 py-4 text-on-fill">
             <div className="text-sm text-fuchsia-100">Purchase total</div>
             <div className="tabular text-3xl font-semibold tracking-tight">{inr(grand)}</div>
             <div className="text-xs text-fuchsia-200">{lines.length} product{lines.length === 1 ? "" : "s"} · {fmtQty(lines.reduce((s, l) => s + (l.qty || 0), 0))} units · {igst ? "IGST" : "CGST + SGST"}</div>
@@ -306,11 +306,11 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, d
             )}
             {error && <Alert>{error}</Alert>}
             {receiveNow ? (
-              <Button className="h-11 w-full bg-emerald-600 hover:bg-emerald-700" disabled={pending} onClick={() => submit(true)}>
+              <Button className="h-11 w-full bg-primary hover:bg-primary-hover" disabled={pending} onClick={() => submit(true)}>
                 <PackageCheck className="size-4" /> {pending ? "Saving…" : "Save and add stock"}
               </Button>
             ) : (
-              <Button className="h-11 w-full bg-fuchsia-700 hover:bg-fuchsia-800" disabled={pending} onClick={() => submit(false)}>
+              <Button className="h-11 w-full bg-primary hover:bg-primary-hover" disabled={pending} onClick={() => submit(false)}>
                 <ClipboardList className="size-4" /> {pending ? "Saving…" : initial ? "Save purchase order" : "Create purchase order"}
               </Button>
             )}
@@ -364,9 +364,9 @@ function ProductSearch({ brandId, brandName, onAdd }: { brandId?: string; brandN
   return (
     <div className="relative">
       <div className="mb-2 flex flex-wrap gap-2">
-        <button type="button" onClick={() => { setBrand(undefined); setOpen(false); }} className={cn("rounded-full border px-3 py-1 text-xs font-medium", !brand ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300")}>Search</button>
+        <button type="button" onClick={() => { setBrand(undefined); setOpen(false); }} className={cn("rounded-full border px-3 py-1 text-xs font-medium", !brand ? "border-primary bg-primary text-on-fill" : "border-slate-300")}>Search</button>
         {brandId && (
-          <button type="button" onClick={() => setBrand(brandId)} className={cn("rounded-full border px-3 py-1 text-xs font-medium", brand ? "border-fuchsia-600 bg-fuchsia-600 text-white" : "border-slate-300")}>
+          <button type="button" onClick={() => setBrand(brandId)} className={cn("rounded-full border px-3 py-1 text-xs font-medium", brand ? "border-fuchsia-600 bg-primary text-on-fill" : "border-slate-300")}>
             All {brandName} products
           </button>
         )}
@@ -379,7 +379,7 @@ function ProductSearch({ brandId, brandName, onAdd }: { brandId?: string; brandN
         <BarcodeScanButton onDetected={(code) => setQ(code)} />
       </div>
       {open && results.length > 0 && (
-        <ul className="absolute z-20 mt-1 max-h-96 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+        <ul className="absolute z-20 mt-1 max-h-96 w-full overflow-auto rounded-lg border border-slate-200 bg-surface py-1 shadow-lg">
           {brand && (
             <li className="flex items-center justify-between border-b border-slate-100 px-3 py-2 text-xs text-slate-500">
               {results.length} products

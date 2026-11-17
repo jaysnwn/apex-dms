@@ -111,7 +111,7 @@ export default async function InventoryDashboard({ searchParams }: { searchParam
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {actions.map((a) => (
-          <Link key={a.href} href={a.href} className={cn("group flex items-center gap-3 rounded-xl bg-gradient-to-br p-3 text-white shadow-sm transition hover:shadow-md active:scale-[0.99]", a.tone)}>
+          <Link key={a.href} href={a.href} className={cn("group flex items-center gap-3 rounded-xl bg-gradient-to-br p-3 text-on-fill shadow-sm transition hover:shadow-md active:scale-[0.99]", a.tone)}>
             <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white/20"><a.icon className="size-5" /></span>
             <span className="text-sm font-semibold leading-tight">{a.label}</span>
           </Link>

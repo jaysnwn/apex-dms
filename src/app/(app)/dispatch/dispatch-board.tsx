@@ -75,7 +75,7 @@ export function DispatchBoard({
             target="_blank"
             rel="noopener"
             aria-disabled={!selected.length}
-            className={cn("inline-flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium", selected.length ? "border-slate-300 bg-white hover:bg-slate-50" : "pointer-events-none border-slate-200 text-slate-400")}
+            className={cn("inline-flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium", selected.length ? "border-slate-300 bg-surface hover:bg-slate-50" : "pointer-events-none border-slate-200 text-slate-400")}
           >
             <ClipboardList className="size-4" /> Picking list ({selected.length})
           </a>
@@ -84,7 +84,7 @@ export function DispatchBoard({
             target="_blank"
             rel="noopener"
             aria-disabled={!selected.length}
-            className={cn("inline-flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium", selected.length ? "border-slate-300 bg-white hover:bg-slate-50" : "pointer-events-none border-slate-200 text-slate-400")}
+            className={cn("inline-flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium", selected.length ? "border-slate-300 bg-surface hover:bg-slate-50" : "pointer-events-none border-slate-200 text-slate-400")}
           >
             <Truck className="size-4" /> Delivery notes ({selected.length})
           </a>
@@ -104,7 +104,7 @@ export function DispatchBoard({
               const shortHere = !wh || p.items.some((i) => i.shortIn[wh.id]);
               const waitDays = Math.floor((Date.now() - new Date(p.invoice_date).getTime()) / 864e5);
               return (
-                <Card key={p.id} className={cn("p-4", selected.includes(p.id) && "border-accent-500 ring-2 ring-accent-500/20")}>
+                <Card key={p.id} className={cn("p-4", selected.includes(p.id) && "border-primary ring-2 ring-primary/20")}>
                   <div className="flex items-start gap-3">
                     <input type="checkbox" className="mt-1 size-4" checked={selected.includes(p.id)} onChange={(e) => setSelected((s) => (e.target.checked ? [...s, p.id] : s.filter((x) => x !== p.id)))} aria-label={`Select ${p.invoice_no}`} />
                     <div className="min-w-0 flex-1">
@@ -127,7 +127,7 @@ export function DispatchBoard({
                       </ul>
                       {shortHere && <p className="mt-2 text-xs font-medium text-red-700">{wh ? "Not enough stock in this warehouse for the red items. Transfer stock or choose another warehouse." : `No active ${p.brand_name} warehouse.`}</p>}
                       {canDispatch && (
-                        <Button size="sm" className="mt-3 bg-teal-600 hover:bg-teal-700" disabled={shortHere} onClick={() => setDispatching(p)}>
+                        <Button size="sm" className="mt-3 bg-primary hover:bg-primary-hover" disabled={shortHere} onClick={() => setDispatching(p)}>
                           <Truck className="size-4" /> Dispatch full order
                         </Button>
                       )}
@@ -165,11 +165,11 @@ export function DispatchBoard({
                   {d.remarks && <div className="text-xs text-slate-500">{d.remarks}</div>}
                 </td>
                 <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                  <a href={`/api/pdf/delivery-note/${d.invoice_id}`} target="_blank" rel="noopener" className="mr-2 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-medium hover:bg-slate-50" title="Delivery note">
+                  <a href={`/api/pdf/delivery-note/${d.invoice_id}`} target="_blank" rel="noopener" className="mr-2 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-surface px-2.5 text-xs font-medium hover:bg-slate-50" title="Delivery note">
                     <Truck className="size-3.5" /> Note
                   </a>
                   {d.status === "dispatched" && (
-                    <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setDelivering(d)}><PackageCheck className="size-4" /> Delivered</Button>
+                    <Button size="sm" className="bg-primary hover:bg-primary-hover" onClick={() => setDelivering(d)}><PackageCheck className="size-4" /> Delivered</Button>
                   )}
                 </td>
               </tr>
@@ -200,7 +200,7 @@ function DispatchDialog({ invoice, warehouseId, warehouseName, onClose }: { invo
       {error && <div className="mt-3"><Alert>{error}</Alert></div>}
       <div className="mt-5 flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button className="bg-teal-600 hover:bg-teal-700" disabled={pending} onClick={() => start(async () => {
+        <Button className="bg-primary hover:bg-primary-hover" disabled={pending} onClick={() => start(async () => {
           const res = await dispatchInvoice(invoice.id, warehouseId, vehicle, remarks);
           if (res.error) setError(res.error); else { onClose(); router.refresh(); }
         })}>{pending ? "Dispatching…" : "Confirm dispatch"}</Button>
@@ -230,7 +230,7 @@ function DeliveryDialog({ row, onClose }: { row: DispatchedRow; onClose: () => v
       {error && <div className="mt-3"><Alert>{error}</Alert></div>}
       <div className="mt-5 flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button className="bg-emerald-600 hover:bg-emerald-700" disabled={pending} onClick={() => start(async () => {
+        <Button className="bg-primary hover:bg-primary-hover" disabled={pending} onClick={() => start(async () => {
           let path: string | null = null;
           if (file) {
             path = tenantStoragePath(`${row.id}/${crypto.randomUUID()}-${file.name.replace(/[^\w.]+/g, "_")}`);

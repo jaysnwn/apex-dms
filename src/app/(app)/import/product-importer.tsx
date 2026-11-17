@@ -24,8 +24,8 @@ function BrandPick({ brands, value, onPick }: { brands: Brand[]; value: string |
         const t = brandTone(b.code);
         return (
           <button key={b.id} type="button" role="radio" aria-checked={on} onClick={() => onPick(b.id)}
-            className={cn("flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-[12px] font-semibold", on ? t.solid + " shadow-sm" : "text-slate-600 hover:bg-white")}>
-            <span className={cn("size-2 rounded-full", on ? "bg-white" : t.dot)} />{b.name}
+            className={cn("flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-[12px] font-semibold", on ? t.solid + " shadow-sm" : "text-slate-600 hover:bg-surface")}>
+            <span className={cn("size-2 rounded-full", on ? "bg-surface" : t.dot)} />{b.name}
           </button>
         );
       })}
@@ -144,12 +144,12 @@ export function ProductImporter({ brand: initialBrand, brands, canSeeAll }: { br
         </div>
         <ol className="mb-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-5">
           {["Download the template", "Fill it in Excel", "Upload the file", "Check & fix the preview", "Import valid rows"].map((s, i) => (
-            <li key={s} className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2"><span className="grid size-6 shrink-0 place-items-center rounded-full bg-ink-900 text-xs font-bold text-white">{i + 1}</span>{s}</li>
+            <li key={s} className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2"><span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-on-fill">{i + 1}</span>{s}</li>
           ))}
         </ol>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Button variant="secondary" onClick={downloadTemplate}><Download className="size-4" /> Download {brand.name} template</Button>
-          <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-ink-900 px-4 text-sm font-medium text-white hover:bg-ink-800">
+          <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-on-fill hover:bg-primary-hover">
             <FileSpreadsheet className="size-4" /> Upload .xlsx or .csv
             <input type="file" accept=".xlsx,.csv" hidden onChange={(e) => onFile(e.target.files?.[0])} onClick={(e) => ((e.target as HTMLInputElement).value = "")} />
           </label>
@@ -169,7 +169,7 @@ export function ProductImporter({ brand: initialBrand, brands, canSeeAll }: { br
               <label key={c.key} className="block">
                 <span className="mb-1 block text-sm font-medium text-slate-700">{c.header}{c.required && <span className="text-red-600"> *</span>}</span>
                 <select value={mapping[c.key] ?? ""} onChange={(e) => setMapping((m) => { const n = { ...m }; if (e.target.value === "") delete n[c.key]; else n[c.key] = Number(e.target.value); return n; })}
-                  className={cn("h-10 w-full rounded-lg border bg-white px-2 text-sm", mapping[c.key] === undefined ? (c.required ? "border-red-300 bg-red-50" : "border-slate-200 text-slate-400") : "border-emerald-300 bg-emerald-50/50")}>
+                  className={cn("h-10 w-full rounded-lg border bg-surface px-2 text-sm", mapping[c.key] === undefined ? (c.required ? "border-red-300 bg-red-50" : "border-slate-200 text-slate-400") : "border-emerald-300 bg-emerald-50/50")}>
                   <option value="">— Not in file —</option>
                   {file.headers.map((h, i) => <option key={i} value={i}>{h || `Column ${i + 1}`}</option>)}
                 </select>
@@ -197,7 +197,7 @@ export function ProductImporter({ brand: initialBrand, brands, canSeeAll }: { br
           <p className="border-b border-slate-100 bg-slate-50 px-4 py-2 text-xs text-slate-500">Click any cell to correct it — the checks update as you type. Rows with errors (red) are not imported.</p>
           <div className="max-h-[60vh] overflow-auto">
             <table className="w-full text-xs">
-              <thead className="sticky top-0 z-10 bg-white text-left text-slate-500 shadow-sm">
+              <thead className="sticky top-0 z-10 bg-surface text-left text-slate-500 shadow-sm">
                 <tr>
                   <th className="px-2 py-2 font-medium">Row</th>
                   {SHOW.map((k) => <th key={k} className="px-1 py-2 font-medium whitespace-nowrap">{COLS.find((c) => c.key === k)?.header}</th>)}
@@ -215,8 +215,8 @@ export function ProductImporter({ brand: initialBrand, brands, canSeeAll }: { br
                       {SHOW.map((k) => (
                         <td key={k} className="px-0.5 py-0.5">
                           <input value={r[k] ?? ""} onChange={(e) => edit(i, k, e.target.value)} aria-label={`${k} row ${r.__row}`}
-                            className={cn("h-7 w-full min-w-16 rounded border border-transparent bg-transparent px-1.5 hover:border-slate-300 focus:border-ink-900 focus:bg-white focus:outline-none",
-                              k === "name" && "min-w-44", (k === "name" || k === "sku") && !r[k] && "border-red-300 bg-white")} />
+                            className={cn("h-7 w-full min-w-16 rounded border border-transparent bg-transparent px-1.5 hover:border-slate-300 focus:border-primary focus:bg-surface focus:outline-none",
+                              k === "name" && "min-w-44", (k === "name" || k === "sku") && !r[k] && "border-red-300 bg-surface")} />
                         </td>
                       ))}
                       <td className="max-w-72 px-2 py-1">
@@ -224,7 +224,7 @@ export function ProductImporter({ brand: initialBrand, brands, canSeeAll }: { br
                         {c.warnings.map((w) => <div key={w} className="flex items-start gap-1 text-amber-800"><AlertTriangle className="mt-0.5 size-3 shrink-0" />{w}</div>)}
                         {!c.errors.length && !c.warnings.length && <span className="text-emerald-700">OK</span>}
                       </td>
-                      <td className="px-1"><button onClick={() => remove(i)} className="rounded p-1 text-slate-400 hover:bg-white hover:text-red-600" aria-label={`Remove row ${r.__row}`}><Trash2 className="size-3.5" /></button></td>
+                      <td className="px-1"><button onClick={() => remove(i)} className="rounded p-1 text-slate-400 hover:bg-surface hover:text-red-600" aria-label={`Remove row ${r.__row}`}><Trash2 className="size-3.5" /></button></td>
                     </tr>
                   );
                 })}

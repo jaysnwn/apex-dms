@@ -78,7 +78,7 @@ export function ReorderList({ brandId, brandName, rows }: { brandId: string; bra
         <span className="text-sm text-slate-600">{chosen.length} product{chosen.length === 1 ? "" : "s"} · approx. <b className="tabular">{inr(value, { decimals: false })}</b> before GST · {suppliers.size} purchase order{suppliers.size === 1 ? "" : "s"}</span>
         <span className="flex items-center gap-2">
           {error && <Alert>{error}</Alert>}
-          <Button className="bg-fuchsia-600 hover:bg-fuchsia-700" disabled={pending || !chosen.length} onClick={() => start(async () => {
+          <Button className="bg-primary hover:bg-primary-hover" disabled={pending || !chosen.length} onClick={() => start(async () => {
             setError(null);
             const r = await createReorderPurchases({ brandId, items: chosen.map((c) => ({ product_id: c.product_id, qty: Number(qty[c.product_id]), supplier_id: c.supplier_id, unit_cost: c.unit_cost, cost_mode: c.cost_mode })) });
             if (r.error) return setError(r.error);

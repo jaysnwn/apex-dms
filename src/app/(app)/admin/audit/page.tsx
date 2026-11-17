@@ -173,8 +173,8 @@ export default async function AuditPage({
           {(count ?? 0).toLocaleString("en-IN")} entries · page {page} of {totalPages}
         </span>
         <div className="flex gap-2">
-          {page > 1 && <Link className="rounded-lg border bg-white px-3 py-1.5" href={qs(page - 1)}>Newer</Link>}
-          {page < totalPages && <Link className="rounded-lg border bg-white px-3 py-1.5" href={qs(page + 1)}>Older</Link>}
+          {page > 1 && <Link className="rounded-lg border bg-surface px-3 py-1.5" href={qs(page - 1)}>Newer</Link>}
+          {page < totalPages && <Link className="rounded-lg border bg-surface px-3 py-1.5" href={qs(page + 1)}>Older</Link>}
         </div>
       </div>
     </>

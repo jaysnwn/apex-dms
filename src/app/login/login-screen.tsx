@@ -14,9 +14,9 @@ export function LoginScreen({ next, error, org }: { next?: string; error?: strin
   return (
     <main className="grid min-h-dvh lg:grid-cols-2">
       <OfflineReset />
-      <section className="relative hidden flex-col justify-between overflow-hidden bg-ink-900 p-12 text-white lg:flex">
+      <section className="relative hidden flex-col justify-between overflow-hidden bg-primary p-12 text-on-fill lg:flex">
         {org?.logoUrl ? (
-          <div className="inline-flex w-fit rounded-2xl bg-white px-5 py-3 shadow-lg">
+          <div className="inline-flex w-fit rounded-2xl bg-surface px-5 py-3 shadow-lg">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={org.logoUrl} alt={org.name} className="h-14 w-auto max-w-72 object-contain" />
           </div>
@@ -35,7 +35,7 @@ export function LoginScreen({ next, error, org }: { next?: string; error?: strin
           </p>
         </div>
         <p className="text-xs text-slate-500">Authorised staff only. All activity is logged.</p>
-        <div aria-hidden className="pointer-events-none absolute -right-24 -bottom-24 h-96 w-96 rounded-full border-[48px] border-accent-500/10" />
+        <div aria-hidden className="pointer-events-none absolute -right-24 -bottom-24 h-96 w-96 rounded-full border-[48px] border-primary/10" />
       </section>
 
       <section className="flex items-center justify-center p-6">

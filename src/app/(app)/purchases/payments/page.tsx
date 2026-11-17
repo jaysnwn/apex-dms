@@ -37,7 +37,7 @@ export default async function SupplierPaymentsPage({ searchParams }: { searchPar
         <StatCard label="Paid in period" value={inr(total, { decimals: false })} icon={Wallet} tone="green" hint={`${live.length} payments`} />
         <StatCard label="Advances not yet used" value={inr(advance, { decimals: false })} icon={Building2} tone="blue" hint="applied to the next bill automatically" />
         <div className="flex items-center justify-end">
-          <LinkButton href="/purchases/payments/new" className="h-11 bg-emerald-600 px-5 text-white hover:bg-emerald-700"><Plus className="size-4" /> Pay a supplier</LinkButton>
+          <LinkButton href="/purchases/payments/new" className="h-11 bg-primary px-5 text-on-fill hover:bg-primary-hover"><Plus className="size-4" /> Pay a supplier</LinkButton>
         </div>
       </div>
       <form className="mb-4 grid gap-2 sm:grid-cols-4">

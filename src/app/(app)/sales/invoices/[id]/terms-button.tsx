@@ -24,7 +24,7 @@ export function TermsButton({ invoiceId, invoiceDate, creditDays }: { invoiceId:
         <Dialog title="Change payment terms" onClose={() => setOpen(false)}>
           <div className="mb-3 flex flex-wrap gap-2">
             {[0, 10, 15, 21, 30, 45].map((d) => (
-              <button key={d} type="button" onClick={() => setDays(d)} className={`rounded-lg border px-3 py-1.5 text-sm font-semibold ${days === d ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300"}`}>{d === 0 ? "Immediate" : `${d} days`}</button>
+              <button key={d} type="button" onClick={() => setDays(d)} className={`rounded-lg border px-3 py-1.5 text-sm font-semibold ${days === d ? "border-primary bg-primary text-on-fill" : "border-slate-300"}`}>{d === 0 ? "Immediate" : `${d} days`}</button>
             ))}
           </div>
           <div className="grid gap-3 sm:grid-cols-2">

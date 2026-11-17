@@ -278,14 +278,14 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
         <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
           {brands.length > 1 && (
             <button type="button" onClick={() => setBrandId("")}
-              className={cn("rounded-lg px-4 py-2 text-sm font-bold transition", brandId === "" ? "bg-white text-slate-900 shadow" : "text-slate-600 hover:bg-white")}>All brands</button>
+              className={cn("rounded-lg px-4 py-2 text-sm font-bold transition", brandId === "" ? "bg-surface text-slate-900 shadow" : "text-slate-600 hover:bg-surface")}>All brands</button>
           )}
           {brands.map((b) => {
             const t = brandTone(b.code), on = b.id === brandId;
             return (
               <button key={b.id} type="button" onClick={() => switchBrand(b.id)}
-                className={cn("flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition", on ? `${t.solid} shadow` : "text-slate-600 hover:bg-white")}>
-                <span className={cn("size-2 rounded-full", on ? "bg-white" : t.dot)} /> {b.name}
+                className={cn("flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition", on ? `${t.solid} shadow` : "text-slate-600 hover:bg-surface")}>
+                <span className={cn("size-2 rounded-full", on ? "bg-surface" : t.dot)} /> {b.name}
               </button>
             );
           })}
@@ -297,17 +297,17 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
       <div className="grid gap-5 xl:grid-cols-[1fr_400px]">
         <div className="min-w-0 space-y-4">
           {/* Step 2: retailer + Step 3: terms */}
-          <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+          <section className="rounded-2xl bg-surface p-4 shadow-sm ring-1 ring-slate-200">
             <RetailerSelect ref={retailerRef} value={retailer} onChange={chooseRetailer} canEditDetails={isOffice} companyState={companyState} />
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <span className="mr-1 text-sm font-semibold text-slate-600">Payment terms</span>
               {TERMS.map((t) => (
                 <button key={t.days} type="button" onClick={() => { setDays(t.days); setCustom(false); }}
-                  className={cn("rounded-lg border px-3 py-1.5 text-sm font-semibold", !custom && days === t.days ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300 bg-white hover:border-slate-400")}>
+                  className={cn("rounded-lg border px-3 py-1.5 text-sm font-semibold", !custom && days === t.days ? "border-primary bg-primary text-on-fill" : "border-slate-300 bg-surface hover:border-slate-400")}>
                   {t.label}
                 </button>
               ))}
-              <button type="button" onClick={() => setCustom(true)} className={cn("rounded-lg border px-3 py-1.5 text-sm font-semibold", custom ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300 bg-white hover:border-slate-400")}>Custom</button>
+              <button type="button" onClick={() => setCustom(true)} className={cn("rounded-lg border px-3 py-1.5 text-sm font-semibold", custom ? "border-primary bg-primary text-on-fill" : "border-slate-300 bg-surface hover:border-slate-400")}>Custom</button>
               {custom && (
                 <span className="flex items-center gap-1.5 text-sm">
                   <Input type="number" min={0} max={365} value={days} onChange={(e) => setDays(Math.max(0, Math.min(365, Number(e.target.value) || 0)))} className="h-9 w-20" aria-label="Credit days" />
@@ -323,7 +323,7 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
           </section>
 
           {/* Step 4: products */}
-          <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+          <section className="rounded-2xl bg-surface p-4 shadow-sm ring-1 ring-slate-200">
             <div className="flex flex-col gap-2 sm:flex-row">
               <div className="relative flex-1">
                 <Search className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-slate-400" />
@@ -333,7 +333,7 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
               </div>
               <BarcodeScanButton label="Scan" onDetected={(code) => { const p = products.find((x) => x.barcode === code || x.sku.toLowerCase() === code.toLowerCase()); if (p) add(p); else setQ(code); }} />
               <button type="button" onClick={() => setBrowse((b) => !b)}
-                className={cn("flex h-12 items-center justify-center gap-2 rounded-lg px-4 text-sm font-bold tracking-wide transition", browse ? "bg-ink-900 text-white" : `${tone.solid} hover:opacity-90`)}>
+                className={cn("flex h-12 items-center justify-center gap-2 rounded-lg px-4 text-sm font-bold tracking-wide transition", browse ? "bg-primary text-on-fill" : `${tone.solid} hover:opacity-90`)}>
                 <LayoutGrid className="size-4" /> {browse ? "CLOSE CATALOGUE" : "BROWSE PRODUCT CATALOGUE"}
               </button>
             </div>
@@ -349,7 +349,7 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
                     const n = c.id === "all" ? products.length : products.filter((p) => p.category_id === c.id).length;
                     return (
                       <button key={c.id} type="button" onClick={() => setCat(c.id)}
-                        className={cn("shrink-0 rounded-full px-4 py-1.5 text-sm font-bold tracking-wide uppercase", cat === c.id ? "bg-ink-900 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200")}>
+                        className={cn("shrink-0 rounded-full px-4 py-1.5 text-sm font-bold tracking-wide uppercase", cat === c.id ? "bg-primary text-on-fill" : "bg-slate-100 text-slate-700 hover:bg-slate-200")}>
                         {c.name} <span className="font-normal opacity-60">{n}</span>
                       </button>
                     );
@@ -386,10 +386,10 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
 
         {/* Cart: always visible on the right on desktop */}
         <aside id="cart" className="xl:sticky xl:top-4 xl:self-start">
-          <div className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 xl:max-h-[calc(100dvh-9rem)]">
+          <div className="flex flex-col overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-slate-200 xl:max-h-[calc(100dvh-9rem)]">
             <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
               <span className="flex items-center gap-2 font-semibold"><ShoppingCart className="size-5" /> Cart
-                <span className="rounded-full bg-ink-900 px-2 py-0.5 text-xs text-white">{lines.length} items · {fmtQty(totalQty)} qty</span>
+                <span className="rounded-full bg-primary px-2 py-0.5 text-xs text-on-fill">{lines.length} items · {fmtQty(totalQty)} qty</span>
               </span>
               {lines.length > 0 && <button onClick={clearCart} className="text-xs font-medium text-slate-500 hover:text-red-600">Clear</button>}
             </div>
@@ -447,7 +447,7 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
                 {maxDisc > 0 && (
                   <div className="flex items-center justify-between">
                     <dt className="text-slate-500">Overall discount</dt>
-                    <dd className="flex items-center gap-1"><input type="number" min={0} max={maxDisc} step="0.5" value={overall} placeholder="0" onChange={(e) => setOverall(e.target.value)} className="tabular h-7 w-14 rounded border border-slate-300 bg-white px-1 text-right" aria-label="Overall discount percent" />%</dd>
+                    <dd className="flex items-center gap-1"><input type="number" min={0} max={maxDisc} step="0.5" value={overall} placeholder="0" onChange={(e) => setOverall(e.target.value)} className="tabular h-7 w-14 rounded border border-slate-300 bg-surface px-1 text-right" aria-label="Overall discount percent" />%</dd>
                   </div>
                 )}
                 {discount > 0 && <Row k="Discount" v={`− ${inr(discount)}`} tone="green" />}
@@ -462,14 +462,14 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
                 <span className="tabular text-2xl font-bold">{inr(grand)}</span>
               </div>
               {isOffice && (
-                <div className="mt-2 rounded-xl bg-white p-2.5 ring-1 ring-slate-200">
+                <div className="mt-2 rounded-xl bg-surface p-2.5 ring-1 ring-slate-200">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-slate-600">Amount paid now</span>
                     <input type="number" min={0} step="1" value={paid} placeholder="0" onChange={(e) => setPaid(e.target.value)} className="tabular h-8 w-28 rounded border border-slate-300 px-2 text-right font-semibold" aria-label="Amount paid" />
                   </div>
                   {paidNum > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
-                      {METHODS.map((m) => <button key={m.k} type="button" onClick={() => setMethod(m.k)} className={cn("rounded-md px-2.5 py-1 text-xs font-semibold", method === m.k ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-700")}>{m.label}</button>)}
+                      {METHODS.map((m) => <button key={m.k} type="button" onClick={() => setMethod(m.k)} className={cn("rounded-md px-2.5 py-1 text-xs font-semibold", method === m.k ? "bg-primary text-on-fill" : "bg-slate-100 text-slate-700")}>{m.label}</button>)}
                       {method !== "cash" && <input value={payRef} onChange={(e) => setPayRef(e.target.value)} placeholder={method === "cheque" ? "Cheque no." : "UTR / ref."} className="h-7 flex-1 rounded border border-slate-300 px-2 text-xs" />}
                     </div>
                   )}
@@ -486,7 +486,7 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
               {error && <div className="mt-2"><Alert>{error.message}</Alert></div>}
               <div className="mt-3 grid gap-2">
                 {isOffice ? (
-                  <Button className="h-12 bg-emerald-600 text-base font-bold tracking-wide hover:bg-emerald-700" disabled={pending || !lines.length || !retailer}
+                  <Button className="h-12 bg-primary text-base font-bold tracking-wide hover:bg-primary-hover" disabled={pending || !lines.length || !retailer}
                     onClick={() => { const v = validate(); if (v) setError({ message: v }); else { setError(null); setReviewing(true); } }}>
                     <FileText className="size-5" /> GENERATE INVOICE
                   </Button>
@@ -502,14 +502,14 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
 
       {/* Phone: cart summary bar */}
       {lines.length > 0 && (
-        <a href="#cart" className="fixed inset-x-3 bottom-3 z-30 flex items-center justify-between rounded-2xl bg-ink-900 px-4 py-3 text-white shadow-xl xl:hidden">
+        <a href="#cart" className="fixed inset-x-3 bottom-3 z-30 flex items-center justify-between rounded-2xl bg-primary px-4 py-3 text-on-fill shadow-xl xl:hidden">
           <span className="flex items-center gap-2 text-sm"><ShoppingCart className="size-5" /> {lines.length} items · {fmtQty(totalQty)} qty</span>
           <span className="tabular text-lg font-bold">{inr(grand)}</span>
         </a>
       )}
 
       {toast && (
-        <div className={cn("pointer-events-none fixed bottom-20 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white shadow-lg xl:bottom-6", toast.warn ? "bg-amber-600" : "bg-emerald-600")}>
+        <div className={cn("pointer-events-none fixed bottom-20 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-on-fill shadow-lg xl:bottom-6", toast.warn ? "bg-amber-600" : "bg-primary")}>
           {toast.warn ? <AlertTriangle className="size-4" /> : <Check className="size-4" />} {toast.text}
         </div>
       )}
@@ -559,7 +559,7 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
             {error && <Alert>{error.message}</Alert>}
             <div className="flex justify-end gap-2 pt-1">
               <Button variant="secondary" onClick={() => setReviewing(false)}>Back</Button>
-              <Button className="bg-emerald-600 hover:bg-emerald-700" autoFocus
+              <Button className="bg-primary hover:bg-primary-hover" autoFocus
                 disabled={pending || missing.length > 0 || (shortLines.length > 0 && !overrideStock) || (overLimit && !overrideCredit && isMgr)}
                 onClick={() => submit(true)}>
                 {pending ? "Generating…" : "Confirm & generate invoice"}
@@ -595,12 +595,12 @@ function ProductCard({ p, qty, fav, onAdd, onFav }: { p: PickerProduct; qty: num
   const out = p.available <= 0;
   return (
     <div role="button" tabIndex={0} onClick={() => onAdd(p)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAdd(p); } }}
-      className={cn("group relative flex cursor-pointer flex-col overflow-hidden rounded-xl border bg-white text-left transition select-none hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98]",
+      className={cn("group relative flex cursor-pointer flex-col overflow-hidden rounded-xl border bg-surface text-left transition select-none hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98]",
         qty > 0 ? "border-emerald-500 ring-2 ring-emerald-500/20" : "border-slate-200 hover:border-slate-300")}>
       <div className="relative aspect-square bg-slate-50">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {p.image_url ? <img src={p.image_url} alt="" className="size-full object-contain p-3" loading="lazy" draggable={false} /> : <div className="grid size-full place-items-center text-slate-300"><ImageOff className="size-8" /></div>}
-        {qty > 0 && <span className="tabular absolute top-2 left-2 rounded-full bg-emerald-600 px-2 py-0.5 text-xs font-bold text-white shadow">× {fmtQty(qty)}</span>}
+        {qty > 0 && <span className="tabular absolute top-2 left-2 rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-on-fill shadow">× {fmtQty(qty)}</span>}
         <button type="button" onClick={(e) => { e.stopPropagation(); onFav(p.id); }} aria-label={fav ? "Remove favourite" : "Mark favourite"}
           className={cn("absolute top-1.5 right-1.5 rounded-full p-1.5 transition", fav ? "text-amber-400" : "text-slate-300 opacity-0 group-hover:opacity-100 hover:text-amber-400")}>
           <Star className={cn("size-4", fav && "fill-amber-400")} />
@@ -614,7 +614,7 @@ function ProductCard({ p, qty, fav, onAdd, onFav }: { p: PickerProduct; qty: num
             <div className="tabular text-sm font-bold">{inr(p.retailer_price)}</div>
             <div className={cn("text-[11px] font-semibold", out ? "text-red-600" : p.available < 10 ? "text-amber-700" : "text-emerald-700")}>{out ? "Out of stock" : `${fmtQty(p.available)} in stock`}</div>
           </div>
-          <span className="grid size-9 place-items-center rounded-full bg-ink-900 text-white shadow transition group-hover:bg-emerald-600" aria-hidden><ShoppingCart className="size-4" /></span>
+          <span className="grid size-9 place-items-center rounded-full bg-primary text-on-fill shadow transition group-hover:bg-primary-hover" aria-hidden><ShoppingCart className="size-4" /></span>
         </div>
       </div>
     </div>
@@ -625,13 +625,13 @@ function ProductStrip({ products, inCart, onAdd }: { products: PickerProduct[]; 
   return (
     <div className="flex flex-wrap gap-2">
       {products.map((p) => (
-        <button key={p.id} type="button" onClick={() => onAdd(p)} className={cn("flex items-center gap-2 rounded-xl border bg-white py-1.5 pr-3 pl-1.5 text-left text-xs hover:border-emerald-400 hover:bg-emerald-50", inCart.get(p.id) ? "border-emerald-400" : "border-slate-200")}>
+        <button key={p.id} type="button" onClick={() => onAdd(p)} className={cn("flex items-center gap-2 rounded-xl border bg-surface py-1.5 pr-3 pl-1.5 text-left text-xs hover:border-emerald-400 hover:bg-emerald-50", inCart.get(p.id) ? "border-emerald-400" : "border-slate-200")}>
           <span className="grid size-8 place-items-center overflow-hidden rounded-lg bg-slate-100">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             {p.image_url ? <img src={p.image_url} alt="" className="size-full object-cover" /> : <Plus className="size-4 text-slate-400" />}
           </span>
           <span className="max-w-40"><span className="line-clamp-1 font-semibold">{p.name}</span><span className="tabular text-slate-500">{inr(p.retailer_price, { decimals: false })} · {fmtQty(p.available)} left</span></span>
-          {inCart.get(p.id) ? <span className="tabular rounded-full bg-emerald-600 px-1.5 text-white">× {fmtQty(inCart.get(p.id)!)}</span> : null}
+          {inCart.get(p.id) ? <span className="tabular rounded-full bg-primary px-1.5 text-on-fill">× {fmtQty(inCart.get(p.id)!)}</span> : null}
         </button>
       ))}
     </div>
@@ -666,12 +666,12 @@ function DonePanel({ done, onNew, error }: { done: Done; onNew: () => void; erro
       <p className="mt-1 text-slate-600">{done.shop} · <b className="tabular">{inr(done.total)}</b>{done.paid > 0 ? ` · paid ${inr(done.paid)}` : ""} · {done.total - done.paid > 0 ? `balance due ${fmtDate(done.due)}` : "fully paid"}</p>
       {error && <div className="mt-3 text-left"><Alert>{error}</Alert></div>}
       {done.docs.length > 1 && (
-        <ul className="mt-5 divide-y divide-slate-100 rounded-xl bg-white text-left ring-1 ring-slate-200">
+        <ul className="mt-5 divide-y divide-slate-100 rounded-xl bg-surface text-left ring-1 ring-slate-200">
           {done.docs.map((d) => (
             <li key={d.invoiceId} className="flex flex-wrap items-center gap-2 p-3">
               <div className="min-w-0 flex-1"><div className="font-semibold">{d.brandName}</div><div className="font-mono text-xs text-slate-500">{d.invoiceNo}</div></div>
               <span className="tabular font-semibold">{inr(d.total)}</span>
-              <a href={`/api/pdf/invoice/${d.invoiceId}`} target="_blank" rel="noopener" className="rounded-lg bg-ink-900 px-3 py-1.5 text-sm font-semibold text-white">Print</a>
+              <a href={`/api/pdf/invoice/${d.invoiceId}`} target="_blank" rel="noopener" className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-on-fill">Print</a>
               <a href={`/api/pdf/invoice/${d.invoiceId}?download=1`} className="rounded-lg px-3 py-1.5 text-sm font-semibold ring-1 ring-slate-300">PDF</a>
               <Link href={`/sales/invoices/${d.invoiceId}`} className="rounded-lg px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">Open</Link>
             </li>
@@ -679,14 +679,14 @@ function DonePanel({ done, onNew, error }: { done: Done; onNew: () => void; erro
         </ul>
       )}
       <div className={cn("mt-6 grid gap-3 sm:grid-cols-3", done.docs.length > 1 && "hidden")}>
-        <a href={pdf} target="_blank" rel="noopener" className="flex h-14 items-center justify-center gap-2 rounded-xl bg-ink-900 font-semibold text-white hover:bg-ink-800"><Printer className="size-5" /> Print</a>
-        <a href={`${pdf}?download=1`} className="flex h-14 items-center justify-center gap-2 rounded-xl bg-white font-semibold ring-1 ring-slate-300 hover:bg-slate-50"><Download className="size-5" /> PDF</a>
+        <a href={pdf} target="_blank" rel="noopener" className="flex h-14 items-center justify-center gap-2 rounded-xl bg-primary font-semibold text-on-fill hover:bg-primary-hover"><Printer className="size-5" /> Print</a>
+        <a href={`${pdf}?download=1`} className="flex h-14 items-center justify-center gap-2 rounded-xl bg-surface font-semibold ring-1 ring-slate-300 hover:bg-slate-50"><Download className="size-5" /> PDF</a>
         <button type="button" disabled={sharing} onClick={() => start(async () => { setShareError(null); const r = await shareOnWhatsApp("invoice", done.invoiceId, ""); if (r.url) window.open(r.url, "_blank", "noopener"); else setShareError(r.error ?? "Could not share"); })}
-          className="flex h-14 items-center justify-center gap-2 rounded-xl bg-[#25D366] font-semibold text-white hover:bg-[#1ebe5b] disabled:opacity-60"><MessageCircle className="size-5" /> {sharing ? "Preparing…" : "WhatsApp"}</button>
+          className="flex h-14 items-center justify-center gap-2 rounded-xl bg-[#25D366] font-semibold text-on-fill hover:bg-[#1ebe5b] disabled:opacity-60"><MessageCircle className="size-5" /> {sharing ? "Preparing…" : "WhatsApp"}</button>
       </div>
       {shareError && <p className="mt-2 text-sm text-red-700">{shareError}</p>}
       <div className="mt-4 flex flex-col justify-center gap-2 sm:flex-row">
-        <Button className="h-12 bg-emerald-600 px-6 text-base font-bold hover:bg-emerald-700" onClick={onNew}><Plus className="size-5" /> New invoice</Button>
+        <Button className="h-12 bg-primary px-6 text-base font-bold hover:bg-primary-hover" onClick={onNew}><Plus className="size-5" /> New invoice</Button>
         <Link href={`/sales/invoices/${done.invoiceId}`} className="flex h-12 items-center justify-center rounded-lg px-4 text-sm font-medium text-slate-600 hover:bg-slate-100">Open invoice</Link>
       </div>
       <p className="mt-3 text-xs text-slate-400">Ctrl+Enter starts the next invoice.</p>

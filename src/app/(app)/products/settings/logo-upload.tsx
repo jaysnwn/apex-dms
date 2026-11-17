@@ -29,7 +29,7 @@ export function LogoUpload({ brandId, url, canEdit }: { brandId: string; url: st
 
   return (
     <div className="flex items-center gap-3">
-      <span className="grid h-14 w-28 place-items-center overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <span className="grid h-14 w-28 place-items-center overflow-hidden rounded-lg border border-slate-200 bg-surface">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {url ? <img src={url} alt="Logo" className="max-h-12 max-w-24 object-contain" /> : <span className="text-xs text-slate-400">No logo</span>}
       </span>

@@ -243,7 +243,7 @@ export function RetailerForm({
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <fieldset className="mb-6 rounded-xl border border-slate-200 bg-white p-5">
+    <fieldset className="mb-6 rounded-xl border border-slate-200 bg-surface p-5">
       <legend className="px-1 text-sm font-semibold text-slate-900">{title}</legend>
       <div className="grid gap-4 sm:grid-cols-2">{children}</div>
     </fieldset>

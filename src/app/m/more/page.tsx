@@ -22,7 +22,7 @@ export default async function MorePage() {
   ];
   return (
     <div className="space-y-4">
-      <section className="flex items-center gap-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70">
+      <section className="flex items-center gap-4 rounded-3xl bg-surface p-5 shadow-sm ring-1 ring-slate-200/70">
         <Avatar name={profile.full_name || "?"} size={64} />
         <div className="min-w-0">
           <div className="truncate text-xl font-bold">{profile.full_name}</div>
@@ -30,7 +30,7 @@ export default async function MorePage() {
           <div className="truncate text-xs text-slate-400">{user.email}</div>
         </div>
       </section>
-      <ul className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70">
+      <ul className="overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-slate-200/70">
         {items.map((i) => (
           <li key={i.href} className="border-b border-slate-100 last:border-0">
             <Link href={i.href} className="flex items-center gap-3 px-4 py-3.5 active:bg-slate-50">
@@ -41,14 +41,14 @@ export default async function MorePage() {
           </li>
         ))}
         {profile.role !== "salesman" && (
-          <li><Link href="/dashboard" className="flex items-center gap-3 px-4 py-3.5 active:bg-slate-50"><span className="grid size-10 place-items-center rounded-xl bg-ink-900 text-white"><Monitor className="size-5" /></span><span className="flex-1 font-medium">Back to office app</span><ChevronRight className="size-5 text-slate-300" /></Link></li>
+          <li><Link href="/dashboard" className="flex items-center gap-3 px-4 py-3.5 active:bg-slate-50"><span className="grid size-10 place-items-center rounded-xl bg-primary text-on-fill"><Monitor className="size-5" /></span><span className="flex-1 font-medium">Back to office app</span><ChevronRight className="size-5 text-slate-300" /></Link></li>
         )}
       </ul>
       <section className="rounded-2xl bg-sky-50 p-4 text-sm text-sky-900">
         <div className="mb-1 flex items-center gap-2 font-semibold"><Smartphone className="size-4" /> Put the app on your home screen</div>
         Android (Chrome): tap ⋮ → <b>Add to Home screen</b>. iPhone (Safari): tap Share → <b>Add to Home Screen</b>. It then opens like a normal app and works with weak network.
       </section>
-      <SignOutButton className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white font-semibold text-red-600 ring-1 ring-red-200 active:bg-red-50"><LogOut className="size-5" /> Sign out</SignOutButton>
+      <SignOutButton className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-surface font-semibold text-red-600 ring-1 ring-red-200 active:bg-red-50"><LogOut className="size-5" /> Sign out</SignOutButton>
       <p className="text-center text-xs text-slate-400">DMS · salesman app</p>
     </div>
   );

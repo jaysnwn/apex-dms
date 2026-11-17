@@ -13,12 +13,12 @@ export function DocButtons({ kind, id, query = "", size = "md", label = "PDF" }:
   const href = `/api/pdf/${kind}/${id}${query ? `?${query}` : ""}`;
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <a href={href} target="_blank" rel="noopener" className={`inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white font-medium hover:bg-slate-50 ${size === "sm" ? "h-8 px-3 text-sm" : "h-10 px-4 text-sm"}`}>
+      <a href={href} target="_blank" rel="noopener" className={`inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-surface font-medium hover:bg-slate-50 ${size === "sm" ? "h-8 px-3 text-sm" : "h-10 px-4 text-sm"}`}>
         <FileDown className="size-4" /> {label}
       </a>
       <Button
         size={size}
-        className="bg-[#25D366] text-white hover:bg-[#1ebe5b]"
+        className="bg-[#25D366] text-on-fill hover:bg-[#1ebe5b]"
         disabled={pending}
         onClick={() =>
           start(async () => {

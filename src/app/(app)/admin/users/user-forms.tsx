@@ -14,7 +14,7 @@ function BrandBoxes({ brands, selected, idPrefix }: { brands: BrandOpt[]; select
       <div className="mb-1.5 text-sm font-medium text-slate-700">Brand access <span className="font-normal text-slate-500">(Super Admin always has every brand)</span></div>
       <div className="flex flex-wrap gap-3">
         {brands.map((b) => (
-          <label key={b.id} htmlFor={`${idPrefix}-${b.id}`} className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium has-[:checked]:border-ink-900 has-[:checked]:bg-slate-50">
+          <label key={b.id} htmlFor={`${idPrefix}-${b.id}`} className="flex items-center gap-2 rounded-lg border border-slate-300 bg-surface px-3 py-2 text-sm font-medium has-[:checked]:border-primary has-[:checked]:bg-slate-50">
             <input id={`${idPrefix}-${b.id}`} type="checkbox" name="brand_ids" value={b.id} defaultChecked={selected.includes(b.id)} className="size-4" />
             {b.name}
           </label>
@@ -118,7 +118,7 @@ export function EditUserForm({ user, isSelf, brands, brandIds }: { user: UserRow
         </div>
         <div className="sm:col-span-4"><BrandBoxes brands={brands} selected={brandIds} idPrefix={`brand-${user.id}`} /></div>
         <label className="flex items-start gap-2 text-sm sm:col-span-4">
-          <input type="checkbox" name="can_reimburse" value="true" defaultChecked={!!user.can_reimburse} className="mt-0.5 size-4 accent-ink-900" />
+          <input type="checkbox" name="can_reimburse" value="true" defaultChecked={!!user.can_reimburse} className="mt-0.5 size-4 accent-primary" />
           <span><span className="font-medium">Can reimburse expenses</span><span className="block text-xs text-slate-500">Lets a Manager or Billing user pay employees for approved expenses. The Super Admin can always do this; salesmen and warehouse staff never can.</span></span>
         </label>
         <div className="flex flex-wrap items-center gap-3 sm:col-span-4">

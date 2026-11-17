@@ -22,7 +22,7 @@ export function HomeView({ h, firstName }: { h: HomeData; firstName: string }) {
       <p className="px-1 text-sm text-slate-500">{greet}, <span className="font-medium text-slate-800">{firstName}</span> · {date(h.today)}</p>
 
       {/* ---------- Monthly target (main highlight) ---------- */}
-      <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-ink-700 text-white shadow-lg">
+      <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-blue-700 via-blue-600 to-blue-600 text-on-fill shadow-lg">
         <div className="flex items-center justify-between px-5 pt-4">
           <span className="flex items-center gap-1.5 text-sm font-medium text-slate-300"><Target className="size-4 text-accent-400" /> {h.target ? "Sales target" : "Sales"} · {monthName}</span>
           {h.target && <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs text-slate-200">{h.daysLeft} day{h.daysLeft === 1 ? "" : "s"} left</span>}
@@ -76,7 +76,7 @@ export function HomeView({ h, firstName }: { h: HomeData; firstName: string }) {
 
       {/* ---------- Incentive this month ---------- */}
       {h.incentive && (
-        <Link href="/m/incentive" className="block rounded-3xl bg-white p-4 shadow-sm ring-1 ring-emerald-200 active:bg-emerald-50/40">
+        <Link href="/m/incentive" className="block rounded-3xl bg-surface p-4 shadow-sm ring-1 ring-emerald-200 active:bg-emerald-50/40">
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-1.5 text-sm font-semibold text-emerald-800"><Sparkles className="size-4" /> My incentive this month</span>
             <span className="flex items-center text-sm font-medium text-emerald-700">Details <ChevronRight className="size-4" /></span>
@@ -109,7 +109,7 @@ export function HomeView({ h, firstName }: { h: HomeData; firstName: string }) {
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5 text-xs font-semibold">
                 {Object.entries(h.withMe.byMethod).map(([m, v]) => (
-                  <span key={m} className="tabular rounded-lg bg-white px-2 py-1 text-slate-700 ring-1 ring-amber-200">{PAYMENT_METHOD[m] ?? m} {inr(v, { decimals: false })}</span>
+                  <span key={m} className="tabular rounded-lg bg-surface px-2 py-1 text-slate-700 ring-1 ring-amber-200">{PAYMENT_METHOD[m] ?? m} {inr(v, { decimals: false })}</span>
                 ))}
               </div>
             </>
@@ -121,7 +121,7 @@ export function HomeView({ h, firstName }: { h: HomeData; firstName: string }) {
       )}
 
       {/* ---------- Big order button ---------- */}
-      <Link href="/m/order" className="flex items-center gap-4 rounded-3xl bg-gradient-to-r from-accent-500 to-accent-600 p-4 text-white shadow-md shadow-accent-500/30 active:scale-[0.99]">
+      <Link href="/m/order" className="flex items-center gap-4 rounded-3xl bg-gradient-to-r from-accent-500 to-accent-600 p-4 text-on-fill shadow-md active:scale-[0.99]">
         <span className="grid size-14 place-items-center rounded-2xl bg-white/20"><Plus className="size-8" strokeWidth={2.5} /></span>
         <span className="flex-1">
           <span className="block text-lg font-bold">Take new order</span>
@@ -131,7 +131,7 @@ export function HomeView({ h, firstName }: { h: HomeData; firstName: string }) {
       </Link>
 
       {/* ---------- Today ---------- */}
-      <section className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70">
+      <section className="rounded-3xl bg-surface p-4 shadow-sm ring-1 ring-slate-200/70">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-semibold">Today</h2>
           <Link href="/m/route" className="flex items-center text-sm font-medium text-sky-700">My route <ChevronRight className="size-4" /></Link>
@@ -143,12 +143,12 @@ export function HomeView({ h, firstName }: { h: HomeData; firstName: string }) {
         </div>
         {h.today_.visitsTotal > 0 && (
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-            <div className="h-full rounded-full bg-sky-500" style={{ width: `${(h.today_.visitsDone / h.today_.visitsTotal) * 100}%` }} />
+            <div className="h-full rounded-full bg-primary" style={{ width: `${(h.today_.visitsDone / h.today_.visitsTotal) * 100}%` }} />
           </div>
         )}
         {h.nextVisit ? (
           <Link href={`/m/outlets/${h.nextVisit.retailer_id}`} className="mt-3 flex items-center gap-3 rounded-2xl bg-sky-50 p-3 active:bg-sky-100">
-            <span className="grid size-10 place-items-center rounded-xl bg-sky-600 text-white"><Navigation className="size-5" /></span>
+            <span className="grid size-10 place-items-center rounded-xl bg-primary text-on-fill"><Navigation className="size-5" /></span>
             <span className="min-w-0 flex-1">
               <span className="block text-xs text-sky-700">Next visit{h.today_.routeNames.length ? ` · ${h.today_.routeNames.join(" + ")}` : ""}</span>
               <span className="block truncate font-semibold text-slate-900">{h.nextVisit.shop_name}</span>
@@ -171,7 +171,7 @@ export function HomeView({ h, firstName }: { h: HomeData; firstName: string }) {
       </section>
 
       {/* ---------- Recent orders ---------- */}
-      <section className="rounded-3xl bg-white shadow-sm ring-1 ring-slate-200/70">
+      <section className="rounded-3xl bg-surface shadow-sm ring-1 ring-slate-200/70">
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
           <h2 className="flex items-center gap-2 font-semibold"><TrendingUp className="size-4 text-slate-400" /> Recent orders</h2>
           <Link href="/m/orders" className="text-sm font-medium text-sky-700">See all</Link>
@@ -225,8 +225,8 @@ function Tile({ icon: Icon, tone, value, label }: { icon: typeof MapPin; tone: s
 
 function Quick({ href, icon: Icon, label, tone, badge }: { href: string; icon: typeof MapPin; label: string; tone: string; badge?: string }) {
   return (
-    <Link href={href} className="relative flex flex-col items-center gap-2 rounded-3xl bg-white p-3 text-center shadow-sm ring-1 ring-slate-200/70 active:scale-[0.98]">
-      <span className={cn("grid size-12 place-items-center rounded-2xl bg-gradient-to-br text-white shadow-sm", tone)}><Icon className="size-6" /></span>
+    <Link href={href} className="relative flex flex-col items-center gap-2 rounded-3xl bg-surface p-3 text-center shadow-sm ring-1 ring-slate-200/70 active:scale-[0.98]">
+      <span className={cn("grid size-12 place-items-center rounded-2xl bg-gradient-to-br text-on-fill shadow-sm", tone)}><Icon className="size-6" /></span>
       <span className="text-xs font-semibold text-slate-800">{label}</span>
       {badge && <span className="absolute top-2 right-2 rounded-full bg-rose-100 px-1.5 text-[10px] font-semibold text-rose-700">{badge}</span>}
     </Link>

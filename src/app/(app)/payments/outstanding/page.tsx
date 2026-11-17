@@ -147,7 +147,7 @@ export default async function OutstandingPage({ searchParams }: { searchParams: 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {DUE_FILTERS.map((f) => (
             <Link key={f.k} href={qs({ due: dueKey === f.k ? undefined : f.k })} aria-current={dueKey === f.k ? "true" : undefined}
-              className={cn("rounded-lg border p-2.5", dueKey === f.k ? "border-ink-900 bg-slate-50" : "border-slate-200 hover:border-slate-300")}>
+              className={cn("rounded-lg border p-2.5", dueKey === f.k ? "border-primary bg-slate-50" : "border-slate-200 hover:border-slate-300")}>
               <div className="text-xs text-slate-500">{f.label} <span className="text-slate-400">· {f.hint}</span></div>
               <div className={cn("tabular font-semibold", dueSum(f.k) > 0 ? f.tone : "text-slate-400")}>{inr(dueSum(f.k), { decimals: false })}</div>
               <div className="text-xs text-slate-400">{dueCount(f.k)} retailer{dueCount(f.k) === 1 ? "" : "s"}</div>
@@ -163,7 +163,7 @@ export default async function OutstandingPage({ searchParams }: { searchParams: 
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {buckets.map((b) => (
-            <Link key={b.k} href={qs({ bucket: sp.bucket === b.k ? undefined : b.k })} className={cn("rounded-lg border p-2.5", sp.bucket === b.k ? "border-ink-900" : "border-slate-200 hover:border-slate-300")}>
+            <Link key={b.k} href={qs({ bucket: sp.bucket === b.k ? undefined : b.k })} className={cn("rounded-lg border p-2.5", sp.bucket === b.k ? "border-primary" : "border-slate-200 hover:border-slate-300")}>
               <div className="flex items-center gap-1.5 text-xs text-slate-500"><span className={cn("size-2.5 rounded-full", b.cls)} /> {b.label}</div>
               <div className="tabular font-semibold">{inr(b.v, { decimals: false })}</div>
             </Link>

@@ -70,7 +70,7 @@ export function MobileShell({ name, roleLabel, orgName, logoUrl, tenantId, child
     <div className="min-h-dvh bg-slate-100">
       <div className="mx-auto flex min-h-dvh max-w-md flex-col bg-slate-50 shadow-xl sm:border-x sm:border-slate-200">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200/80 bg-white/95 px-4 py-2.5 backdrop-blur pt-[max(0.625rem,env(safe-area-inset-top))]">
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200/80 bg-surface/95 px-4 py-2.5 backdrop-blur pt-[max(0.625rem,env(safe-area-inset-top))]">
           {logoUrl ? (
             <>
               <Link href="/m" className="flex min-w-0 flex-1 items-center" aria-label={`${orgName} home`}>
@@ -108,8 +108,8 @@ export function MobileShell({ name, roleLabel, orgName, logoUrl, tenantId, child
             </span>
             {online && (
               <span className="flex shrink-0 gap-1">
-                {failed.length > 0 && <button onClick={() => writeOutbox(outbox.filter((o) => o.id !== failed[0].id))} className="rounded-lg bg-white px-2 py-1 text-xs font-medium text-red-700 shadow-sm">Remove</button>}
-                <button onClick={sync} className="grid size-8 place-items-center rounded-lg bg-white shadow-sm" aria-label="Send now"><RefreshCw className={cn("size-4", syncing && "animate-spin")} /></button>
+                {failed.length > 0 && <button onClick={() => writeOutbox(outbox.filter((o) => o.id !== failed[0].id))} className="rounded-lg bg-surface px-2 py-1 text-xs font-medium text-red-700 shadow-sm">Remove</button>}
+                <button onClick={sync} className="grid size-8 place-items-center rounded-lg bg-surface shadow-sm" aria-label="Send now"><RefreshCw className={cn("size-4", syncing && "animate-spin")} /></button>
               </span>
             )}
           </div>
@@ -118,7 +118,7 @@ export function MobileShell({ name, roleLabel, orgName, logoUrl, tenantId, child
         <main className="flex-1 px-3 pt-3 pb-28">{children}</main>
 
         {/* Bottom tab bar */}
-        <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-slate-200 bg-white/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
+        <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-slate-200 bg-surface/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
           <ul className="grid grid-cols-5">
             {TABS.map((t) => {
               const active = isActive(t.href);
@@ -126,7 +126,7 @@ export function MobileShell({ name, roleLabel, orgName, logoUrl, tenantId, child
                 return (
                   <li key={t.href} className="flex justify-center">
                     <Link href={t.href} className="-mt-6 flex flex-col items-center gap-1" aria-label="New order">
-                      <span className={cn("grid size-16 place-items-center rounded-full bg-gradient-to-br from-accent-400 to-accent-600 text-white shadow-lg shadow-accent-500/40 ring-4 ring-white transition active:scale-95", active && "ring-accent-100")}>
+                      <span className={cn("grid size-16 place-items-center rounded-full bg-gradient-to-br from-accent-400 to-accent-600 text-on-fill shadow-lg ring-4 ring-surface transition active:scale-95", active && "ring-accent-100")}>
                         <Plus className="size-8" strokeWidth={2.5} />
                       </span>
                       <span className={cn("text-[11px] font-semibold", active ? "text-accent-600" : "text-slate-600")}>New order</span>

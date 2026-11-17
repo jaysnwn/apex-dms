@@ -165,7 +165,7 @@ export function ProductForm({
 
 function Section({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
   return (
-    <fieldset className="mb-6 rounded-xl border border-slate-200 bg-white p-5">
+    <fieldset className="mb-6 rounded-xl border border-slate-200 bg-surface p-5">
       <legend className="px-1 text-sm font-semibold text-slate-900">{title}</legend>
       {note && <p className="-mt-1 mb-4 text-xs text-slate-500">{note}</p>}
       <div className="grid gap-4 sm:grid-cols-2">{children}</div>

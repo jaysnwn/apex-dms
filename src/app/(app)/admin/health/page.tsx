@@ -98,7 +98,7 @@ export default async function HealthPage() {
       {errors.length === 0 ? (
         <Card className="p-8 text-center text-sm text-slate-500">No errors recorded. Errors from the last 30 days appear here.</Card>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-surface">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
               <tr><th className="px-4 py-2">When</th><th className="px-4 py-2">Where</th><th className="px-4 py-2">Error</th><th className="px-4 py-2">Who</th></tr>

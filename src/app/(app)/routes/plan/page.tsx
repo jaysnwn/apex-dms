@@ -64,7 +64,7 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
             {rows.length === 0 && <tr><td colSpan={15} className="px-4 py-10 text-center text-sm text-slate-500">No salesmen or routes yet.</td></tr>}
             {rows.map((r) => (
               <tr key={r.id || "none"} className="align-top">
-                <td className="sticky left-0 bg-white px-3 py-2 text-sm font-medium whitespace-nowrap">{r.name}</td>
+                <td className="sticky left-0 bg-surface px-3 py-2 text-sm font-medium whitespace-nowrap">{r.name}</td>
                 {days.map((d) => (
                   <td key={d} className="px-1 py-1.5">
                     {cell(r.id, d).map((s) => {

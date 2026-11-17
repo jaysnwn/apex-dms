@@ -59,7 +59,7 @@ export default async function RetailerPage({ params, searchParams }: { params: P
         description={`${r.code}${r.owner_name ? ` · ${r.owner_name}` : ""}${r.billing_city ? ` · ${r.billing_city}` : ""}`}
         actions={
           <>
-            <a href={`tel:${r.mobile}`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium hover:bg-slate-50"><Phone className="size-4" /> <span className="hidden sm:inline">Call</span></a>
+            <a href={`tel:${r.mobile}`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-surface px-3 text-sm font-medium hover:bg-slate-50"><Phone className="size-4" /> <span className="hidden sm:inline">Call</span></a>
             {canSell && <LinkButton href={`/payments/new?retailer=${id}`}><Wallet className="size-4" /> <span className="hidden sm:inline">Payment</span></LinkButton>}
             {canSell && <LinkButton href={`/sales/new?retailer=${id}`} variant="primary"><ShoppingCart className="size-4" /> New order</LinkButton>}
             {canEdit && <LinkButton href={`/retailers/${id}/edit`}><Pencil className="size-4" /></LinkButton>}

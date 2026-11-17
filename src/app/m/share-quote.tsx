@@ -61,25 +61,25 @@ export function ShareQuote({ orderId, orderNo, mobile, fallbackText, compact = f
     <div className="space-y-2">
       {canShareFile ? (
         <>
-          <button onClick={sendFile} disabled={busy !== null} className={`flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] font-bold text-white shadow-md shadow-green-600/20 active:scale-[0.99] disabled:opacity-70 ${big}`}>
+          <button onClick={sendFile} disabled={busy !== null} className={`flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] font-bold text-on-fill shadow-md active:scale-[0.99] disabled:opacity-70 ${big}`}>
             <MessageCircle className="size-5" /> {busy === "file" ? "Preparing PDF…" : "Send PDF on WhatsApp"}
           </button>
           <p className="text-center text-[11px] text-slate-500">Then choose <b>WhatsApp</b> and the shop. The shop gets the PDF itself.</p>
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={sendLink} disabled={busy !== null} className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-white text-sm font-semibold text-slate-700 ring-1 ring-slate-300 disabled:opacity-60">
+            <button onClick={sendLink} disabled={busy !== null} className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-surface text-sm font-semibold text-slate-700 ring-1 ring-slate-300 disabled:opacity-60">
               <Link2 className="size-4" /> {busy === "link" ? "Preparing…" : "Send as link"}
             </button>
-            <a href={pdfUrl} target="_blank" rel="noopener" className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-white text-sm font-semibold text-slate-700 ring-1 ring-slate-300">
+            <a href={pdfUrl} target="_blank" rel="noopener" className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-surface text-sm font-semibold text-slate-700 ring-1 ring-slate-300">
               <FileDown className="size-4" /> View PDF
             </a>
           </div>
         </>
       ) : (
         <>
-          <button onClick={sendLink} disabled={busy !== null} className={`flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] font-bold text-white shadow-md shadow-green-600/20 active:scale-[0.99] disabled:opacity-70 ${big}`}>
+          <button onClick={sendLink} disabled={busy !== null} className={`flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] font-bold text-on-fill shadow-md active:scale-[0.99] disabled:opacity-70 ${big}`}>
             <MessageCircle className="size-5" /> {busy === "link" ? "Preparing quotation…" : "Send quotation on WhatsApp"}
           </button>
-          <a href={pdfUrl} target="_blank" rel="noopener" className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-white text-sm font-semibold text-slate-700 ring-1 ring-slate-300">
+          <a href={pdfUrl} target="_blank" rel="noopener" className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-surface text-sm font-semibold text-slate-700 ring-1 ring-slate-300">
             <FileDown className="size-4" /> View PDF
           </a>
         </>

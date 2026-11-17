@@ -25,7 +25,7 @@ export function IncentiveView({ s, shops, shopHref, orderHref }: {
 
   return (
     <div className="space-y-4">
-      <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 to-teal-800 p-5 text-white shadow-md">
+      <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 to-teal-800 p-5 text-on-fill shadow-md">
         <div className="flex items-center justify-between text-sm text-emerald-100">
           <span className="flex items-center gap-1.5"><Sparkles className="size-4" /> Incentive</span>
           <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-xs">{s.is_final ? "Final" : `Provisional · final on ${date(s.final_on)}`}</span>
@@ -36,7 +36,7 @@ export function IncentiveView({ s, shops, shopHref, orderHref }: {
         </div>
         <div className="mt-3 grid grid-cols-4 gap-1.5">
           {[s.sales_earned, s.billed_earned, s.smart_earned, s.collection_earned].map((v, i) => (
-            <div key={i} className={cn("h-2 rounded-full", v > 0 ? "bg-white" : "bg-white/20")} />
+            <div key={i} className={cn("h-2 rounded-full", v > 0 ? "bg-surface" : "bg-white/20")} />
           ))}
         </div>
       </section>
@@ -94,7 +94,7 @@ function Criterion({ icon: Icon, title, amount, amountLabel, met, value, target,
 }) {
   const p = Math.max(0, Math.min(100, pct || 0));
   return (
-    <section className={cn("rounded-3xl bg-white p-4 shadow-sm ring-1", met ? "ring-emerald-300" : "ring-slate-200/70")}>
+    <section className={cn("rounded-3xl bg-surface p-4 shadow-sm ring-1", met ? "ring-emerald-300" : "ring-slate-200/70")}>
       <div className="flex items-start gap-3">
         <span className={cn("grid size-10 shrink-0 place-items-center rounded-2xl", met ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600")}><Icon className="size-5" /></span>
         <div className="min-w-0 flex-1">
@@ -109,7 +109,7 @@ function Criterion({ icon: Icon, title, amount, amountLabel, met, value, target,
             <span className="tabular text-sm text-slate-500">/ {target}</span>
           </div>
           <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-100">
-            <div className={cn("h-full rounded-full", met ? "bg-emerald-500" : p >= 60 ? "bg-sky-500" : "bg-amber-500")} style={{ width: `${p}%` }} />
+            <div className={cn("h-full rounded-full", met ? "bg-emerald-500" : p >= 60 ? "bg-primary" : "bg-amber-500")} style={{ width: `${p}%` }} />
           </div>
           <p className={cn("mt-1.5 text-xs font-medium", met ? "text-emerald-700" : "text-slate-600")}>{hint}</p>
           {note && <p className="mt-0.5 text-[11px] text-slate-400">{note}</p>}
@@ -122,7 +122,7 @@ function Criterion({ icon: Icon, title, amount, amountLabel, met, value, target,
 
 function SlabChip({ label, amount, active }: { label: string; amount: number; active: boolean }) {
   return (
-    <div className={cn("rounded-xl px-1 py-1.5 text-center", active ? (amount > 0 ? "bg-emerald-600 text-white shadow-sm" : "bg-slate-700 text-white") : "bg-slate-100 text-slate-500")}>
+    <div className={cn("rounded-xl px-1 py-1.5 text-center", active ? (amount > 0 ? "bg-primary text-on-fill shadow-sm" : "bg-slate-700 text-on-fill") : "bg-slate-100 text-slate-500")}>
       <div className="tabular text-[10px] leading-tight">{label}</div>
       <div className="tabular text-xs font-bold">{inr(amount, { decimals: false })}</div>
     </div>
@@ -141,7 +141,7 @@ function ShopList({ title, rows, tone = "slate", open, shopHref, orderHref }: {
         <span className="flex items-center gap-1.5">{tone === "amber" && <Clock className="size-4" />}{title}</span>
         <ChevronRight className="size-4 transition group-open:rotate-90" />
       </summary>
-      <ul className="max-h-96 divide-y divide-slate-100 overflow-y-auto bg-white">
+      <ul className="max-h-96 divide-y divide-slate-100 overflow-y-auto bg-surface">
         {rows.map(({ x, right, sub }) => (
           <li key={x.retailer_id} className="flex items-center gap-2 px-3 py-2">
             <Link href={shopHref(x.retailer_id)} className="min-w-0 flex-1">
@@ -149,7 +149,7 @@ function ShopList({ title, rows, tone = "slate", open, shopHref, orderHref }: {
               {sub && <span className="block truncate text-[11px] text-slate-500">{sub}</span>}
             </Link>
             {right && <span className="tabular text-sm font-semibold">{right}</span>}
-            {orderHref && <Link href={orderHref(x.retailer_id)} className="rounded-lg bg-accent-500 px-2.5 py-1 text-xs font-bold text-white">Order</Link>}
+            {orderHref && <Link href={orderHref(x.retailer_id)} className="rounded-lg bg-primary px-2.5 py-1 text-xs font-bold text-on-fill">Order</Link>}
           </li>
         ))}
       </ul>

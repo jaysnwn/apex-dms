@@ -53,7 +53,7 @@ export function EntryForms({
         {ENTRY_TYPES.filter((t) => allowed.includes(t.key)).map((t) => (
           <button key={t.key} type="button" onClick={() => switchTo(t.key)}
             className={cn("flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left text-sm font-semibold transition",
-              t.key === type ? TONE[t.tone] : "border-transparent bg-white text-slate-700 ring-1 ring-slate-200 hover:ring-slate-300")}>
+              t.key === type ? TONE[t.tone] : "border-transparent bg-surface text-slate-700 ring-1 ring-slate-200 hover:ring-slate-300")}>
             <t.icon className="size-4 shrink-0" /> {t.label}
           </button>
         ))}
@@ -184,7 +184,7 @@ function AdjustmentForm({ brandId, warehouses, onDone }: { brandId: string | nul
           <div className="text-xs text-slate-500">Current system stock</div>
           <div className="tabular mt-1 text-2xl font-bold">{product ? (system === null ? "…" : fmtQty(system)) : "—"}</div>
         </div>
-        <div className="rounded-xl bg-white p-3 ring-2 ring-violet-300">
+        <div className="rounded-xl bg-surface p-3 ring-2 ring-violet-300">
           <label htmlFor="adj_phys" className="text-xs text-slate-500">Actual physical stock</label>
           <input id="adj_phys" type="number" min={0} step="any" value={physical} onChange={(e) => { setPhysical(e.target.value); setConfirming(false); }}
             className="tabular mt-1 w-full bg-transparent text-2xl font-bold outline-none" placeholder="0" disabled={!product} />

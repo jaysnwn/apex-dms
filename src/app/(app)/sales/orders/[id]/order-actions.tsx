@@ -18,7 +18,7 @@ export function OrderActions({ orderId, canConfirm, canOverride, canEdit }: { or
       <div className="flex flex-wrap gap-2">
         {canConfirm && (
           <Button
-            className="bg-accent-600 hover:bg-accent-700"
+            className="bg-primary hover:bg-primary-hover"
             disabled={pending}
             onClick={() =>
               start(async () => {
@@ -33,7 +33,7 @@ export function OrderActions({ orderId, canConfirm, canOverride, canEdit }: { or
           </Button>
         )}
         {canEdit && (
-          <Link href={`/sales/orders/${orderId}/edit`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium hover:bg-slate-50">
+          <Link href={`/sales/orders/${orderId}/edit`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-surface px-4 text-sm font-medium hover:bg-slate-50">
             <Pencil className="size-4" /> Edit
           </Link>
         )}

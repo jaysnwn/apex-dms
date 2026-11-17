@@ -96,7 +96,7 @@ export default async function ReportPage({ params, searchParams }: { params: Pro
           <Button type="submit" variant="secondary">Apply</Button>
           <div className="ml-auto flex flex-wrap gap-1.5">
             {PRESETS(today).map((p) => (
-              <Link key={p.label} href={presetHref(p)} className={cn("rounded-full border px-3 py-1 text-xs", f.from === p.from && f.to === p.to ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300 hover:border-slate-400")}>{p.label}</Link>
+              <Link key={p.label} href={presetHref(p)} className={cn("rounded-full border px-3 py-1 text-xs", f.from === p.from && f.to === p.to ? "border-primary bg-primary text-on-fill" : "border-slate-300 hover:border-slate-400")}>{p.label}</Link>
             ))}
           </div>
         </form>

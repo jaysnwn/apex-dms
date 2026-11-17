@@ -79,7 +79,7 @@ export default async function PurchasePage({ params, searchParams }: { params: P
             </>
           )}
           {received && balance > 0 && (
-            <LinkButton href={`/purchases/payments/new?supplier=${s.id}&bill=${p.id}`} className="bg-emerald-600 text-white hover:bg-emerald-700"><Wallet className="size-4" /> Pay this bill</LinkButton>
+            <LinkButton href={`/purchases/payments/new?supplier=${s.id}&bill=${p.id}`} className="bg-primary text-on-fill hover:bg-primary-hover"><Wallet className="size-4" /> Pay this bill</LinkButton>
           )}
           {received && (
             <ReturnButton purchaseId={p.id} lines={(lines ?? []).map((l) => {
@@ -126,7 +126,7 @@ export default async function PurchasePage({ params, searchParams }: { params: P
 
         <div className="space-y-6">
           <Card className="overflow-hidden">
-            <div className={cn("px-5 py-4 text-white", received ? "bg-gradient-to-br from-emerald-700 to-emerald-900" : "bg-gradient-to-br from-fuchsia-700 to-fuchsia-900")}>
+            <div className={cn("px-5 py-4 text-on-fill", received ? "bg-gradient-to-br from-emerald-700 to-emerald-900" : "bg-gradient-to-br from-fuchsia-700 to-fuchsia-900")}>
               <div className="text-sm opacity-80">{received ? "Bill total" : "Order total"}</div>
               <div className="tabular text-2xl font-semibold">{inr(p.grand_total)}</div>
               {returnedTotal > 0 && <div className="text-sm opacity-90">Returned − {inr(returnedTotal)}</div>}

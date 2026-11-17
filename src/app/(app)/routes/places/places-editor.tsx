@@ -93,7 +93,7 @@ function TownForm({ town, territories, onDone }: { town: TownRow | null; territo
         </div>
         <div><Label hint="optional — Google Maps link or lat, long">Town centre location</Label><Input value={ll} onChange={(e) => setLl(e.target.value)} placeholder="19.5712, 74.2083" />
           {ll.trim() && !parsed && <p className="mt-1 text-xs text-red-700">Could not read a location.</p>}</div>
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-ink-900" checked={active} onChange={(e) => setActive(e.target.checked)} /> In use</label>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-primary" checked={active} onChange={(e) => setActive(e.target.checked)} /> In use</label>
       </div>
       {error && <div className="mt-3"><Alert>{error}</Alert></div>}
       <div className="mt-4 flex gap-2">
@@ -123,7 +123,7 @@ function TerritoryForm({ territory, onDone }: { territory: Territory | null; onD
         <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Junnar belt" autoFocus /></div>
         <div><Label hint="optional">Code</Label><Input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} maxLength={10} className="font-mono" /></div>
         <div><Label hint="optional">Description</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-ink-900" checked={active} onChange={(e) => setActive(e.target.checked)} /> In use</label>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-primary" checked={active} onChange={(e) => setActive(e.target.checked)} /> In use</label>
       </div>
       {error && <div className="mt-3"><Alert>{error}</Alert></div>}
       <div className="mt-4 flex gap-2">

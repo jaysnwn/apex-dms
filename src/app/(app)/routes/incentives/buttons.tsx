@@ -16,7 +16,7 @@ export function ApproveButton({ month, canApprove, canOverride }: { month: strin
   if (!canApprove && !canOverride) return null;
   return (
     <>
-      <Button className={canApprove ? "bg-emerald-600 hover:bg-emerald-700" : ""} variant={canApprove ? "primary" : "secondary"} onClick={() => setOpen(true)}>
+      <Button className={canApprove ? "bg-primary hover:bg-primary-hover" : ""} variant={canApprove ? "primary" : "secondary"} onClick={() => setOpen(true)}>
         <BadgeCheck className="size-4" /> {canApprove ? "Approve & lock month" : "Approve early"}
       </Button>
       {open && (
@@ -28,7 +28,7 @@ export function ApproveButton({ month, canApprove, canOverride }: { month: strin
           {error && <div className="mt-3"><Alert>{error}</Alert></div>}
           <div className="mt-5 flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button className="bg-emerald-600 hover:bg-emerald-700" disabled={pending} onClick={() => start(async () => {
+            <Button className="bg-primary hover:bg-primary-hover" disabled={pending} onClick={() => start(async () => {
               const r = await approveMonth(month, !canApprove);
               if (r.error) setError(r.error); else { setOpen(false); router.refresh(); }
             })}>{pending ? "Approving…" : "Approve"}</Button>
@@ -48,7 +48,7 @@ export function PaidButton({ id, amount, name }: { id: string; amount: number; n
   const [pending, start] = useTransition();
   return (
     <>
-      <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setOpen(true)}><Wallet className="size-3.5" /> Mark paid</Button>
+      <Button size="sm" className="bg-primary hover:bg-primary-hover" onClick={() => setOpen(true)}><Wallet className="size-3.5" /> Mark paid</Button>
       {open && (
         <Dialog title={`Pay ${inr(amount, { decimals: false })} to ${name}`} onClose={() => setOpen(false)}>
           <div className="grid grid-cols-4 gap-2">
@@ -60,7 +60,7 @@ export function PaidButton({ id, amount, name }: { id: string; amount: number; n
           {error && <div className="mt-3"><Alert>{error}</Alert></div>}
           <div className="mt-5 flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button className="bg-emerald-600 hover:bg-emerald-700" disabled={pending} onClick={() => start(async () => {
+            <Button className="bg-primary hover:bg-primary-hover" disabled={pending} onClick={() => start(async () => {
               const r = await markPaid(id, method, ref);
               if (r.error) setError(r.error); else { setOpen(false); router.refresh(); }
             })}>{pending ? "Saving…" : "Mark paid"}</Button>

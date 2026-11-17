@@ -99,7 +99,7 @@ export function Importer({ initialTab, brand, brands, canSeeAll }: { initialTab:
           <button
             key={k}
             onClick={() => switchTab(k)}
-            className={cn("rounded-full border px-3 py-1 text-sm", k === tab ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300 bg-white hover:border-slate-400")}
+            className={cn("rounded-full border px-3 py-1 text-sm", k === tab ? "border-primary bg-primary text-on-fill" : "border-slate-300 bg-surface hover:border-slate-400")}
           >
             {INFO[k].title}
           </button>
@@ -113,7 +113,7 @@ export function Importer({ initialTab, brand, brands, canSeeAll }: { initialTab:
           <Button variant="secondary" onClick={downloadTemplate}>
             <Download className="size-4" /> Download template
           </Button>
-          <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-ink-900 px-4 text-sm font-medium text-white hover:bg-ink-800">
+          <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-on-fill hover:bg-primary-hover">
             <FileSpreadsheet className="size-4" /> Choose .xlsx or .csv file
             <input type="file" accept=".xlsx,.csv" hidden onChange={(e) => onFile(e.target.files?.[0])} onClick={(e) => ((e.target as HTMLInputElement).value = "")} />
           </label>

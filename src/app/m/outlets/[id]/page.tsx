@@ -39,8 +39,8 @@ export default async function OutletPage({ params }: { params: Promise<{ id: str
     <div className="space-y-4">
       <Link href="/m/outlets" className="flex items-center gap-1 px-1 text-sm font-medium text-slate-600"><ArrowLeft className="size-4" /> Outlets</Link>
 
-      <section className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200/70">
-        <div className="bg-gradient-to-br from-violet-600 to-violet-800 p-5 text-white">
+      <section className="overflow-hidden rounded-3xl bg-surface shadow-sm ring-1 ring-slate-200/70">
+        <div className="bg-gradient-to-br from-violet-600 to-violet-800 p-5 text-on-fill">
           <div className="text-xs text-violet-200">{r.code}{(r.routes as unknown as { name: string } | null)?.name ? ` · ${(r.routes as unknown as { name: string }).name}` : ""}</div>
           <h1 className="text-2xl leading-tight font-bold">{r.shop_name}</h1>
           <p className="text-sm text-violet-100">{[r.owner_name, r.billing_city].filter(Boolean).join(" · ")}</p>
@@ -62,14 +62,14 @@ export default async function OutletPage({ params }: { params: Promise<{ id: str
       </section>
 
       <div className="grid grid-cols-2 gap-3">
-        <Link href={`/m/order?retailer=${r.id}`} className={cn("flex h-14 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-accent-500 to-accent-600 font-bold text-white shadow-md shadow-accent-500/30 active:scale-[0.98]", r.status === "blocked" && "pointer-events-none opacity-50")}>
+        <Link href={`/m/order?retailer=${r.id}`} className={cn("flex h-14 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-accent-500 to-accent-600 font-bold text-on-fill shadow-md active:scale-[0.98]", r.status === "blocked" && "pointer-events-none opacity-50")}>
           <ShoppingCart className="size-5" /> Take order
         </Link>
         <CollectButton retailerId={r.id} shop={r.shop_name} outstanding={outstanding} overdue={overdue} />
       </div>
 
       <section className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70">
+        <div className="rounded-2xl bg-surface p-4 shadow-sm ring-1 ring-slate-200/70">
           <div className="text-xs text-slate-500">Outstanding</div>
           <div className="tabular text-xl font-bold">{inr(outstanding, { decimals: false })}</div>
           <div className="text-[11px] text-slate-400">{r.credit_days} days credit{Number(r.credit_limit) > 0 ? ` · limit ${inr(r.credit_limit, { decimals: false })}` : ""}</div>
@@ -84,7 +84,7 @@ export default async function OutletPage({ params }: { params: Promise<{ id: str
       {promise && <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">Promised to pay {inr(promise.amount, { decimals: false })} on {date(promise.promised_date)}</p>}
 
       {(bills ?? []).length > 0 && (
-        <section className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70">
+        <section className="rounded-2xl bg-surface shadow-sm ring-1 ring-slate-200/70">
           <h2 className="px-4 pt-3 pb-1 text-sm font-semibold">Unpaid bills</h2>
           <ul className="divide-y divide-slate-100">
             {(bills ?? []).map((b) => {
@@ -100,7 +100,7 @@ export default async function OutletPage({ params }: { params: Promise<{ id: str
         </section>
       )}
 
-      <section className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70">
+      <section className="rounded-2xl bg-surface shadow-sm ring-1 ring-slate-200/70">
         <h2 className="px-4 pt-3 pb-1 text-sm font-semibold">Recent orders</h2>
         {(orders ?? []).length === 0 ? <p className="px-4 pb-3 text-sm text-slate-500">No orders yet.</p> : (
           <ul className="divide-y divide-slate-100">
@@ -118,7 +118,7 @@ export default async function OutletPage({ params }: { params: Promise<{ id: str
       </section>
 
       {(pays ?? []).length > 0 && (
-        <section className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70">
+        <section className="rounded-2xl bg-surface shadow-sm ring-1 ring-slate-200/70">
           <h2 className="px-4 pt-3 pb-1 text-sm font-semibold">Last payments</h2>
           <ul className="divide-y divide-slate-100">
             {(pays ?? []).map((p) => (
@@ -136,7 +136,7 @@ export default async function OutletPage({ params }: { params: Promise<{ id: str
         </section>
       )}
 
-      <section className="rounded-2xl bg-white p-4 text-sm shadow-sm ring-1 ring-slate-200/70">
+      <section className="rounded-2xl bg-surface p-4 text-sm shadow-sm ring-1 ring-slate-200/70">
         <div className="flex items-start gap-2 text-slate-600"><MapPin className="mt-0.5 size-4 shrink-0" /> {[r.billing_address, r.billing_city, r.billing_pincode].filter(Boolean).join(", ") || "No address"}</div>
         <div className="mt-1 text-slate-600">Mobile {r.mobile}{r.alt_mobile ? ` · ${r.alt_mobile}` : ""}</div>
         {r.gstin && <div className="mt-1 font-mono text-xs text-slate-500">GSTIN {r.gstin}</div>}

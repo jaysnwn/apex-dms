@@ -273,7 +273,7 @@ export function FieldApp({ initial, mobile = false }: { initial: FieldDay | null
       {notice && <div onClick={() => setNotice(null)}><Alert tone={notice.tone}>{notice.text}</Alert></div>}
 
       <Card className="overflow-hidden">
-        <div className="bg-gradient-to-br from-ink-900 to-ink-700 p-4 text-white">
+        <div className="bg-gradient-to-br from-blue-700 to-blue-600 p-4 text-on-fill">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="text-sm text-slate-300">{date(day.date)}</div>
@@ -286,7 +286,7 @@ export function FieldApp({ initial, mobile = false }: { initial: FieldDay | null
             </div>
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/15">
-            <div className="h-full rounded-full bg-accent-500" style={{ width: total ? `${(done / total) * 100}%` : "0%" }} />
+            <div className="h-full rounded-full bg-primary" style={{ width: total ? `${(done / total) * 100}%` : "0%" }} />
           </div>
         </div>
         <div className="grid grid-cols-3 divide-x divide-slate-100 text-center">
@@ -302,7 +302,7 @@ export function FieldApp({ initial, mobile = false }: { initial: FieldDay | null
           </div>
         )}
         <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-4 py-2.5 text-xs">
-          {next && <a href={directions(next)} target="_blank" rel="noopener" className="flex items-center gap-1 rounded-full bg-accent-500 px-3 py-1.5 font-semibold text-white"><Navigation className="size-3.5" /> Next: {next.shop_name}</a>}
+          {next && <a href={directions(next)} target="_blank" rel="noopener" className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 font-semibold text-on-fill"><Navigation className="size-3.5" /> Next: {next.shop_name}</a>}
           {mobile && <Link href="/m/routes" className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 font-medium text-slate-700"><RouteIcon className="size-3.5" /> My routes</Link>}
           <button onClick={toggleSharing} className={cn("ml-auto flex items-center gap-1 rounded-full px-3 py-1.5 font-medium", day.shareLocation ? "bg-violet-100 text-violet-800" : "bg-slate-100 text-slate-600")}>
             <Radio className="size-3.5" /> {day.shareLocation ? "Sharing location" : "Location sharing off"}
@@ -312,8 +312,8 @@ export function FieldApp({ initial, mobile = false }: { initial: FieldDay | null
 
       <div className="flex items-center justify-between">
         <div className="flex gap-2">
-          <button onClick={() => setFilter("todo")} className={cn("rounded-full border px-3 py-1 text-sm", filter === "todo" ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300 bg-white")}>To visit ({total - done - missed})</button>
-          <button onClick={() => setFilter("all")} className={cn("rounded-full border px-3 py-1 text-sm", filter === "all" ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300 bg-white")}>All ({total})</button>
+          <button onClick={() => setFilter("todo")} className={cn("rounded-full border px-3 py-1 text-sm", filter === "todo" ? "border-primary bg-primary text-on-fill" : "border-slate-300 bg-surface")}>To visit ({total - done - missed})</button>
+          <button onClick={() => setFilter("all")} className={cn("rounded-full border px-3 py-1 text-sm", filter === "all" ? "border-primary bg-primary text-on-fill" : "border-slate-300 bg-surface")}>All ({total})</button>
         </div>
         <span className="text-xs text-slate-400">Updated {time(day.loadedAt)}</span>
       </div>
@@ -385,9 +385,9 @@ export function FieldApp({ initial, mobile = false }: { initial: FieldDay | null
               {(v.status === "planned" || v.status === "in_progress") && (
                 <div className="grid grid-cols-4 gap-1.5 border-t border-slate-100 bg-slate-50/60 p-2.5">
                   {v.status === "planned" ? (
-                    <Button size="sm" className="col-span-2 bg-blue-600 hover:bg-blue-700" disabled={working} onClick={() => visitAction(v, "checkin")}><LogIn className="size-4" /> {working ? "Getting GPS…" : "Check in"}</Button>
+                    <Button size="sm" className="col-span-2 bg-primary hover:bg-primary-hover" disabled={working} onClick={() => visitAction(v, "checkin")}><LogIn className="size-4" /> {working ? "Getting GPS…" : "Check in"}</Button>
                   ) : (
-                    <Button size="sm" className="col-span-2 bg-emerald-600 hover:bg-emerald-700" onClick={() => setClosing({ v, mode: "complete" })}><CheckCircle2 className="size-4" /> Visit done</Button>
+                    <Button size="sm" className="col-span-2 bg-primary hover:bg-primary-hover" onClick={() => setClosing({ v, mode: "complete" })}><CheckCircle2 className="size-4" /> Visit done</Button>
                   )}
                   <Button size="sm" variant="secondary" onClick={() => setPaying(v)} aria-label="Collect payment"><IndianRupee className="size-4" /></Button>
                   <div className="grid grid-cols-2 gap-1">
@@ -445,7 +445,7 @@ function Progress({ label, done, goal }: { label: string; done: number; goal: nu
   return (
     <div>
       <div className="mb-1 flex justify-between text-xs"><span>{label}</span><span className="tabular">{inr(done, { decimals: false })} / {inr(goal, { decimals: false })}</span></div>
-      <div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className={cn("h-full rounded-full", pct >= 100 ? "bg-emerald-500" : pct >= 60 ? "bg-sky-500" : "bg-amber-500")} style={{ width: `${pct}%` }} /></div>
+      <div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className={cn("h-full rounded-full", pct >= 100 ? "bg-emerald-500" : pct >= 60 ? "bg-primary" : "bg-amber-500")} style={{ width: `${pct}%` }} /></div>
     </div>
   );
 }
@@ -475,7 +475,7 @@ function CollectDialog({ visit, onClose, onSave }: { visit: FieldVisit; onClose:
       {error && <div className="mt-3"><Alert>{error}</Alert></div>}
       <div className="mt-5 flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button className="bg-emerald-600 hover:bg-emerald-700" disabled={busy} onClick={async () => {
+        <Button className="bg-primary hover:bg-primary-hover" disabled={busy} onClick={async () => {
           const amt = Number(amount);
           if (!(amt > 0)) return setError("Enter the amount.");
           if (method !== "cash" && !reference.trim()) return setError("Enter the reference number.");
@@ -525,7 +525,7 @@ function CloseDialog({ visit, mode, today, online, onClose, onSave }: {
       {error && <div className="mt-3"><Alert>{error}</Alert></div>}
       <div className="mt-5 flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button className={mode === "complete" ? "bg-emerald-600 hover:bg-emerald-700" : ""} variant={mode === "missed" ? "danger" : "primary"} disabled={busy}
+        <Button className={mode === "complete" ? "bg-primary hover:bg-primary-hover" : ""} variant={mode === "missed" ? "danger" : "primary"} disabled={busy}
           onClick={async () => {
             setError(null);
             if (mode === "missed" && reason === "Other" && !other.trim()) return setError("Write the reason.");

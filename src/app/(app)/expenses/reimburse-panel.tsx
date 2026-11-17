@@ -58,7 +58,7 @@ function EmployeeCard({ g, canPay, me }: { g: { employeeId: string; name: string
       <table className="w-full text-sm">
         <thead className="text-left text-xs text-slate-500">
           <tr>
-            {canPay && <th className="w-10 py-2 pl-4"><input type="checkbox" className="size-4 accent-ink-900" aria-label="Select all" checked={all} onChange={() => setSel(all ? {} : Object.fromEntries(g.rows.map((r) => [r.id, String(r.outstanding)])))} /></th>}
+            {canPay && <th className="w-10 py-2 pl-4"><input type="checkbox" className="size-4 accent-primary" aria-label="Select all" checked={all} onChange={() => setSel(all ? {} : Object.fromEntries(g.rows.map((r) => [r.id, String(r.outstanding)])))} /></th>}
             <th className="px-4 py-2">Expense</th>
             <th className="px-3 py-2 text-right">Approved</th>
             <th className="px-3 py-2 text-right">Paid</th>
@@ -69,7 +69,7 @@ function EmployeeCard({ g, canPay, me }: { g: { employeeId: string; name: string
         <tbody className="divide-y divide-slate-100">
           {g.rows.map((r) => (
             <tr key={r.id} className={cn(sel[r.id] !== undefined && "bg-amber-50/50")}>
-              {canPay && <td className="pl-4"><input type="checkbox" className="size-4 accent-ink-900" checked={sel[r.id] !== undefined} onChange={() => toggle(r)} aria-label={`Select ${r.expense_no}`} /></td>}
+              {canPay && <td className="pl-4"><input type="checkbox" className="size-4 accent-primary" checked={sel[r.id] !== undefined} onChange={() => toggle(r)} aria-label={`Select ${r.expense_no}`} /></td>}
               <td className="px-4 py-2">
                 <span className="font-medium">{r.category_name}</span> <span className="text-slate-500">· {date(r.expense_date)} · {r.expense_no}</span>
                 {r.description && <div className="truncate text-xs text-slate-500">{r.description}</div>}

@@ -43,7 +43,7 @@ export function RouteEditor(p: {
       <nav className="-mx-4 overflow-x-auto border-b border-slate-200 px-4 sm:mx-0 sm:px-0">
         <ul className="flex gap-1">
           {TABS.map((t) => (
-            <li key={t.k}><button onClick={() => setTab(t.k)} className={cn("border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap", tab === t.k ? "border-accent-500 text-slate-900" : "border-transparent text-slate-500 hover:text-slate-800")}>{t.label}</button></li>
+            <li key={t.k}><button onClick={() => setTab(t.k)} className={cn("border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap", tab === t.k ? "border-primary text-slate-900" : "border-transparent text-slate-500 hover:text-slate-800")}>{t.label}</button></li>
           ))}
         </ul>
       </nav>
@@ -95,14 +95,14 @@ function DetailsForm({ route, territories, superAdmin }: { route: RouteRow | nul
               <div className="flex flex-wrap gap-1.5">
                 {WEEKDAYS.map((d, i) => {
                   const on = days.includes(i + 1);
-                  return <button key={d} type="button" onClick={() => setDays(on ? days.filter((x) => x !== i + 1) : [...days, i + 1].sort())} className={cn("h-9 w-12 rounded-lg border text-sm font-medium", on ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300 hover:border-slate-400")}>{d}</button>;
+                  return <button key={d} type="button" onClick={() => setDays(on ? days.filter((x) => x !== i + 1) : [...days, i + 1].sort())} className={cn("h-9 w-12 rounded-lg border text-sm font-medium", on ? "border-primary bg-primary text-on-fill" : "border-slate-300 hover:border-slate-400")}>{d}</button>;
                 })}
               </div>
               <p className="mt-1 text-xs text-slate-500">Twice a week (e.g. Mon + Thu) is fine. Each outlet can also be set to once a week, every 2 weeks or once a month.</p>
             </div>
           )}
           {frequency === "fortnightly" && <div><Label hint="the route runs in this week, then every second week">A week it runs</Label><Input type="date" value={anchor} onChange={(e) => setAnchor(e.target.value)} /></div>}
-          <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" className="size-4 accent-ink-900" checked={active} onChange={(e) => setActive(e.target.checked)} /> Active — visits are planned for this route</label>
+          <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" className="size-4 accent-primary" checked={active} onChange={(e) => setActive(e.target.checked)} /> Active — visits are planned for this route</label>
         </div>
         {msg.error && <div className="mt-3"><Alert>{msg.error}</Alert></div>}
         {msg.ok && <div className="mt-3"><Alert tone="green">{msg.ok}</Alert></div>}

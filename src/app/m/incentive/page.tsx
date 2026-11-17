@@ -28,7 +28,7 @@ export default async function MyIncentivePage({ searchParams }: { searchParams: 
   return (
     <div className="space-y-4">
       <Link href="/m" className="flex items-center gap-1 px-1 text-sm font-medium text-slate-600"><ArrowLeft className="size-4" /> Home</Link>
-      <div className="flex items-center justify-between rounded-2xl bg-white p-2 shadow-sm ring-1 ring-slate-200/70">
+      <div className="flex items-center justify-between rounded-2xl bg-surface p-2 shadow-sm ring-1 ring-slate-200/70">
         <Link href={`/m/incentive?month=${prev}`} className="grid size-10 place-items-center rounded-xl active:bg-slate-100" aria-label="Previous month"><ChevronLeft className="size-5" /></Link>
         <span className="font-semibold">{monthLabel(month)}</span>
         {next <= thisMonth ? (
@@ -39,11 +39,11 @@ export default async function MyIncentivePage({ searchParams }: { searchParams: 
       {summary ? (
         <IncentiveView s={summary} shops={shops} shopHref={(id) => `/m/outlets/${id}`} orderHref={month === thisMonth ? (id) => `/m/order?retailer=${id}` : undefined} />
       ) : (
-        <p className="rounded-2xl bg-white p-6 text-center text-sm text-slate-500">No incentive scheme for this month.</p>
+        <p className="rounded-2xl bg-surface p-6 text-center text-sm text-slate-500">No incentive scheme for this month.</p>
       )}
 
       {(history ?? []).length > 0 && (
-        <section className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70">
+        <section className="rounded-2xl bg-surface shadow-sm ring-1 ring-slate-200/70">
           <h2 className="px-4 pt-3 pb-1 text-sm font-semibold">Approved incentives</h2>
           <ul className="divide-y divide-slate-100">
             {(history ?? []).map((h) => (

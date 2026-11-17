@@ -86,13 +86,13 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         description={`${visible.length} ${archivedView ? "archived " : ""}product${visible.length === 1 ? "" : "s"}`}
         actions={canEdit && (
           <>
-            <Link href="/products/settings" className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium hover:bg-slate-50">
+            <Link href="/products/settings" className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-surface px-3 text-sm font-medium hover:bg-slate-50">
               <Settings2 className="size-4" /> <span className="hidden sm:inline">Brands &amp; categories</span>
             </Link>
-            <Link href="/import?tab=products" className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium hover:bg-slate-50">
+            <Link href="/import?tab=products" className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-surface px-3 text-sm font-medium hover:bg-slate-50">
               <Upload className="size-4" /> <span className="hidden sm:inline">Import</span>
             </Link>
-            <Link href="/products/new" className="inline-flex h-10 items-center gap-2 rounded-lg bg-ink-900 px-4 text-sm font-medium text-white hover:bg-ink-800">
+            <Link href="/products/new" className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-on-fill hover:bg-primary-hover">
               <Plus className="size-4" /> Add product
             </Link>
           </>
@@ -105,13 +105,13 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         <form className="flex items-center gap-2">
           {Object.entries(sp).filter(([k, v]) => v && k !== "sort").map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
           <ArrowDownUp className="size-4 text-slate-400" />
-          <select name="sort" defaultValue={sort} className="h-10 rounded-lg border border-slate-300 bg-white px-2 text-sm" aria-label="Sort">
+          <select name="sort" defaultValue={sort} className="h-10 rounded-lg border border-slate-300 bg-surface px-2 text-sm" aria-label="Sort">
             {Object.entries(SORTS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
-          <button className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium hover:bg-slate-50">Sort</button>
+          <button className="h-10 rounded-lg border border-slate-300 bg-surface px-3 text-sm font-medium hover:bg-slate-50">Sort</button>
           <span className="ml-1 flex overflow-hidden rounded-lg border border-slate-300">
-            <Link href={href({ view: undefined })} aria-label="Table view" className={cn("grid size-10 place-items-center", !grid ? "bg-ink-900 text-white" : "bg-white text-slate-600")}><List className="size-4" /></Link>
-            <Link href={href({ view: "grid" })} aria-label="Photo grid" className={cn("grid size-10 place-items-center", grid ? "bg-ink-900 text-white" : "bg-white text-slate-600")}><LayoutGrid className="size-4" /></Link>
+            <Link href={href({ view: undefined })} aria-label="Table view" className={cn("grid size-10 place-items-center", !grid ? "bg-primary text-on-fill" : "bg-surface text-slate-600")}><List className="size-4" /></Link>
+            <Link href={href({ view: "grid" })} aria-label="Photo grid" className={cn("grid size-10 place-items-center", grid ? "bg-primary text-on-fill" : "bg-surface text-slate-600")}><LayoutGrid className="size-4" /></Link>
           </span>
         </form>
       </div>

@@ -31,8 +31,8 @@ export function BrandFilter({ brands, current, path, params = {}, label = "Show"
         return (
           <Link key={o.code ?? "all"} href={href(o.code)} aria-current={on ? "page" : undefined}
             className={cn("inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold ring-1 ring-inset transition",
-              on ? (o.code ? t.solid + " ring-transparent" : "bg-slate-900 text-white ring-transparent") : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50")}>
-            {o.code ? <span className={cn("size-2 rounded-full", on ? "bg-white" : t.dot)} /> : <Layers className="size-3.5" />}
+              on ? (o.code ? t.solid + " ring-transparent" : "bg-slate-900 text-on-fill ring-transparent") : "bg-surface text-slate-700 ring-slate-200 hover:bg-slate-50")}>
+            {o.code ? <span className={cn("size-2 rounded-full", on ? "bg-surface" : t.dot)} /> : <Layers className="size-3.5" />}
             {o.name}
           </Link>
         );

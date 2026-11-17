@@ -63,7 +63,7 @@ function ScannerDialog({ onClose, onDetected }: { onClose: () => void; onDetecte
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-label="Scan barcode">
-      <div className="w-full max-w-md overflow-hidden rounded-xl bg-white">
+      <div className="w-full max-w-md overflow-hidden rounded-xl bg-surface">
         <div className="flex items-center justify-between border-b px-4 py-3">
           <span className="font-medium">Point the camera at the barcode</span>
           <button onClick={onClose} aria-label="Close" className="rounded p-1 text-slate-500 hover:bg-slate-100">

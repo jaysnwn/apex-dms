@@ -71,12 +71,12 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
         <div className="flex flex-wrap gap-2">
           <DocButtons kind="invoice" id={id} />
           {!cancelled && (
-            <a href={`/api/pdf/delivery-note/${id}`} target="_blank" rel="noopener" className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium hover:bg-slate-50">
+            <a href={`/api/pdf/delivery-note/${id}`} target="_blank" rel="noopener" className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-surface px-4 text-sm font-medium hover:bg-slate-50">
               <Truck className="size-4" /> Delivery note
             </a>
           )}
           {isOffice && !cancelled && Number(bal?.balance ?? 0) > 0 && (
-            <Link href={`/payments/new?retailer=${inv.retailer_id}&invoice=${id}`} className="inline-flex h-10 items-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700">
+            <Link href={`/payments/new?retailer=${inv.retailer_id}&invoice=${id}`} className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-on-fill hover:bg-primary-hover">
               <Wallet className="size-4" /> Record payment
             </Link>
           )}
@@ -153,7 +153,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
 
         <div className="space-y-6">
           <Card className="overflow-hidden">
-            <div className={cn("px-5 py-4 text-white", cancelled ? "bg-slate-500" : Number(bal?.balance ?? 0) <= 0 ? "bg-emerald-600" : bal?.due_status === "overdue" ? "bg-red-600" : "bg-ink-900")}>
+            <div className={cn("px-5 py-4 text-on-fill", cancelled ? "bg-slate-500" : Number(bal?.balance ?? 0) <= 0 ? "bg-primary" : bal?.due_status === "overdue" ? "bg-red-600" : "bg-primary")}>
               <div className="text-sm opacity-80">{cancelled ? "Cancelled" : Number(bal?.balance ?? 0) <= 0 ? "Fully paid" : "Balance due"}</div>
               <div className="tabular text-3xl font-semibold">{inr(cancelled ? 0 : Math.max(0, Number(bal?.balance ?? 0)))}</div>
               <div className="text-xs opacity-80">of {inr(inv.grand_total)}</div>
