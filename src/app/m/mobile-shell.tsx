@@ -76,8 +76,9 @@ export function MobileShell({ name, roleLabel, orgName, logoUrl, tenantId, child
         <header className="glass sticky top-0 z-30 flex items-center gap-3 border-b border-line/70 px-4 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))]">
           {logoUrl ? (
             <>
+              {/* The frosted bar isolates blending, so in dark mode the logo sits on a small white chip */}
               <Link href="/m" className="flex min-w-0 flex-1 items-center" aria-label={`${orgName} home`}>
-                <CompanyLogo src={logoUrl} name={orgName} className="h-8 w-auto max-w-[60%] object-contain brightness-[1.04] contrast-[1.04] mix-blend-multiply dark:mix-blend-screen dark:invert dark:hue-rotate-180" fallbackClassName="truncate text-base font-semibold text-text" />
+                <CompanyLogo src={logoUrl} name={orgName} className="h-8 w-auto max-w-[60%] rounded-md object-contain mix-blend-multiply dark:bg-white dark:px-1.5 dark:py-0.5 dark:mix-blend-normal" fallbackClassName="truncate text-base font-semibold text-text" />
               </Link>
               <NetPill online={online} />
               <Link href="/m/more" aria-label={`${firstName}, ${roleLabel}: account and more`} title={`${name} · ${roleLabel}`}>
