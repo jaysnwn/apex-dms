@@ -50,8 +50,12 @@ export default async function OutletPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
         <div className="grid grid-cols-4 divide-x divide-slate-100 text-xs font-semibold">
-          <a href={`tel:${r.mobile}`} className="flex flex-col items-center gap-1 py-3 text-slate-700 active:bg-slate-50"><Phone className="size-5 text-sky-600" /> Call</a>
-          <a href={`https://wa.me/91${r.mobile}`} target="_blank" rel="noopener" className="flex flex-col items-center gap-1 py-3 text-slate-700 active:bg-slate-50"><MessageCircle className="size-5 text-[#25D366]" /> WhatsApp</a>
+          {r.mobile
+            ? <a href={`tel:${r.mobile}`} className="flex flex-col items-center gap-1 py-3 text-slate-700 active:bg-slate-50"><Phone className="size-5 text-sky-600" /> Call</a>
+            : <span title="No number on file" className="flex flex-col items-center gap-1 py-3 text-slate-300"><Phone className="size-5" /> Call</span>}
+          {r.mobile
+            ? <a href={`https://wa.me/91${r.mobile}`} target="_blank" rel="noopener" className="flex flex-col items-center gap-1 py-3 text-slate-700 active:bg-slate-50"><MessageCircle className="size-5 text-[#25D366]" /> WhatsApp</a>
+            : <span title="No number on file" className="flex flex-col items-center gap-1 py-3 text-slate-300"><MessageCircle className="size-5" /> WhatsApp</span>}
           <a href={map} target="_blank" rel="noopener" className="flex flex-col items-center gap-1 py-3 text-slate-700 active:bg-slate-50"><Navigation className="size-5 text-violet-600" /> Directions</a>
           <a href={`/api/pdf/statement/${r.id}`} target="_blank" rel="noopener" className="flex flex-col items-center gap-1 py-3 text-slate-700 active:bg-slate-50"><FileText className="size-5 text-slate-500" /> Statement</a>
         </div>

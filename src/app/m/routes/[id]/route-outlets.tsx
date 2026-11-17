@@ -71,7 +71,9 @@ export function RouteOutlets({ towns, outlets }: { towns: Town[]; outlets: Outle
                     </div>
                   </div>
                   <div className="grid grid-cols-5 border-t border-slate-100 text-[11px] font-medium">
-                    <a href={`tel:${o.mobile}`} className="flex flex-col items-center gap-0.5 py-2 text-slate-700"><Phone className="size-4" /> Call</a>
+                    {o.mobile
+                      ? <a href={`tel:${o.mobile}`} className="flex flex-col items-center gap-0.5 py-2 text-slate-700"><Phone className="size-4" /> Call</a>
+                      : <span title="No number on file" className="flex flex-col items-center gap-0.5 py-2 text-slate-300"><Phone className="size-4" /> Call</span>}
                     <a href={nav} target="_blank" rel="noopener" className="flex flex-col items-center gap-0.5 py-2 text-slate-700"><Navigation className="size-4" /> Go</a>
                     <a href={`/api/pdf/statement/${o.retailer_id}`} target="_blank" rel="noopener" className="flex flex-col items-center gap-0.5 py-2 text-slate-700"><FileText className="size-4" /> Statement</a>
                     <Link href={`/m/outlets/${o.retailer_id}`} className="flex flex-col items-center gap-0.5 py-2 text-emerald-700"><IndianRupee className="size-4" /> Collect</Link>
