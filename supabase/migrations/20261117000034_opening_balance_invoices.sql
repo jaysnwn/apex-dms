@@ -78,7 +78,7 @@ begin
        where conname='invoices_opening_has_no_order' and conrelid='public.invoices'::regclass) then
     raise exception '0034: the opening/order constraint is missing';
   end if;
-  if position('is_opening' in pg_get_functiondef('public.invoice_brand()'::regprocedure)) = 0 then
+  if (select prosrc from pg_proc where oid = 'public.invoice_brand()'::regprocedure) not like '%is_opening%' then
     raise exception '0034: invoice_brand was not updated';
   end if;
 end $$;

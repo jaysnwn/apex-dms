@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
-import { createUser, resetPassword, updateUser, type ActionState } from "./actions";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
+import { createUser, removeUser, resetPassword, updateUser, type ActionState } from "./actions";
 import { ROLE_LABELS, ROLES, type AppRole } from "@/lib/roles";
 import { Alert, Button, Input, Label, Select } from "@/components/ui";
 
@@ -128,6 +128,7 @@ export function EditUserForm({ user, isSelf, brands, brandIds }: { user: UserRow
               Reset password
             </Button>
           )}
+          {!isSelf && <RemoveUser user={user} />}
           {state.error && <Alert>{state.error}</Alert>}
           {state.ok && <Alert tone="green">{state.ok}</Alert>}
         </div>
@@ -150,6 +151,37 @@ export function EditUserForm({ user, isSelf, brands, brandIds }: { user: UserRow
           {pwState.ok && <Alert tone="green">{pwState.ok}</Alert>}
         </form>
       )}
+    </div>
+  );
+}
+
+// Remove from this organization, after typing the person's name.
+function RemoveUser({ user }: { user: UserRow }) {
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState("");
+  const [res, setRes] = useState<ActionState>({});
+  const [pending, start] = useTransition();
+  const name = user.full_name || user.email || "";
+  if (!open) {
+    return <Button type="button" size="sm" variant="secondary" className="text-red-700" onClick={() => setOpen(true)}>Remove user</Button>;
+  }
+  return (
+    <div className="w-full rounded-lg border border-red-200 bg-red-50 p-3 text-sm sm:col-span-4">
+      <p className="mb-2 text-red-900">
+        <b>Remove {name}?</b> They lose all access to this organization at once.
+        Anything they already created (invoices, payments, visits) stays, with their name on it.
+        To confirm, type <b>{name}</b>:
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <Input value={typed} onChange={(e) => setTyped(e.target.value)} className="h-9 w-64" aria-label="Type the name to confirm" autoFocus />
+        <Button type="button" size="sm" className="bg-red-600 hover:bg-red-700" disabled={pending || typed.trim().toLowerCase() !== name.trim().toLowerCase()}
+          onClick={() => start(async () => setRes(await removeUser(user.id, typed)))}>
+          {pending ? "Removing…" : "Remove"}
+        </Button>
+        <Button type="button" size="sm" variant="secondary" onClick={() => { setOpen(false); setTyped(""); setRes({}); }}>Cancel</Button>
+      </div>
+      {res.error && <div className="mt-2"><Alert>{res.error}</Alert></div>}
+      {res.ok && <div className="mt-2"><Alert tone="green">{res.ok}</Alert></div>}
     </div>
   );
 }

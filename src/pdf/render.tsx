@@ -32,14 +32,19 @@ async function company(): Promise<Company> {
 // Brand shown on sales documents (name, colour, logo). The seller stays APEX TRADING CO.
 async function brandInfo(supabase: Awaited<ReturnType<typeof createClient>>, brandId: string | null | undefined): Promise<InvoicePdfData["brand"]> {
   if (!brandId) return undefined;
-  const { data: b } = await supabase.from("brands").select("name, code, logo_path").eq("id", brandId).maybeSingle();
+  const [{ data: b }, { count: taxed }] = await Promise.all([
+    supabase.from("brands").select("name, code, logo_path").eq("id", brandId).maybeSingle(),
+    // A brand whose products carry GST (CONQRETE) issues GST documents; a brand
+    // whose products are all GST-free (BLUEI) issues plain invoices without a GSTIN.
+    supabase.from("products").select("id", { count: "exact", head: true }).eq("brand_id", brandId).gt("gst_rate", 0),
+  ]);
   if (!b) return undefined;
   let logo: { data: Buffer; format: "png" | "jpg" } | null = null;
   if (b.logo_path && /\.(png|jpe?g)$/i.test(b.logo_path)) {
     const { data: blob } = await supabase.storage.from("product-images").download(b.logo_path);
     if (blob) logo = { data: Buffer.from(await blob.arrayBuffer()), format: /\.png$/i.test(b.logo_path) ? "png" : "jpg" };
   }
-  return { name: b.name, color: brandTone(b.code).hex, logo };
+  return { name: b.name, color: brandTone(b.code).hex, logo, gst: (taxed ?? 0) > 0 };
 }
 
 const INV_LINE_COLS =

@@ -1,12 +1,12 @@
 "use server";
 
-import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { dbError } from "@/lib/actions";
 import { getCatalogue } from "./data";
+import { brandKey } from "@/lib/brand-key";
 
 const FIELD = ["salesman", "manager", "super_admin"] as const;
 
@@ -32,12 +32,6 @@ export type QuoteInput = {
 
 // Same retry key → same order. Each brand of a split order gets its own key, derived
 // from the phone's key, so a resend never creates a second copy of any part.
-function brandKey(clientUuid: string, brandId: string, first: boolean) {
-  if (first) return clientUuid;
-  const h = createHash("sha256").update(`${clientUuid}:${brandId}`).digest("hex");
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`;
-}
-
 export type SentQuote = { orderId: string; orderNo: string; total: number; brand: string };
 
 // Save a quotation (never an invoice). One invoice is for one brand, so a cart

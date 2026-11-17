@@ -171,3 +171,30 @@ export async function resetPassword(_prev: ActionState, formData: FormData): Pro
   if (error) return { error: error.message };
   return { ok: "Password changed. Share it with the user privately." };
 }
+
+// Remove someone from this organization. No history here → deleted; with
+// history (invoices, payments, visits…) → removed: no access, hidden from this
+// list, name kept on old records. Their login is blocked if no other
+// organization uses it. Adding the same email again brings them back.
+export async function removeUser(userId: string, confirmName: string): Promise<ActionState> {
+  const { user: me } = await requireRole("super_admin");
+  if (!z.string().guid().safeParse(userId).success) return { error: "Unknown user." };
+  if (userId === me.id) return { error: "You cannot remove yourself." };
+  const supabase = await createClient();
+  const { data: members } = await supabase.rpc("list_members");
+  const target = ((members ?? []) as { id: string; full_name: string; email: string | null }[]).find((m) => m.id === userId);
+  if (!target) return { error: "This person is not a user of this organization." };
+  const expected = (target.full_name || target.email || "").trim().toLowerCase();
+  if (confirmName.trim().toLowerCase() !== expected) return { error: `Type the name exactly as shown (${target.full_name || target.email}) to confirm.` };
+
+  const { data: how, error } = await supabase.rpc("remove_member", { p_user: userId });
+  if (error) return { error: error.message };
+
+  const admin = createAdminClient();
+  if ((await activeMembershipCount(userId)) === 0) {
+    const { error: authError } = await admin.auth.admin.updateUserById(userId, { ban_duration: "876000h" });
+    if (authError) return { error: `Removed, but their sign-in could not be blocked: ${authError.message}` };
+  }
+  revalidatePath("/admin/users");
+  return { ok: how === "deleted" ? `${target.full_name || target.email} deleted.` : `${target.full_name || target.email} removed. Their name stays on the invoices, payments and visits they made.` };
+}

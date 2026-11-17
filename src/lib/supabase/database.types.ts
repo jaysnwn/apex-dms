@@ -4263,7 +4263,7 @@ export type Database = {
       warehouses: {
         Row: {
           address: string | null;
-          brand_id: string;
+          brand_id: string | null;
           created_at: string;
           id: string;
           is_active: boolean;
@@ -4273,7 +4273,7 @@ export type Database = {
         ComputedFields: never;
         Insert: {
           address?: string | null;
-          brand_id: string;
+          brand_id: string | null;
           created_at?: string;
           id?: string;
           is_active?: boolean;
@@ -4282,7 +4282,7 @@ export type Database = {
         };
         Update: {
           address?: string | null;
-          brand_id?: string;
+          brand_id?: string | null;
           created_at?: string;
           id?: string;
           is_active?: boolean;
@@ -5043,6 +5043,7 @@ export type Database = {
         };
         Returns: string;
       };
+      remove_member: { Args: { p_user: string }; Returns: string };
       record_supplier_payment: {
         Args: {
           p_allocations?: Json;
@@ -5449,7 +5450,7 @@ export type Database = {
         Returns: undefined;
       };
       set_user_brands: { Args: { p_brands: string[]; p_user: string }; Returns: undefined };
-      start_stock_count: { Args: { p_notes?: string; p_warehouse_id: string }; Returns: string };
+      start_stock_count: { Args: { p_brand_id?: string; p_notes?: string; p_warehouse_id: string }; Returns: string };
       storage_object_tenant: { Args: { p_name: string }; Returns: string };
       storage_user_folder: { Args: { p_name: string }; Returns: string };
       supplier_allocate_unallocated: { Args: { p_supplier_id: string }; Returns: number };

@@ -2,11 +2,12 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { brandScope, getBrandContext } from "@/lib/brand";
+import { brandScope, getBrandContext, pageBrand } from "@/lib/brand";
+import { BrandFilter } from "@/components/brand-filter";
 import { dateTime, MOVEMENT_LABELS, qty, txnLabel } from "@/lib/format";
 import { Button, Card, Input, Select, cn } from "@/components/ui";
-import { BrandStrip } from "@/components/brand-badge";
 import { enumParam } from "@/lib/enum-param";
+import { warehouseOr } from "@/lib/warehouse-scope";
 
 export const metadata: Metadata = { title: "Stock movement history" };
 
@@ -21,13 +22,14 @@ const TONE: Record<string, string> = {
 export default async function MovementsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ product?: string; warehouse?: string; type?: string; from?: string; to?: string; page?: string }>;
+  searchParams: Promise<{ product?: string; warehouse?: string; type?: string; from?: string; to?: string; page?: string; brand?: string }>;
 }) {
   await requireRole("super_admin", "manager", "billing", "warehouse");
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page) || 1);
   const ctx = await getBrandContext();
-  const scope = await brandScope();
+  const picked = await pageBrand(sp.brand);
+  const scope = await brandScope(sp.brand);
   const supabase = await createClient();
 
   let query = supabase
@@ -46,7 +48,7 @@ export default async function MovementsPage({
 
   const [{ data, count }, { data: warehouses }] = await Promise.all([
     query,
-    supabase.from("warehouses").select("id, name").in("brand_id", scope).order("name"),
+    supabase.from("warehouses").select("id, name").or(warehouseOr(scope)).order("name"),
   ]);
   const rows = data ?? [];
   const pages = Math.max(1, Math.ceil((count ?? 0) / PAGE));
@@ -63,7 +65,7 @@ export default async function MovementsPage({
 
   return (
     <>
-      <BrandStrip name={ctx.current?.name} code={ctx.current?.code} all={ctx.isAll} />
+      <BrandFilter brands={ctx.brands} current={picked} path="/stock/movements" params={sp} label="Movements of" />
       <Card className="mb-4 p-4">
         <form className="grid gap-3 sm:grid-cols-5">
           {sp.product && <input type="hidden" name="product" value={sp.product} />}
@@ -114,7 +116,7 @@ export default async function MovementsPage({
                   <td className="px-4 py-2.5 whitespace-nowrap text-slate-600">{dateTime(m.created_at)}</td>
                   <td className="px-3 py-2.5">
                     <Link href={`/stock/movements?product=${m.product_id}`} className="font-medium hover:underline">{m.product_name}</Link>
-                    <div className="text-xs text-slate-500"><span className="font-mono">{m.sku}</span>{multiWh ? ` · ${m.warehouse_name}` : ""}{ctx.isAll ? ` · ${m.brand_name}` : ""}</div>
+                    <div className="text-xs text-slate-500"><span className="font-mono">{m.sku}</span>{multiWh ? ` · ${m.warehouse_name}` : ""}{!picked && ctx.isAll ? ` · ${m.brand_name}` : ""}</div>
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap"><span className={cn("rounded-md px-2 py-0.5 text-xs font-semibold", TONE[label] ?? "bg-slate-100 text-slate-700")}>{label}</span></td>
                   <td className="tabular px-3 py-2.5 text-right font-semibold text-emerald-700">{q > 0 ? `+${qty(q)}` : ""}</td>

@@ -35,7 +35,7 @@ const newId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? c
 export function EntryForms({
   brandId, brandName, warehouses, initialType, allowed, canSetCost, today,
 }: {
-  brandId: string; brandName: string; warehouses: Warehouse[]; initialType: EntryType; allowed: EntryType[]; canSetCost: boolean; today: string;
+  brandId: string | null; brandName: string; warehouses: Warehouse[]; initialType: EntryType; allowed: EntryType[]; canSetCost: boolean; today: string;
 }) {
   const [type, setType] = useState<EntryType>(initialType);
   const [formKey, setFormKey] = useState(newId());   // new id after each save → protects against double submit
@@ -65,7 +65,7 @@ export function EntryForms({
           <AdjustmentForm key={formKey} brandId={brandId} warehouses={warehouses} onDone={() => setFormKey(newId())} />
         ) : type === "transfer" ? (
           warehouses.length < 2 ? (
-            <Alert tone="amber">{brandName} has only one warehouse. Add a second {brandName} warehouse to transfer stock. Stock can never move to another brand&apos;s warehouse.</Alert>
+            <Alert tone="amber">There is only one warehouse. Add a second warehouse to transfer stock between them.</Alert>
           ) : (
             <ActionForm key={formKey} action={transferStock} submitLabel="Record transfer">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -135,7 +135,7 @@ export function EntryForms({
 }
 
 // Current system stock → physical stock → difference → reason → confirm.
-function AdjustmentForm({ brandId, warehouses, onDone }: { brandId: string; warehouses: Warehouse[]; onDone: () => void }) {
+function AdjustmentForm({ brandId, warehouses, onDone }: { brandId: string | null; warehouses: Warehouse[]; onDone: () => void }) {
   const router = useRouter();
   const [product, setProduct] = useState<PickedProduct | null>(null);
   const [wh, setWh] = useState(warehouses[0]?.id ?? "");

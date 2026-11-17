@@ -124,9 +124,11 @@ export async function startCount(_prev: FormResult, formData: FormData): Promise
   await requireRole("super_admin", "manager", "warehouse");
   const warehouse = String(formData.get("warehouse_id") ?? "");
   const notes = String(formData.get("notes") ?? "").trim() || null;
+  const brand = String(formData.get("brand_id") ?? "") || null;
   if (!warehouse) return { error: "Choose a warehouse." };
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("start_stock_count", { p_warehouse_id: warehouse, p_notes: notes });
+  // A count covers one brand; in the shared warehouse the brand is chosen here.
+  const { data, error } = await supabase.rpc("start_stock_count", { p_warehouse_id: warehouse, p_notes: notes, p_brand_id: brand ?? undefined });
   if (error) return { error: dbError(error) };
   redirect(`/stock/counts/${data}`);
 }
@@ -172,7 +174,7 @@ export async function reviewCount(countId: string, decision: "approve" | "reopen
 
 const warehouseSchema = z.object({
   id: z.string().guid().optional(),
-  brand_id: z.string().guid().optional(),
+  brand_id: z.union([z.string().guid(), z.literal("shared")]).optional(),
   name: z.string().min(2, "Enter a warehouse name").max(80),
   address: z.string().max(300).optional(),
   is_active: z.enum(["true", "false"]).optional(),
@@ -194,8 +196,9 @@ export async function saveWarehouse(_prev: FormResult, formData: FormData): Prom
   if (id) {
     ({ error } = await supabase.from("warehouses").update(row).eq("id", id));
   } else {
-    if (!v.brand_id) return { error: "Choose the brand this warehouse belongs to." };
-    ({ error } = await supabase.from("warehouses").insert({ ...row, brand_id: v.brand_id }));
+    // "shared" = one warehouse that holds stock of every brand.
+    const brand = !v.brand_id || v.brand_id === "shared" ? null : v.brand_id;
+    ({ error } = await supabase.from("warehouses").insert({ ...row, brand_id: brand }));
   }
   if (error) return { error: dbError(error) };
   revalidatePath("/stock/warehouses");

@@ -19,7 +19,7 @@ declare v text;
 begin
   select string_agg(s, ', ') into v
     from unnest(array[
-      'public.start_stock_count(uuid, text)', 'public.confirm_order(uuid, boolean, boolean)',
+      'public.start_stock_count(uuid, text, uuid)', 'public.confirm_order(uuid, boolean, boolean)',
       'public.create_credit_note(uuid, text, boolean, jsonb)', 'public.save_quotation(uuid, uuid, integer, text, jsonb, uuid)',
       'public.approve_incentives(date, boolean)', 'public.plan_route(uuid, uuid, date, text)',
       'public.record_location(numeric, numeric, numeric, timestamp with time zone)', 'public.route_assign(uuid, uuid, date, text)',

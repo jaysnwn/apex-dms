@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { listSuppliers } from "./actions";
 import { getBrandContext } from "@/lib/brand";
+import { warehouseOr } from "@/lib/warehouse-scope";
 
 export async function builderOptions() {
   const supabase = await createClient();
@@ -10,7 +11,7 @@ export async function builderOptions() {
   const ids = ctx.brands.map((b) => b.id);
   const [suppliers, { data: wh }, { data: co }] = await Promise.all([
     listSuppliers(),
-    supabase.from("warehouses").select("id, name, brand_id").eq("is_active", true).in("brand_id", ids).order("name"),
+    supabase.from("warehouses").select("id, name, brand_id").eq("is_active", true).or(warehouseOr(ids)).order("name"),
     supabase.from("company_settings").select("state_code").maybeSingle(),
   ]);
   return {

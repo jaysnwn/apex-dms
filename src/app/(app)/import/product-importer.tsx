@@ -6,7 +6,7 @@ import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, Trash2, XCircle
 import { PRODUCT_COLUMNS, guessMapping, parseCsv } from "@/lib/import-columns";
 import { checkRows, type ImportContext } from "@/lib/product-import";
 import { Alert, Badge, Button, Card, cn } from "@/components/ui";
-import { BrandSwitcher } from "@/components/brand-switcher";
+import { brandTone } from "@/lib/brand-style";
 import { importProducts, prepareProductImport, type ImportResult } from "./actions";
 
 type Brand = { id: string; name: string; code: string };
@@ -15,7 +15,27 @@ const COLS = PRODUCT_COLUMNS.filter((c) => c.key !== "brand");
 const SHOW = ["name", "sku", "category", "hsn_code", "unit_code", "gst_rate", "purchase_cost", "distributor_price", "retailer_price", "mrp", "opening_qty", "min_stock_qty"];
 
 // Step 1 template → 2 upload → 3 check columns → 4 preview & fix → 5 import valid rows.
-export function ProductImporter({ brand, brands, canSeeAll }: { brand: Brand | null; brands: Brand[]; canSeeAll: boolean }) {
+// Pick which brand's catalogue a file goes into (no global brand switcher any more).
+function BrandPick({ brands, value, onPick }: { brands: Brand[]; value: string | null; onPick: (id: string) => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1" role="radiogroup" aria-label="Brand">
+      {brands.map((b) => {
+        const on = b.id === value;
+        const t = brandTone(b.code);
+        return (
+          <button key={b.id} type="button" role="radio" aria-checked={on} onClick={() => onPick(b.id)}
+            className={cn("flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-[12px] font-semibold", on ? t.solid + " shadow-sm" : "text-slate-600 hover:bg-white")}>
+            <span className={cn("size-2 rounded-full", on ? "bg-white" : t.dot)} />{b.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function ProductImporter({ brand: initialBrand, brands, canSeeAll }: { brand: Brand | null; brands: Brand[]; canSeeAll: boolean }) {
+  const [brandId, setBrandId] = useState<string | null>(initialBrand?.id ?? (brands.length === 1 ? brands[0].id : null));
+  const brand = brands.find((b) => b.id === brandId) ?? null;
   const [file, setFile] = useState<{ name: string; headers: string[]; body: unknown[][] } | null>(null);
   const [mapping, setMapping] = useState<Record<string, number>>({});
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -35,7 +55,7 @@ export function ProductImporter({ brand, brands, canSeeAll }: { brand: Brand | n
       <Card className="max-w-xl p-6">
         <h2 className="font-semibold">Which brand are these products for?</h2>
         <p className="mb-4 text-sm text-slate-500">Each brand has its own catalogue. Import one brand at a time.</p>
-        <BrandSwitcher brands={brands} currentId={null} canSeeAll={false} />
+        <BrandPick brands={brands} value={null} onPick={setBrandId} />
       </Card>
     );
   }
@@ -119,7 +139,7 @@ export function ProductImporter({ brand, brands, canSeeAll }: { brand: Brand | n
       <Card className="p-5">
         <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
           <span className="text-slate-600">Importing into</span>
-          <span className="w-64"><BrandSwitcher brands={brands} currentId={brand.id} canSeeAll={false} /></span>
+          <span className="w-64"><BrandPick brands={brands} value={brand.id} onPick={(id) => { setBrandId(id); setRows(null); setFile(null); setCtx(null); setResult(null); }} /></span>
           {canSeeAll && <span className="text-xs text-slate-400">(products always belong to one brand)</span>}
         </div>
         <ol className="mb-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-5">

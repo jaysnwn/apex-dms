@@ -7,6 +7,7 @@ import { getBrandContext } from "@/lib/brand";
 import { Card } from "@/components/ui";
 import { BrandBadge } from "@/components/brand-badge";
 import { brandTone } from "@/lib/brand-style";
+import { warehouseOr } from "@/lib/warehouse-scope";
 
 export const metadata: Metadata = { title: "Stock reports" };
 
@@ -15,15 +16,15 @@ export default async function StockReportsPage() {
   const { profile } = await requireRole("super_admin", "manager", "billing", "warehouse");
   const ctx = await getBrandContext();
   const supabase = await createClient();
-  const brands = ctx.current ? [ctx.current] : ctx.brands;
-  const { data: whs } = await supabase.from("warehouses").select("id, name, brand_id").eq("is_active", true).in("brand_id", brands.map((b) => b.id)).order("name");
+  const brands = ctx.brands;
+  const { data: whs } = await supabase.from("warehouses").select("id, name, brand_id").eq("is_active", true).or(warehouseOr(brands.map((b) => b.id))).order("name");
   const seesCost = profile.role !== "warehouse";
 
   return (
     <div className="space-y-6">
       <p className="text-sm text-slate-600">Each brand gets its own reports with its own name and logo (logo is set in Products → Brands &amp; categories). Reports are never combined across brands.</p>
       {brands.map((b) => {
-        const mine = (whs ?? []).filter((w) => w.brand_id === b.id);
+        const mine = (whs ?? []).filter((w) => w.brand_id === null || w.brand_id === b.id);
         const t = brandTone(b.code);
         return (
           <Card key={b.id} className="overflow-hidden">

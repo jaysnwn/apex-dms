@@ -15,7 +15,7 @@ export type PurchaseBuilderLine = { product: PurchaseProduct; qty: number; cost:
 type Props = {
   companyState: string;
   suppliers: PickerSupplier[];
-  warehouses: { id: string; name: string; brand_id: string }[];
+  warehouses: { id: string; name: string; brand_id: string | null }[];
   brands: { id: string; name: string }[];
   defaultBrandId?: string;
   presetSupplierId?: string;
@@ -40,8 +40,11 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, d
   const [supplierId, setSupplierId] = useState(initial?.supplierId ?? presetSupplierId ?? (suppliers.length === 1 ? suppliers[0].id : ""));
   const presetBrand = suppliers.find((s) => s.id === presetSupplierId)?.brand_id ?? defaultBrandId;
   const [warehouseId, setWarehouseId] = useState(initial?.warehouseId ?? (warehouses.find((w) => w.brand_id === presetBrand) ?? warehouses[0])?.id ?? "");
-  // A purchase belongs to the brand of the warehouse the goods arrive at.
-  const brandId = warehouses.find((w) => w.id === warehouseId)?.brand_id;
+  const [lines, setLines] = useState<PurchaseBuilderLine[]>(initial?.lines ?? []);
+  // A purchase bill is for one brand: a brand warehouse decides it; with the
+  // shared warehouse the first product (or the supplier's brand) decides it.
+  const supplierBrand = suppliers.find((s) => s.id === supplierId)?.brand_id ?? undefined;
+  const brandId = warehouses.find((w) => w.id === warehouseId)?.brand_id ?? lines[0]?.product.brand_id ?? supplierBrand;
   const brandName = brands.find((b) => b.id === brandId)?.name ?? "";
   const [orderDate, setOrderDate] = useState(initial?.orderDate ?? todayIST());
   const [expectedDate, setExpectedDate] = useState(initial?.expectedDate ?? "");
@@ -49,7 +52,6 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, d
   const [creditDays, setCreditDays] = useState<number>(initial?.creditDays ?? supplier?.credit_days ?? 30);
   const [otherCharges, setOtherCharges] = useState(initial?.otherCharges ? String(initial.otherCharges) : "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
-  const [lines, setLines] = useState<PurchaseBuilderLine[]>(initial?.lines ?? []);
   const [receiveNow, setReceiveNow] = useState(false);
   const [billNo, setBillNo] = useState("");
   const [billDate, setBillDate] = useState(todayIST());
@@ -79,7 +81,7 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, d
   }
   function chooseWarehouse(id: string) {
     const next = warehouses.find((w) => w.id === id);
-    if (lines.length && next && next.brand_id !== brandId) {
+    if (lines.length && next?.brand_id && next.brand_id !== brandId) {
       setError(`This purchase already has ${brandName} products. A ${brands.find((b) => b.id === next.brand_id)?.name} warehouse needs a separate purchase.`);
       return;
     }
@@ -88,6 +90,12 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, d
   }
 
   function add(p: PurchaseProduct, qty = 1) {
+    const first = lines[0]?.product;
+    if (first && first.brand_id !== p.brand_id) {
+      setError(`This bill already has ${brandName || "other-brand"} products. ${p.name} is a ${p.brand_name || "different brand"} product — put it on a separate purchase.`);
+      return;
+    }
+    setError(null);
     setLines((prev) => {
       const i = prev.findIndex((l) => l.product.id === p.id);
       if (i >= 0) return prev.map((l, j) => (j === i ? { ...l, qty: l.qty + qty } : l));

@@ -3,13 +3,13 @@ import type { Metadata } from "next";
 import { ArrowDownUp, ImageOff, LayoutGrid, List, Pencil, Plus, Settings2, Upload } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { brandScope, getBrandContext } from "@/lib/brand";
+import { brandScope, getBrandContext, pageBrand } from "@/lib/brand";
+import { BrandFilter } from "@/components/brand-filter";
 import { signProductImages } from "@/lib/images";
 import { inr, qty } from "@/lib/format";
 import { Badge, Card, PageHeader, cn } from "@/components/ui";
 import { SearchBar } from "@/components/search-bar";
 import { Chip } from "@/components/chip";
-import { BrandStrip } from "@/components/brand-badge";
 import { ArchiveButton } from "./archive-button";
 import { searchWords } from "@/lib/search-words";
 
@@ -20,7 +20,7 @@ type CatalogRow = {
   category_name: string | null; unit_code: string; retailer_price: number; retailer_price_mode: string;
   gst_rate: number; is_active: boolean; image_path: string | null; created_at: string;
 };
-type Sp = { q?: string; cat?: string; stock?: string; sort?: string; archived?: string; view?: string };
+type Sp = { q?: string; cat?: string; stock?: string; sort?: string; archived?: string; view?: string; brand?: string };
 
 const SORTS: Record<string, string> = { name: "Name A–Z", newest: "Newest", stock_low: "Stock: lowest first", stock_high: "Stock: highest first", price_high: "Price: highest first", price_low: "Price: lowest first" };
 
@@ -28,7 +28,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const { profile } = await requireRole();
   const sp = await searchParams;
   const ctx = await getBrandContext();
-  const scope = await brandScope();
+  const picked = await pageBrand(sp.brand);
+  const scope = await brandScope(sp.brand);
   const supabase = await createClient();
   const canEdit = profile.role === "super_admin" || profile.role === "manager";
   const seesCost = canEdit || profile.role === "billing";
@@ -97,7 +98,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
           </>
         )}
       />
-      <BrandStrip name={ctx.current?.name} code={ctx.current?.code} all={ctx.isAll} />
+      <BrandFilter brands={ctx.brands} current={picked} path="/products" params={sp} label="Products of" />
 
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="flex-1"><SearchBar placeholder="Search name, SKU or barcode" scan /></div>
@@ -187,7 +188,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                         </span>
                         <span className="min-w-0">
                           <span className="block font-medium text-slate-900 hover:underline">{p.name}</span>
-                          {ctx.isAll && <span className="text-xs text-slate-500">{p.brand_name}</span>}
+                          {!picked && ctx.isAll && <span className="text-xs text-slate-500">{p.brand_name}</span>}
                         </span>
                       </Link>
                     </td>

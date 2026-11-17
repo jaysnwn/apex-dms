@@ -48,14 +48,16 @@ export function DispatchBoard({
   tab: "pending" | "transit" | "history";
   pending: PendingInvoice[];
   dispatched: DispatchedRow[];
-  warehouses: { id: string; name: string; brand_id: string }[];
+  warehouses: { id: string; name: string; brand_id: string | null }[];
   canDispatch: boolean;
 }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [warehouse, setWarehouse] = useState(warehouses[0]?.id ?? "");
   const [dispatching, setDispatching] = useState<PendingInvoice | null>(null);
   // Goods leave a warehouse of the invoice's own brand: the picked one if it matches, else that brand's first.
-  const whFor = (inv: PendingInvoice) => warehouses.find((w) => w.id === warehouse && w.brand_id === inv.brand_id) ?? warehouses.find((w) => w.brand_id === inv.brand_id);
+  // The shared warehouse serves every brand; a brand warehouse only its own.
+  const fits = (w: { brand_id: string | null }, inv: PendingInvoice) => w.brand_id === null || w.brand_id === inv.brand_id;
+  const whFor = (inv: PendingInvoice) => warehouses.find((w) => w.id === warehouse && fits(w, inv)) ?? warehouses.find((w) => fits(w, inv));
   const [delivering, setDelivering] = useState<DispatchedRow | null>(null);
 
   if (tab === "pending") {

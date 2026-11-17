@@ -9,6 +9,7 @@ import { StockReportPdf, type StockReportData } from "@/pdf/stock-report";
 import { brandTone } from "@/lib/brand-style";
 import { fetchAll } from "@/lib/reports";
 import { getCompanyLogoFile } from "@/lib/branding";
+import { warehouseOr } from "@/lib/warehouse-scope";
 
 type Opts = { brandId: string; warehouseId?: string | null; withValue: boolean; userName: string };
 type Item = { id: string; name: string; sku: string; unit: string; category: string; qty: number; avgCost: number | null; value: number | null };
@@ -22,7 +23,7 @@ async function load(o: Opts) {
   const supabase = await createClient();
   const [{ data: brand }, { data: whs }] = await Promise.all([
     supabase.from("brands").select("id, name, code, logo_path").eq("id", o.brandId).maybeSingle(),
-    supabase.from("warehouses").select("id, name").eq("brand_id", o.brandId).order("name"),
+    supabase.from("warehouses").select("id, name").or(warehouseOr([o.brandId])).order("name"),
   ]);
   const { data: allowed } = await supabase.rpc("can_access_brand", { p_brand: o.brandId });
   if (!brand || !allowed) return null;

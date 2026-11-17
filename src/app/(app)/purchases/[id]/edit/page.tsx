@@ -15,16 +15,16 @@ export default async function EditPurchasePage({ params }: { params: Promise<{ i
   if (!p) notFound();
   if (p.status !== "ordered") redirect(`/purchases/${id}`);
   const [{ data: lines }, options] = await Promise.all([
-    supabase.from("purchase_lines").select("qty, unit_cost, cost_mode, discount_pct, products(id, name, sku, unit_code, gst_rate, purchase_cost, purchase_cost_mode, brands(name))").eq("purchase_id", id).order("line_no"),
+    supabase.from("purchase_lines").select("qty, unit_cost, cost_mode, discount_pct, products(id, name, sku, brand_id, unit_code, gst_rate, purchase_cost, purchase_cost_mode, brands(name))").eq("purchase_id", id).order("line_no"),
     builderOptions(),
   ]);
   const ids = (lines ?? []).map((l) => (l.products as unknown as { id: string }).id);
   const { data: stock } = ids.length ? await supabase.from("product_stock").select("product_id, on_hand").in("product_id", ids) : { data: [] };
   const sMap = new Map((stock ?? []).map((s) => [s.product_id as string, Number(s.on_hand)]));
   const initialLines: PurchaseBuilderLine[] = (lines ?? []).map((l) => {
-    const pr = l.products as unknown as { id: string; name: string; sku: string; unit_code: string; gst_rate: number; purchase_cost: number; purchase_cost_mode: "inclusive" | "exclusive"; brands: { name: string } | null };
+    const pr = l.products as unknown as { id: string; name: string; sku: string; brand_id: string; unit_code: string; gst_rate: number; purchase_cost: number; purchase_cost_mode: "inclusive" | "exclusive"; brands: { name: string } | null };
     return {
-      product: { id: pr.id, name: pr.name, sku: pr.sku, unit_code: pr.unit_code, brand_name: pr.brands?.name ?? "", gst_rate: Number(pr.gst_rate), purchase_cost: Number(pr.purchase_cost), purchase_cost_mode: pr.purchase_cost_mode, on_hand: sMap.get(pr.id) ?? 0 },
+      product: { id: pr.id, name: pr.name, sku: pr.sku, brand_id: pr.brand_id, unit_code: pr.unit_code, brand_name: pr.brands?.name ?? "", gst_rate: Number(pr.gst_rate), purchase_cost: Number(pr.purchase_cost), purchase_cost_mode: pr.purchase_cost_mode, on_hand: sMap.get(pr.id) ?? 0 },
       qty: Number(l.qty),
       cost: Number(l.unit_cost),
       mode: l.cost_mode as "inclusive" | "exclusive",

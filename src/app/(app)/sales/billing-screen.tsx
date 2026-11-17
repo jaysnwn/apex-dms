@@ -15,7 +15,7 @@ import { addDays, calcLine, todayIST } from "@/lib/gst";
 import { date as fmtDate, inr, qty as fmtQty } from "@/lib/format";
 import { shareOnWhatsApp } from "@/lib/share-actions";
 import { BillingDetailsDialog, RetailerSelect, missingTaxDetails, rememberRetailer } from "./retailer-select";
-import { loadBillingCatalogue, retailerUsuals, saveOrder, type PickerProduct, type PickerRetailer } from "./actions";
+import { loadBillingCatalogue, retailerUsuals, saveOrder, type PickerProduct, type PickerRetailer, type SavedDoc } from "./actions";
 import { tenantKey } from "@/lib/supabase/client";
 
 export type BuilderLine = { product: PickerProduct; qty: number; discount: number; price: number | null };
@@ -60,7 +60,9 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
   const isMgr = role === "super_admin" || role === "manager";
   const maxDisc = isMgr ? 100 : role === "billing" ? billingMaxDiscount : maxSalesmanDiscount;
 
-  const [brandId, setBrandId] = useState(initial?.lines[0]?.product.brand_id ?? defaultBrandId ?? brands[0]?.id ?? "");
+  // Catalogue filter only ("" = all brands). The cart takes products of every
+  // brand; saving splits it into one quotation / invoice per brand.
+  const [brandId, setBrandId] = useState(brands.length === 1 ? brands[0].id : (defaultBrandId ?? ""));
   const brand = brands.find((b) => b.id === brandId);
   const [catalogue, setCatalogue] = useState<{ products: PickerProduct[]; categories: { id: string; name: string }[] } | null>(
     initialCatalogue && initialCatalogue.brandId === brandId ? initialCatalogue : null);
@@ -88,7 +90,7 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
   const [overrideStock, setOverrideStock] = useState(false);
   const [overrideCredit, setOverrideCredit] = useState(false);
   const [error, setError] = useState<{ message: string; hint?: string } | null>(null);
-  const [done, setDone] = useState<{ invoiceId: string; invoiceNo: string; total: number; paid: number; due: string; shop: string } | null>(null);
+  const [done, setDone] = useState<Done | null>(null);
   const [savedOrderId, setSavedOrderId] = useState<string | null>(initial?.orderId ?? null);
   const [clientKey, setClientKey] = useState(newKey);
   const [pending, start] = useTransition();
@@ -99,19 +101,18 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
   // ---- brand catalogue (photos, stock, categories) ---------------------------
   const reloadCatalogue = useCallback(async (id: string) => {
     setCatalogue(null);
-    setCatalogue(await loadBillingCatalogue(id));
+    setCatalogue(await loadBillingCatalogue(id || null));
   }, []);
   useEffect(() => {
-    if (!brandId) return;
     if (preloaded.current) preloaded.current = false;   // already loaded on the server
     else reloadCatalogue(brandId);
-    setFavs(ls.get(`apex.fav.${brandId}`, []));
-    setRecentProducts(ls.get(`apex.recentProducts.${brandId}`, []));
+    setFavs(ls.get(`apex.fav.${brandId || "all"}`, []));
+    setRecentProducts(ls.get(`apex.recentProducts.${brandId || "all"}`, []));
     setCat("all");
   }, [brandId, reloadCatalogue]);
   useEffect(() => {
     setUsuals(null);
-    if (retailer && brandId) retailerUsuals(retailer.id, brandId).then(setUsuals);
+    if (retailer) retailerUsuals(retailer.id, brandId || null).then(setUsuals);
   }, [retailer, brandId]);
   const byId = useMemo(() => new Map((catalogue?.products ?? []).map((p) => [p.id, p])), [catalogue]);
 
@@ -124,7 +125,15 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
   const discount = r2(calc.reduce((t, c) => t + c.discount, 0));
   const taxable = r2(calc.reduce((t, c) => t + c.taxable, 0));
   const tax = r2(calc.reduce((t, c) => t + c.tax, 0));
-  const grand = Math.round(taxable + tax);
+  // One invoice per brand, each rounded on its own.
+  const split = [...lines.reduce((m, l, i) => {
+    const k = l.product.brand_id;
+    const g = m.get(k) ?? { id: k, name: l.product.brand_name, code: brands.find((b) => b.id === k)?.code ?? null, items: 0, exact: 0 };
+    g.items += 1; g.exact += calc[i].taxable + calc[i].tax;
+    return m.set(k, g);
+  }, new Map<string, { id: string; name: string; code: string | null; items: number; exact: number }>()).values()]
+    .map((g) => ({ ...g, total: Math.round(g.exact) }));
+  const grand = split.length > 1 ? split.reduce((t, g) => t + g.total, 0) : Math.round(taxable + tax);
   const roundOff = r2(grand - (taxable + tax));
   const byRate = [...lines.reduce((m, l, i) => {
     const g = m.get(l.product.gst_rate) ?? { taxable: 0, tax: 0 };
@@ -158,12 +167,11 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
   };
   const setLine = (id: string, patch: Partial<BuilderLine>) => setLines((p) => p.map((l) => (l.product.id === id ? { ...l, ...patch } : l)));
   const removeLine = (id: string) => setLines((p) => p.filter((l) => l.product.id !== id));
-  const toggleFav = (id: string) => setFavs((f) => { const n = f.includes(id) ? f.filter((x) => x !== id) : [id, ...f].slice(0, 24); ls.set(`apex.fav.${brandId}`, n); return n; });
+  const toggleFav = (id: string) => setFavs((f) => { const n = f.includes(id) ? f.filter((x) => x !== id) : [id, ...f].slice(0, 24); ls.set(`apex.fav.${brandId || "all"}`, n); return n; });
 
   function switchBrand(id: string) {
-    if (id === brandId) return;
-    if (lines.length && !confirm(`The cart has ${brand?.name} products. One invoice is for one brand — clear the cart and switch to ${brands.find((b) => b.id === id)?.name}?`)) return;
-    setLines([]); setBrandId(id); setSavedOrderId(null); setClientKey(newKey());
+    // Only filters the catalogue; the cart keeps every brand's products.
+    setBrandId(id === brandId ? "" : id);
   }
   function chooseRetailer(r: PickerRetailer | null) {
     setRetailer(r);
@@ -201,10 +209,10 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
       });
       if (res.orderId) setSavedOrderId(res.orderId);
       if (res.invoiceId) {
-        ls.set(`apex.recentProducts.${brandId}`, [...new Set([...lines.map((l) => l.product.id), ...recentProducts])].slice(0, 16));
+        ls.set(`apex.recentProducts.${brandId || "all"}`, [...new Set([...lines.map((l) => l.product.id), ...recentProducts])].slice(0, 16));
         rememberRetailer(retailer!);
         setReviewing(false);
-        setDone({ invoiceId: res.invoiceId, invoiceNo: res.invoiceNo ?? "", total: grand, paid: res.paid ?? 0, due, shop: retailer!.shop_name });
+        setDone({ invoiceId: res.invoiceId, invoiceNo: res.invoiceNo ?? "", total: grand, paid: res.paid ?? 0, due, shop: retailer!.shop_name, docs: (res.docs ?? []).filter((d) => d.invoiceId) });
         if (res.error) setError({ message: res.error });
         return;
       }
@@ -266,8 +274,12 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
     <div className="pb-24 xl:pb-0">
       {/* Step 1: brand */}
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <span className="text-sm font-semibold text-slate-500">Billing for</span>
+        <span className="text-sm font-semibold text-slate-500">Show products of</span>
         <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
+          {brands.length > 1 && (
+            <button type="button" onClick={() => setBrandId("")}
+              className={cn("rounded-lg px-4 py-2 text-sm font-bold transition", brandId === "" ? "bg-white text-slate-900 shadow" : "text-slate-600 hover:bg-white")}>All brands</button>
+          )}
           {brands.map((b) => {
             const t = brandTone(b.code), on = b.id === brandId;
             return (
@@ -316,7 +328,7 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
               <div className="relative flex-1">
                 <Search className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-slate-400" />
                 <Input ref={searchRef} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey}
-                  placeholder={`Search ${brand?.name ?? ""} products: name, SKU, 65W, Type C, category…`} className="h-12 pl-10 text-base" autoComplete="off" />
+                  placeholder={`Search ${brand?.name ?? "all"} products: name, SKU, 65W, Type C, category…`} className="h-12 pl-10 text-base" autoComplete="off" />
                 {q && <button onClick={() => setQ("")} className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-700" aria-label="Clear search"><X className="size-4" /></button>}
               </div>
               <BarcodeScanButton label="Scan" onDetected={(code) => { const p = products.find((x) => x.barcode === code || x.sku.toLowerCase() === code.toLowerCase()); if (p) add(p); else setQ(code); }} />
@@ -327,7 +339,7 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
             </div>
 
             {!catalogue ? (
-              <p className="py-10 text-center text-sm text-slate-500">Loading {brand?.name} catalogue…</p>
+              <p className="py-10 text-center text-sm text-slate-500">Loading {brand?.name ?? "the"} catalogue…</p>
             ) : term ? (
               <ProductArea title={`${results.length} match${results.length === 1 ? "" : "es"} for “${term}”`} products={results} inCart={inCart} favs={favs} onAdd={add} onFav={toggleFav} empty="Nothing matches. Try fewer letters, the SKU, or a category name." />
             ) : browse ? (
@@ -510,8 +522,14 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
                 <div className="font-semibold">{retailer.shop_name}</div>
                 <div className="text-xs text-slate-500">{retailer.gstin ? `GSTIN ${retailer.gstin}` : "Unregistered"} · {igst ? "IGST" : "CGST + SGST"}</div>
               </div>
-              <span className={cn("rounded-md px-2 py-0.5 text-xs font-bold", tone.solid)}>{brand?.name}</span>
+              <span className="flex flex-wrap justify-end gap-1">{split.map((g) => <span key={g.id} className={cn("rounded-md px-2 py-0.5 text-xs font-bold", brandTone(g.code).solid)}>{g.name}</span>)}</span>
             </div>
+            {split.length > 1 && (
+              <div className="rounded-lg bg-sky-50 p-3 text-sky-900 ring-1 ring-sky-200">
+                <div className="mb-1 font-semibold">This bill becomes {split.length} invoices — one per brand, each with its own number:</div>
+                {split.map((g) => <div key={g.id} className="tabular flex justify-between"><span>{g.name} · {g.items} product{g.items === 1 ? "" : "s"}</span><b>{inr(g.total)}</b></div>)}
+              </div>
+            )}
             <dl className="tabular space-y-1">
               <Row k={`${lines.length} products · ${fmtQty(totalQty)} qty`} v="" />
               <Row k="Taxable value" v={inr(taxable)} />
@@ -629,8 +647,10 @@ function Row({ k, v, tone }: { k: string; v: string; tone?: "green" }) {
   );
 }
 
+type Done = { invoiceId: string; invoiceNo: string; total: number; paid: number; due: string; shop: string; docs: SavedDoc[] };
+
 // After the invoice: print, download, WhatsApp, next bill.
-function DonePanel({ done, onNew, error }: { done: { invoiceId: string; invoiceNo: string; total: number; paid: number; due: string; shop: string }; onNew: () => void; error?: string }) {
+function DonePanel({ done, onNew, error }: { done: Done; onNew: () => void; error?: string }) {
   const [sharing, start] = useTransition();
   const [shareError, setShareError] = useState<string | null>(null);
   const pdf = `/api/pdf/invoice/${done.invoiceId}`;
@@ -642,10 +662,23 @@ function DonePanel({ done, onNew, error }: { done: { invoiceId: string; invoiceN
   return (
     <div className="mx-auto max-w-xl py-6 text-center">
       <CheckCircle2 className="mx-auto size-20 text-emerald-500" />
-      <h1 className="mt-3 text-2xl font-bold">Invoice {done.invoiceNo} created</h1>
+      <h1 className="mt-3 text-2xl font-bold">{done.docs.length > 1 ? `${done.docs.length} invoices created` : `Invoice ${done.invoiceNo} created`}</h1>
       <p className="mt-1 text-slate-600">{done.shop} · <b className="tabular">{inr(done.total)}</b>{done.paid > 0 ? ` · paid ${inr(done.paid)}` : ""} · {done.total - done.paid > 0 ? `balance due ${fmtDate(done.due)}` : "fully paid"}</p>
       {error && <div className="mt-3 text-left"><Alert>{error}</Alert></div>}
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+      {done.docs.length > 1 && (
+        <ul className="mt-5 divide-y divide-slate-100 rounded-xl bg-white text-left ring-1 ring-slate-200">
+          {done.docs.map((d) => (
+            <li key={d.invoiceId} className="flex flex-wrap items-center gap-2 p-3">
+              <div className="min-w-0 flex-1"><div className="font-semibold">{d.brandName}</div><div className="font-mono text-xs text-slate-500">{d.invoiceNo}</div></div>
+              <span className="tabular font-semibold">{inr(d.total)}</span>
+              <a href={`/api/pdf/invoice/${d.invoiceId}`} target="_blank" rel="noopener" className="rounded-lg bg-ink-900 px-3 py-1.5 text-sm font-semibold text-white">Print</a>
+              <a href={`/api/pdf/invoice/${d.invoiceId}?download=1`} className="rounded-lg px-3 py-1.5 text-sm font-semibold ring-1 ring-slate-300">PDF</a>
+              <Link href={`/sales/invoices/${d.invoiceId}`} className="rounded-lg px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">Open</Link>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className={cn("mt-6 grid gap-3 sm:grid-cols-3", done.docs.length > 1 && "hidden")}>
         <a href={pdf} target="_blank" rel="noopener" className="flex h-14 items-center justify-center gap-2 rounded-xl bg-ink-900 font-semibold text-white hover:bg-ink-800"><Printer className="size-5" /> Print</a>
         <a href={`${pdf}?download=1`} className="flex h-14 items-center justify-center gap-2 rounded-xl bg-white font-semibold ring-1 ring-slate-300 hover:bg-slate-50"><Download className="size-5" /> PDF</a>
         <button type="button" disabled={sharing} onClick={() => start(async () => { setShareError(null); const r = await shareOnWhatsApp("invoice", done.invoiceId, ""); if (r.url) window.open(r.url, "_blank", "noopener"); else setShareError(r.error ?? "Could not share"); })}

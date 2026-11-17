@@ -9,6 +9,7 @@ import { saveProduct } from "./actions";
 
 type Option = { id: string; name: string };
 type BrandOption = Option & { brand_id: string };
+type WarehouseOption = Option & { brand_id: string | null };
 type Mode = "inclusive" | "exclusive";
 export type ProductRow = {
   id: string;
@@ -46,14 +47,14 @@ export function ProductForm({
   defaultBrandId: string;
   categories: BrandOption[];
   units: { code: string; name: string }[];
-  warehouses: BrandOption[];
+  warehouses: WarehouseOption[];
 }) {
   const isNew = !product;
   const [brand, setBrand] = useState(product?.brand_id ?? defaultBrandId);
   const [gst, setGst] = useState(Number(product?.gst_rate ?? 18));
   const [photo, setPhoto] = useState<string | null>(null);
   const cats = categories.filter((c) => c.brand_id === brand);
-  const whs = warehouses.filter((w) => w.brand_id === brand);
+  const whs = warehouses.filter((w) => w.brand_id === null || w.brand_id === brand);
   const brandName = brands.find((b) => b.id === brand)?.name ?? "";
 
   return (

@@ -6,13 +6,14 @@ import {
 } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { brandScope, getBrandContext } from "@/lib/brand";
+import { brandScope, getBrandContext, pageBrand } from "@/lib/brand";
+import { BrandFilter } from "@/components/brand-filter";
 import { inr, qty } from "@/lib/format";
 import { Card, cn } from "@/components/ui";
 import { SearchBar } from "@/components/search-bar";
 import { Chip } from "@/components/chip";
 import { StatCard } from "@/components/stat-card";
-import { BrandBadge, BrandStrip } from "@/components/brand-badge";
+import { BrandBadge } from "@/components/brand-badge";
 import { signProductImages } from "@/lib/images";
 import { searchWords } from "@/lib/search-words";
 
@@ -20,11 +21,13 @@ export const metadata: Metadata = { title: "Inventory" };
 
 type Item = { id: string; name: string; sku: string; brand_id: string; brand_name: string; category_name: string | null; unit_code: string; min_stock_qty: number; image_path: string | null };
 
-export default async function InventoryDashboard({ searchParams }: { searchParams: Promise<{ q?: string; stock?: string; cat?: string }> }) {
+export default async function InventoryDashboard({ searchParams }: { searchParams: Promise<{ q?: string; stock?: string; cat?: string; brand?: string }> }) {
   const { profile } = await requireRole("super_admin", "manager", "billing", "warehouse");
   const sp = await searchParams;
   const ctx = await getBrandContext();
-  const scope = await brandScope();
+  const picked = await pageBrand(sp.brand);
+  const scope = await brandScope(sp.brand);
+  const showAll = ctx.isAll && !picked;
   const supabase = await createClient();
   const seesCost = profile.role !== "warehouse";
   const isMgr = profile.role === "super_admin" || profile.role === "manager";
@@ -65,12 +68,12 @@ export default async function InventoryDashboard({ searchParams }: { searchParam
 
   const href = (patch: Record<string, string | undefined>) => {
     const next = new URLSearchParams();
-    for (const [k, v] of Object.entries({ q: sp.q, stock: sp.stock, cat: sp.cat, ...patch })) if (v) next.set(k, v);
+    for (const [k, v] of Object.entries({ q: sp.q, stock: sp.stock, cat: sp.cat, brand: picked?.code, ...patch })) if (v) next.set(k, v);
     return `/stock?${next}`;
   };
 
   // Consolidated view: one line per brand, never mixed.
-  const perBrand = ctx.isAll
+  const perBrand = showAll
     ? ctx.brands.map((b) => {
         const mine = all.filter((r) => r.brand_id === b.id);
         return {
@@ -95,7 +98,7 @@ export default async function InventoryDashboard({ searchParams }: { searchParam
 
   return (
     <>
-      <BrandStrip name={ctx.current?.name} code={ctx.current?.code} all={ctx.isAll} />
+      <BrandFilter brands={ctx.brands} current={picked} path="/stock" params={sp} label="Inventory" />
 
       <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
         <StatCard label="Total products" value={String(all.length)} icon={Package} tone="violet" href="/products" />
@@ -115,7 +118,7 @@ export default async function InventoryDashboard({ searchParams }: { searchParam
         ))}
       </div>
 
-      {ctx.isAll && (
+      {showAll && (
         <Card className="mb-6 overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium text-slate-500">
@@ -178,7 +181,7 @@ export default async function InventoryDashboard({ searchParams }: { searchParam
                       </span>
                       <div className="min-w-0">
                         <Link href={`/products/${r.id}`} className="font-medium text-slate-900 hover:underline">{r.name}</Link>
-                        <div className="text-xs text-slate-500"><span className="font-mono">{r.sku}</span>{r.category_name ? ` · ${r.category_name}` : ""}{ctx.isAll ? ` · ${r.brand_name}` : ""}</div>
+                        <div className="text-xs text-slate-500"><span className="font-mono">{r.sku}</span>{r.category_name ? ` · ${r.category_name}` : ""}{showAll ? ` · ${r.brand_name}` : ""}</div>
                       </div>
                     </div>
                   </td>
