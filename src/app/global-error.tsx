@@ -14,7 +14,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
           <h1 style={{ fontSize: 20, margin: "0 0 8px" }}>Something went wrong</h1>
           <p style={{ color: "#475569", fontSize: 14 }}>The app could not start. Anything you already saved is safe.</p>
           {error.digest && <p style={{ color: "#94a3b8", fontSize: 12 }}>Reference: {error.digest}</p>}
-          <button onClick={reset} style={{ marginTop: 12, height: 44, padding: "0 20px", borderRadius: 8, border: 0, background: "#111a2e", color: "#fff", fontWeight: 600 }}>
+          <button onClick={reset} style={{ marginTop: 12, height: 44, padding: "0 20px", borderRadius: 8, border: 0, background: "#156CDD", color: "#fff", fontWeight: 600 }}>
             Try again
           </button>
         </div>

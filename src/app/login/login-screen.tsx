@@ -14,7 +14,7 @@ export function LoginScreen({ next, error, org }: { next?: string; error?: strin
   return (
     <main className="grid min-h-dvh lg:grid-cols-2">
       <OfflineReset />
-      <section className="relative hidden flex-col justify-between overflow-hidden bg-primary p-12 text-on-fill lg:flex">
+      <section className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-blue-700 to-blue-600 p-12 text-on-fill lg:flex">
         {org?.logoUrl ? (
           <div className="inline-flex w-fit rounded-2xl bg-surface px-5 py-3 shadow-lg">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -23,19 +23,19 @@ export function LoginScreen({ next, error, org }: { next?: string; error?: strin
         ) : (
           <div className="flex items-center gap-3">
             <Logo />
-            <span className="text-sm font-medium tracking-[0.2em] text-slate-300">{org ? org.name : PLATFORM_NAME}</span>
+            <span className="text-sm font-medium tracking-[0.2em] text-on-fill/85">{org ? org.name : PLATFORM_NAME}</span>
           </div>
         )}
         <div className="max-w-md">
           <h1 className="text-4xl font-semibold leading-tight tracking-tight">
             Stock, billing and collections in one place.
           </h1>
-          <p className="mt-4 text-slate-400">
+          <p className="mt-4 text-on-fill/80">
             {PLATFORM_TAGLINE} for the office, the warehouse and the field team.
           </p>
         </div>
-        <p className="text-xs text-slate-500">Authorised staff only. All activity is logged.</p>
-        <div aria-hidden className="pointer-events-none absolute -right-24 -bottom-24 h-96 w-96 rounded-full border-[48px] border-primary/10" />
+        <p className="text-xs text-on-fill/75">Authorised staff only. All activity is logged.</p>
+        <div aria-hidden className="pointer-events-none absolute -right-24 -bottom-24 h-96 w-96 rounded-full border-[48px] border-on-fill/10" />
       </section>
 
       <section className="flex items-center justify-center p-6">
@@ -63,8 +63,8 @@ export function LoginScreen({ next, error, org }: { next?: string; error?: strin
 function Logo() {
   return (
     <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden>
-      <rect width="32" height="32" rx="8" fill="#f28c18" />
-      <path d="M9 23 16 8l7 15h-4l-3-7-3 7z" fill="#111a2e" />
+      <rect width="32" height="32" rx="9" fill="var(--blue-600)" />
+      <path d="M9 23 16 8l7 15h-4l-3-7-3 7z" fill="var(--on-fill)" />
     </svg>
   );
 }
