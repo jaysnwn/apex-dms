@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { AlertTriangle, CalendarClock, IndianRupee, Wallet } from "lucide-react";
+import { Banknote, CalendarClock, CalendarRange, Wallet } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { date, inr } from "@/lib/format";
@@ -21,13 +21,17 @@ export default async function OutstandingPage({ searchParams }: { searchParams: 
   const supabase = await createClient();
   const isOffice = profile.role !== "salesman";
 
-  const [{ data: bal }, { data: dir }, { data: routes }, { data: salesmen }, { data: openInv }] = await Promise.all([
+  const today = todayIST();
+  const monthStart = today.slice(0, 8) + "01";
+  const [{ data: bal }, { data: dir }, { data: routes }, { data: salesmen }, { data: openInv }, { data: paidThisMonth }] = await Promise.all([
     allRows(() => supabase.from("retailer_balances").select("*").gt("outstanding", 0).order("retailer_id")),
     allRows(() => supabase.from("retailer_directory").select("id, route_id, route_name, salesman_id, salesman_name, mobile, classification, billing_city").order("id")),
     supabase.from("routes").select("id, name").order("name"),
     isOffice ? supabase.from("tenant_people").select("id, full_name").eq("role", "salesman").order("full_name") : Promise.resolve({ data: [] }),
     // every open bill: the due-date filters (today / this week / this month) and the invoice-wise view
     allRows(() => supabase.from("invoice_balances").select("invoice_id, invoice_no, retailer_id, invoice_date, due_date, balance, due_status, days_past_due, ageing_bucket").gt("balance", 0).order("due_date").order("invoice_id")),
+    // money received this month (cheques not yet cleared included, bounced / cancelled not)
+    allRows(() => supabase.from("payments").select("id, retailer_id, amount").in("status", ["received", "cheque_pending"]).gte("payment_date", monthStart).lte("payment_date", today).order("id")),
   ]);
   const dMap = new Map((dir ?? []).map((d) => [d.id as string, d]));
   // retailer_balances reads FROM retailers and left-joins the invoice
@@ -60,7 +64,7 @@ export default async function OutstandingPage({ searchParams }: { searchParams: 
       }));
 
   // When is it due: overdue, today, this week (to Sunday), this month (to month end).
-  const win = dueWindows(todayIST());
+  const win = dueWindows(today);
   const dueKey = (DUE_KEYS as string[]).includes(sp.due ?? "") ? (sp.due as DueKey) : null;
   const dueSum = (k: DueKey) => openBills.filter((i) => win.test[k](i.due_date)).reduce((s, i) => s + i.balance, 0);
   const dueCount = (k: DueKey) => new Set(openBills.filter((i) => win.test[k](i.due_date)).map((i) => i.retailer_id)).size;
@@ -80,6 +84,18 @@ export default async function OutstandingPage({ searchParams }: { searchParams: 
     { k: "month", label: "Due this month", hint: `to ${shortDate(win.monthEnd)}`, tone: "text-sky-700" },
   ];
   const dueLabel = DUE_FILTERS.find((f) => f.k === dueKey)?.label;
+  // Cards: total = overdue + due this month (today → month end) + not due (after this month).
+  const notDueAfterMonth = openBills.filter((i) => i.due_date > win.monthEnd).reduce((s, i) => s + i.balance, 0);
+  const notDueShops = new Set(openBills.filter((i) => i.due_date > win.monthEnd).map((i) => i.retailer_id)).size;
+  const overdueNow = dueSum("overdue");
+  // Payments from shops in view (route / salesman filters), whether or not they still owe anything.
+  const shopFits = (id: string | null) => {
+    const d = id ? dMap.get(id) : undefined;
+    return !!d && (!sp.route || d.route_id === sp.route) && (!sp.salesman || d.salesman_id === sp.salesman);
+  };
+  const received = (paidThisMonth ?? []).filter((p) => shopFits(p.retailer_id as string | null));
+  const receivedSum = received.reduce((s, p) => s + Number(p.amount), 0);
+  const monthName = new Date(monthStart + "T00:00:00Z").toLocaleDateString("en-IN", { month: "long", timeZone: "UTC" });
   const shopName = new Map(rows.map((r) => [r.retailer_id as string, r.shop_name as string]));
 
   const qs = (patch: Record<string, string | undefined>) => {
@@ -99,10 +115,14 @@ export default async function OutstandingPage({ searchParams }: { searchParams: 
   return (
     <>
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total outstanding" value={inr(t("outstanding"), { decimals: false })} icon={Wallet} tone="blue" hint={`${allShops.length} retailers`} />
-        <StatCard label="Not yet due" value={inr(t("not_yet_due"), { decimals: false })} icon={CalendarClock} tone="green" />
-        <StatCard label="Due today" value={inr(t("due_today"), { decimals: false })} icon={IndianRupee} tone="amber" />
-        <StatCard label="Overdue" value={inr(t("overdue"), { decimals: false })} icon={AlertTriangle} tone="red" alert={t("overdue") > 0} />
+        <StatCard label="Total outstanding" value={inr(t("outstanding"), { decimals: false })} icon={Wallet} tone="blue" alert={overdueNow > 0}
+          hint={`${allShops.length} retailers${overdueNow > 0 ? ` · ${inr(overdueNow, { decimals: false })} overdue` : " · nothing overdue"}`} />
+        <StatCard label="Due this month" value={inr(dueSum("month"), { decimals: false })} icon={CalendarRange} tone="amber"
+          hint={`today to ${shortDate(win.monthEnd)} · ${dueCount("month")} retailers`} href={qs({ due: "month" })} />
+        <StatCard label="Not due" value={inr(notDueAfterMonth, { decimals: false })} icon={CalendarClock} tone="green"
+          hint={`due after ${shortDate(win.monthEnd)} · ${notDueShops} retailers`} />
+        <StatCard label="Payments received" value={inr(receivedSum, { decimals: false })} icon={Banknote} tone="violet"
+          hint={`${monthName} · ${received.length} payment${received.length === 1 ? "" : "s"}`} href={`/payments?from=${monthStart}&to=${today}`} />
       </div>
 
       <Card className="mb-6 p-5">
