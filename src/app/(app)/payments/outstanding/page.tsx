@@ -76,6 +76,10 @@ export default async function OutstandingPage({ searchParams }: { searchParams: 
   }
   const invoiceRows = dueKey ? openBills.filter((i) => win.test[dueKey](i.due_date)) : openBills;
   const t = (k: string) => allShops.reduce((s, r) => s + Number((r as Record<string, unknown>)[k] ?? 0), 0);
+  const daysToGo = (due: string) => {
+    const n = Math.round((Date.parse(due + "T00:00:00Z") - Date.parse(today + "T00:00:00Z")) / 864e5);
+    return n === 1 ? "Due tomorrow" : `Due in ${n} days`;
+  };
   const shortDate = (d: string) => new Date(d + "T00:00:00Z").toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" });
   const DUE_FILTERS: { k: DueKey; label: string; hint: string; tone: string }[] = [
     { k: "overdue", label: "Overdue", hint: "before today", tone: "text-red-700" },
@@ -88,6 +92,16 @@ export default async function OutstandingPage({ searchParams }: { searchParams: 
   const notDueAfterMonth = openBills.filter((i) => i.due_date > win.monthEnd).reduce((s, i) => s + i.balance, 0);
   const notDueShops = new Set(openBills.filter((i) => i.due_date > win.monthEnd).map((i) => i.retailer_id)).size;
   const overdueNow = dueSum("overdue");
+  // Per shop, split the same way as the cards (never overlapping): overdue,
+  // due this month (today → month end), not due (after this month).
+  const split = new Map<string, { overdue: number; month: number; later: number }>();
+  for (const i of openBills) {
+    const v = split.get(i.retailer_id) ?? { overdue: 0, month: 0, later: 0 };
+    if (win.test.overdue(i.due_date)) v.overdue += i.balance;
+    else if (i.due_date <= win.monthEnd) v.month += i.balance;
+    else v.later += i.balance;
+    split.set(i.retailer_id, v);
+  }
   // Payments from shops in view (route / salesman filters), whether or not they still owe anything.
   const shopFits = (id: string | null) => {
     const d = id ? dMap.get(id) : undefined;
@@ -194,7 +208,7 @@ export default async function OutstandingPage({ searchParams }: { searchParams: 
                     <td className="px-4 py-2.5"><Link href={`/sales/invoices/${i.invoice_id}`} className="font-mono text-xs font-medium hover:underline">{i.invoice_no}</Link><div className="text-xs text-slate-500">{date(i.invoice_date)}</div></td>
                     <td className="px-3 py-2.5"><Link href={`/retailers/${i.retailer_id}`} className="hover:underline">{shopName.get(i.retailer_id)}</Link></td>
                     <td className="px-3 py-2.5">{date(i.due_date)}</td>
-                    <td className="px-3 py-2.5"><Badge tone={st.tone}>{st.label}{i.due_status === "overdue" ? ` · ${i.days_past_due}d` : ""}</Badge></td>
+                    <td className="px-3 py-2.5"><Badge tone={st.tone}>{i.due_status === "not_yet_due" ? daysToGo(i.due_date) : `${st.label}${i.due_status === "overdue" ? ` · ${i.days_past_due}d` : ""}`}</Badge></td>
                     <td className="tabular px-4 py-2.5 text-right font-semibold">{inr(i.balance)}</td>
                   </tr>
                 );
@@ -207,12 +221,21 @@ export default async function OutstandingPage({ searchParams }: { searchParams: 
           <table className="w-full text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium text-slate-500">
               <tr>
-                <th className="px-4 py-2.5">Retailer</th><th className="px-3 py-2.5 text-right">Outstanding</th>{dueKey && <th className="px-3 py-2.5 text-right">{dueLabel}</th>}<th className="px-3 py-2.5 text-right">Not due</th>
-                <th className="px-3 py-2.5 text-right">0–15</th><th className="px-3 py-2.5 text-right">16–30</th><th className="px-3 py-2.5 text-right">31–45</th><th className="px-3 py-2.5 text-right">45+</th><th className="px-4 py-2.5"></th>
+                <th className="px-4 py-2.5">Retailer</th><th className="px-3 py-2.5 text-right">Outstanding</th>
+                {dueKey ? (
+                  <th className="px-3 py-2.5 text-right">{dueLabel}</th>
+                ) : (
+                  <>
+                    <th className="px-3 py-2.5 text-right">Overdue</th>
+                    <th className="px-3 py-2.5 text-right">Due this month <span className="font-normal text-slate-400">to {shortDate(win.monthEnd)}</span></th>
+                    <th className="px-3 py-2.5 text-right">Not due <span className="font-normal text-slate-400">after {shortDate(win.monthEnd)}</span></th>
+                  </>
+                )}
+                <th className="px-4 py-2.5"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {rows.length === 0 && <tr><td colSpan={dueKey ? 9 : 8} className="px-4 py-10 text-center text-slate-500">{dueKey ? `Nothing ${dueLabel?.toLowerCase()}.` : "Nothing outstanding. 🎉"}</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={dueKey ? 4 : 6} className="px-4 py-10 text-center text-slate-500">{dueKey ? `Nothing ${dueLabel?.toLowerCase()}.` : "Nothing outstanding. 🎉"}</td></tr>}
               {rows.map((r) => {
                 const cls = r.d?.classification ? RETAILER_CLASS[r.d.classification] : null;
                 const cell = (v: unknown, tone: string) => <td className={cn("tabular px-3 py-2.5 text-right", Number(v) > 0 ? tone : "text-slate-300")}>{Number(v) > 0 ? inr(v as number, { decimals: false }) : "—"}</td>;
@@ -224,12 +247,13 @@ export default async function OutstandingPage({ searchParams }: { searchParams: 
                       {cls && <Badge tone={cls.tone}>{cls.label}</Badge>}
                     </td>
                     <td className="tabular px-3 py-2.5 text-right font-semibold">{inr(r.outstanding, { decimals: false })}</td>
-                    {dueKey && cell(dueByShop.get(r.retailer_id), "font-semibold text-ink-900")}
-                    {cell(r.not_yet_due, "text-emerald-700")}
-                    {cell(r.overdue_0_15, "text-amber-700 font-medium")}
-                    {cell(r.overdue_16_30, "text-orange-700 font-medium")}
-                    {cell(r.overdue_31_45, "text-red-600 font-medium")}
-                    {cell(r.overdue_45_plus, "text-red-800 font-semibold")}
+                    {dueKey ? cell(dueByShop.get(r.retailer_id), "font-semibold text-ink-900") : (
+                      <>
+                        {cell(split.get(r.retailer_id)?.overdue, "text-red-700 font-semibold")}
+                        {cell(split.get(r.retailer_id)?.month, "text-amber-700 font-medium")}
+                        {cell(split.get(r.retailer_id)?.later, "text-emerald-700")}
+                      </>
+                    )}
                     <td className="px-4 py-2.5 text-right"><Link href={`/payments/new?retailer=${r.retailer_id}`} className="text-xs font-medium text-emerald-700 hover:underline">Collect</Link></td>
                   </tr>
                 );
