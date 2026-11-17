@@ -61,7 +61,7 @@ export const RetailerSelect = forwardRef<HTMLInputElement, {
   if (value) {
     const missing = missingTaxDetails(value);
     return (
-      <div className="rounded-xl border border-violet-200 bg-violet-50/50 p-3">
+      <div className="rounded-[var(--radius-card)] border border-line bg-sunken/60 p-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
           <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-on-fill"><Store className="size-5" /></span>
           <div className="min-w-0 flex-1">
@@ -111,7 +111,7 @@ export const RetailerSelect = forwardRef<HTMLInputElement, {
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
           <History className="size-3.5 text-slate-400" />
           {recent.map((r) => (
-            <button key={r.id} type="button" onClick={() => pick(r, false)} className="rounded-full border border-slate-300 bg-surface px-2.5 py-1 text-xs font-medium hover:border-violet-400 hover:bg-violet-50">
+            <button key={r.id} type="button" onClick={() => pick(r, false)} className="rounded-full border border-slate-300 bg-surface px-2.5 py-1 text-xs font-medium hover:border-primary/50 hover:bg-primary-soft">
               {r.shop_name}
             </button>
           ))}
@@ -121,11 +121,11 @@ export const RetailerSelect = forwardRef<HTMLInputElement, {
         <ul className="absolute z-30 mt-1 max-h-80 w-full overflow-auto rounded-xl border border-slate-200 bg-surface py-1 shadow-lg">
           {results.length === 0 ? (
             <li className="px-3 py-3 text-sm text-slate-500">
-              No retailer found. <button className="font-semibold text-violet-700 underline" onClick={() => setCreating(true)}>+ Add New Retailer</button>
+              No retailer found. <button className="font-semibold text-primary-text underline" onClick={() => setCreating(true)}>+ Add New Retailer</button>
             </li>
           ) : results.map((r, i) => (
             <li key={r.id}>
-              <button type="button" onClick={() => pick(r)} className={cn("flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-violet-50", i === 0 && q && "bg-slate-50")}>
+              <button type="button" onClick={() => pick(r)} className={cn("flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-sunken", i === 0 && q && "bg-slate-50")}>
                 <span className="min-w-0">
                   <span className="font-medium">{r.shop_name}</span>{r.owner_name ? <span className="text-slate-500"> · {r.owner_name}</span> : null}
                   <span className="block truncate text-xs text-slate-500">{r.code} · {r.mobile}{r.billing_city ? ` · ${r.billing_city}` : ""}{r.gstin ? ` · ${r.gstin}` : ""}</span>
@@ -169,7 +169,7 @@ function QuickRetailerDialog({ initialName, initialMobile, companyState, onClose
         <div className="sm:col-span-2"><Label htmlFor="qr-shop">Retailer / shop name</Label><Input id="qr-shop" value={form.shop_name} onChange={set("shop_name")} autoFocus required /></div>
         <div className="sm:col-span-2"><Label htmlFor="qr-mobile">Mobile number</Label><Input id="qr-mobile" value={form.mobile} onChange={set("mobile")} inputMode="tel" maxLength={14} required /></div>
         {!more ? (
-          <button type="button" onClick={() => setMore(true)} className="text-left text-sm font-medium text-violet-700 hover:underline sm:col-span-2">+ GSTIN, address and contact person (optional — can be added later)</button>
+          <button type="button" onClick={() => setMore(true)} className="text-left text-sm font-medium text-primary-text hover:underline sm:col-span-2">+ GSTIN, address and contact person (optional — can be added later)</button>
         ) : (
           <>
             <div><Label htmlFor="qr-owner" hint="optional">Contact person</Label><Input id="qr-owner" value={form.owner_name} onChange={set("owner_name")} /></div>
