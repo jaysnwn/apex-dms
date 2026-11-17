@@ -14,43 +14,45 @@ export function LoginScreen({ next, error, org }: { next?: string; error?: strin
   return (
     <main className="grid min-h-dvh lg:grid-cols-2">
       <OfflineReset />
-      <section className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-blue-700 to-blue-600 p-12 text-on-fill lg:flex">
+      <section className="relative hidden flex-col justify-between overflow-hidden bg-[linear-gradient(135deg,#0A3A8C_0%,#0F55C2_55%,#1A6CDD_100%)] p-12 text-white lg:flex">
+        {/* soft light behind the glass */}
+        <div aria-hidden className="drift pointer-events-none absolute -top-32 -left-24 h-[28rem] w-[28rem] rounded-full bg-[#5AA2FF]/40 blur-3xl" />
+        <div aria-hidden className="drift pointer-events-none absolute -right-28 -bottom-32 h-[30rem] w-[30rem] rounded-full bg-[#38C3B5]/25 blur-3xl [animation-delay:-7s]" />
         {org?.logoUrl ? (
-          <div className="inline-flex w-fit rounded-2xl bg-surface px-5 py-3 shadow-lg">
+          <div className="rise relative inline-flex w-fit rounded-[var(--radius-sheet)] bg-white/90 px-5 py-3 shadow-[var(--shadow-raised)] ring-1 ring-white/60 backdrop-blur-md">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={org.logoUrl} alt={org.name} className="h-14 w-auto max-w-72 object-contain" />
+            <img src={org.logoUrl} alt={org.name} className="h-14 w-auto max-w-72 object-contain brightness-[1.04] contrast-[1.04] mix-blend-multiply" />
           </div>
         ) : (
-          <div className="flex items-center gap-3">
+          <div className="rise relative flex items-center gap-3">
             <Logo />
-            <span className="text-sm font-medium tracking-[0.2em] text-on-fill/85">{org ? org.name : PLATFORM_NAME}</span>
+            <span className="text-sm font-medium tracking-[0.2em] text-white/85">{org ? org.name : PLATFORM_NAME}</span>
           </div>
         )}
-        <div className="max-w-md">
-          <h1 className="text-4xl font-semibold leading-tight tracking-tight">
+        <div className="rise relative bg-white/14 ring-1 ring-white/25 backdrop-blur-md max-w-md rounded-[var(--radius-sheet)] p-7 [animation-delay:120ms]">
+          <h1 className="text-[34px] leading-tight font-semibold tracking-[-0.02em]">
             Stock, billing and collections in one place.
           </h1>
-          <p className="mt-4 text-on-fill/80">
+          <p className="mt-3 text-white/85">
             {PLATFORM_TAGLINE} for the office, the warehouse and the field team.
           </p>
         </div>
-        <p className="text-xs text-on-fill/75">Authorised staff only. All activity is logged.</p>
-        <div aria-hidden className="pointer-events-none absolute -right-24 -bottom-24 h-96 w-96 rounded-full border-[48px] border-on-fill/10" />
+        <p className="rise relative text-xs text-white/80 [animation-delay:240ms]">Authorised staff only. All activity is logged.</p>
       </section>
 
       <section className="flex items-center justify-center p-6">
-        <div className="w-full max-w-sm">
+        <div className="rise w-full max-w-sm [animation-delay:80ms]">
           {org?.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={org.logoUrl} alt={org.name} className="mb-8 h-14 w-auto max-w-full object-contain lg:hidden" />
+            <img src={org.logoUrl} alt={org.name} className="mb-8 h-14 w-auto max-w-full object-contain mix-blend-multiply lg:hidden dark:mix-blend-screen dark:invert dark:hue-rotate-180" />
           ) : (
             <div className="mb-8 flex items-center gap-3 lg:hidden">
               <Logo />
-              <span className="text-sm font-semibold tracking-[0.2em] text-slate-700">{org ? org.name : PLATFORM_NAME}</span>
+              <span className="text-sm font-semibold tracking-[0.2em] text-text-2">{org ? org.name : PLATFORM_NAME}</span>
             </div>
           )}
-          <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Sign in</h2>
-          <p className="mt-1 mb-6 text-sm text-slate-500">
+          <h2 className="text-2xl font-semibold tracking-[-0.015em] text-text">Sign in</h2>
+          <p className="mt-1 mb-6 text-sm text-text-2">
             {org ? `${org.name} · ${PLATFORM_NAME}` : "Use the login your administrator gave you."}
           </p>
           <LoginForm next={next} org={org?.slug} initialError={error ? ERRORS[error] : undefined} />

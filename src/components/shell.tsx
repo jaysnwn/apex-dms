@@ -134,21 +134,35 @@ export function Shell({ modules, role, userName, roleLabel, orgName, logoUrl, ca
     return () => window.removeEventListener("keydown", onKey);
   }, [actions, groups, help, palette, pathname, router]);
 
+  // The business's own logo (Admin → Company) when there is one: multiply drops a white
+  // background in light mode; in dark mode the logo is inverted and screened, so a navy
+  // wordmark reads light on the dark menu without a white box around it.
+  const mark = (
+    <span className="grid size-9 shrink-0 place-items-center rounded-[10px] bg-gradient-to-b from-blue-500 to-blue-700 text-on-fill shadow-[var(--shadow-card)]">
+      <svg width="18" height="18" viewBox="0 0 32 32" aria-hidden><path d="M8 25 16 7l8 18h-4.5L16 17l-3.5 8z" fill="currentColor" /></svg>
+    </span>
+  );
   const brand = (
     <Link href="/dashboard" className="flex min-w-0 items-center gap-3" title={orgName}>
-      {logoUrl ? (
-        <span className="grid h-9 min-w-9 shrink-0 place-items-center overflow-hidden rounded-[10px] bg-white px-1.5 ring-1 ring-line">
-          <CompanyLogo src={logoUrl} name={orgName} className="max-h-6 w-auto max-w-[120px] object-contain" fallbackClassName="text-xs font-bold text-slate-900" />
+      {logoUrl && !collapsed ? (
+        <span className="flex min-w-0 flex-col">
+          <CompanyLogo
+            src={logoUrl}
+            name={orgName}
+            className="-ml-1 h-12 w-auto max-w-[196px] object-contain object-left brightness-[1.04] contrast-[1.04] mix-blend-multiply dark:mix-blend-screen dark:invert dark:hue-rotate-180"
+            fallbackClassName="truncate text-[14px] font-semibold text-text"
+          />
+          <span className="-mt-1 pl-0.5 text-[11px] font-medium tracking-[0.18em] text-text-3 uppercase">{PLATFORM_NAME}</span>
         </span>
       ) : (
-        <span className="grid size-9 shrink-0 place-items-center rounded-[10px] bg-primary text-on-fill">
-          <svg width="18" height="18" viewBox="0 0 32 32" aria-hidden><path d="M8 25 16 7l8 18h-4.5L16 17l-3.5 8z" fill="currentColor" /></svg>
-        </span>
+        <>
+          {mark}
+          <span className={cn("min-w-0 leading-tight", collapsed && "lg:hidden")}>
+            <span className="block truncate text-[14px] font-semibold text-text">{orgName}</span>
+            <span className="block text-[11.5px] text-text-2">{PLATFORM_NAME}</span>
+          </span>
+        </>
       )}
-      <span className={cn("min-w-0 leading-tight", collapsed && "lg:hidden")}>
-        <span className="block truncate text-[14px] font-semibold text-text">{orgName}</span>
-        <span className="block text-xs text-text-2">{PLATFORM_NAME}</span>
-      </span>
     </Link>
   );
 
@@ -169,7 +183,7 @@ export function Shell({ modules, role, userName, roleLabel, orgName, logoUrl, ca
           transition={spring.gentle}
           aria-label="Main menu"
         >
-          <div className={cn("flex h-16 shrink-0 items-center gap-2 px-4", collapsed && "justify-center px-0")}>{brand}</div>
+          <div className={cn("flex h-[72px] shrink-0 items-center gap-2 px-4", collapsed && "justify-center px-0")}>{brand}</div>
           <SideNav groups={groups} pathname={pathname} collapsed={collapsed} pinned={pinned} recent={recent} />
           <div className={cn("shrink-0 border-t border-line p-3", collapsed && "px-2")}>
             <UserBox name={userName} roleLabel={roleLabel} collapsed={collapsed} canSwitchOrg={canSwitchOrg} />
@@ -218,7 +232,7 @@ export function Shell({ modules, role, userName, roleLabel, orgName, logoUrl, ca
 
         <div className={cn(collapsed ? "lg:pl-[76px]" : "lg:pl-64")}>
           {/* Top bar: where you are, search, theme, shortcuts */}
-          <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-line bg-bg/85 px-3 backdrop-blur-md sm:px-4 lg:h-16 lg:px-8">
+          <header className="glass sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-line/70 px-3 sm:px-4 lg:h-16 lg:px-8">
             <button aria-label="Open menu" onClick={() => setDrawer(true)} className="grid size-11 place-items-center rounded-full text-text hover:bg-sunken lg:hidden">
               <Menu className="size-5" />
             </button>
@@ -282,7 +296,7 @@ export function Shell({ modules, role, userName, roleLabel, orgName, logoUrl, ca
         {/* Phone bottom bar for the 4 most-used places + More */}
         <nav
           aria-label="Quick menu"
-          className="fixed inset-x-0 bottom-0 z-30 flex border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
+          className="glass fixed inset-x-0 bottom-0 z-30 flex border-t border-line/70 pb-[env(safe-area-inset-bottom)] lg:hidden"
         >
           {tabs.map((t) => {
             const active = t.match(pathname);
