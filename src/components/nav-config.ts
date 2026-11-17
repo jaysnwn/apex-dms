@@ -61,7 +61,7 @@ export function tabsFor(role: AppRole, groups: NavGroup[]): NavItem[] {
 // Quick actions for the command palette and shortcuts.
 export type QuickAction = { key: string; label: string; href: string; module: ModuleKey; shortcut?: string; keywords?: string };
 export const QUICK_ACTIONS: QuickAction[] = [
-  { key: "new-invoice", label: "New invoice", href: "/sales/new", module: "sales", shortcut: "I", keywords: "bill billing sale create" },
+  { key: "new-invoice", label: "New quotation", href: "/sales/new", module: "sales", shortcut: "I", keywords: "bill billing invoice sale create quote" },
   { key: "new-order", label: "New order / quotation", href: "/sales/new", module: "sales", shortcut: "N", keywords: "order quotation draft" },
   { key: "record-payment", label: "Record payment", href: "/payments/new", module: "payments", shortcut: "P", keywords: "collection receipt money" },
   { key: "new-retailer", label: "Add retailer", href: "/retailers/new", module: "retailers", keywords: "shop customer outlet" },

@@ -5,7 +5,7 @@ import { OrderBuilder } from "../order-builder";
 import { builderOptions } from "../data";
 import { loadBillingCatalogue, type PickerRetailer } from "../actions";
 
-export const metadata: Metadata = { title: "Billing" };
+export const metadata: Metadata = { title: "New quotation" };
 
 export default async function NewOrderPage({ searchParams }: { searchParams: Promise<{ retailer?: string }> }) {
   const { profile } = await requireRole("super_admin", "manager", "billing", "salesman");
