@@ -20,6 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <Shell
       modules={modulesFor(profile.role)}
+      role={profile.role}
       userName={profile.full_name}
       roleLabel={ROLE_LABELS[profile.role]}
       orgName={tenant.display_name}
