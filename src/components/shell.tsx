@@ -240,7 +240,7 @@ export function Shell({ modules, role, userName, roleLabel, orgName, logoUrl, ca
               <Menu className="size-5" />
             </button>
             <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1 text-sm">
-              {current?.group && (
+              {current?.group && current.group !== current.label && (
                 <>
                   <span className="hidden truncate text-text-2 sm:inline">{current.group}</span>
                   <ChevronRight className="hidden size-3.5 shrink-0 text-text-3 sm:inline" aria-hidden />

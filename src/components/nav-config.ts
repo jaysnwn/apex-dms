@@ -1,5 +1,5 @@
 import {
-  Activity, BarChart3, Boxes, FileText, LayoutDashboard, Package, PackagePlus, Receipt, Route, ScrollText,
+  Activity, BarChart3, Boxes, LayoutDashboard, Package, PackagePlus, Receipt, Route, ScrollText,
   Settings, ShoppingCart, Store, Truck, Upload, Users, Wallet, type LucideIcon,
 } from "lucide-react";
 import type { AppRole, ModuleDef, ModuleKey } from "@/lib/roles";
@@ -12,11 +12,11 @@ const starts = (base: string) => (p: string) => p === base || p.startsWith(base 
 
 const ITEMS: (Omit<NavItem, "match"> & { match?: NavItem["match"]; group: string | null })[] = [
   { key: "dashboard", module: "dashboard", label: "Dashboard", short: "Home", href: "/dashboard", icon: LayoutDashboard, group: null },
-  { key: "sales", module: "sales", label: "Billing", href: "/sales/new", icon: ShoppingCart, group: "Sales",
-    match: (p) => p.startsWith("/sales") && !p.startsWith("/sales/invoices") },
-  { key: "invoices", module: "sales", label: "Invoices", href: "/sales/invoices", icon: FileText, group: "Sales" },
-  { key: "retailers", module: "retailers", label: "Retailers", href: "/retailers", icon: Store, group: "Sales" },
-  { key: "routes", module: "routes", label: "Routes", href: "/routes", icon: Route, group: "Sales" },
+  // One menu item for all of Sales; its four tabs (New quotation, Quotations,
+  // Pending for dispatch, Invoices) live on the page itself.
+  { key: "sales", module: "sales", label: "Sales", href: "/sales/new", icon: ShoppingCart, group: null, match: starts("/sales") },
+  { key: "retailers", module: "retailers", label: "Retailers", href: "/retailers", icon: Store, group: "Customers" },
+  { key: "routes", module: "routes", label: "Routes", href: "/routes", icon: Route, group: "Customers" },
   { key: "stock", module: "stock", label: "Inventory", short: "Stock", href: "/stock", icon: Boxes, group: "Inventory" },
   { key: "products", module: "products", label: "Products", href: "/products", icon: Package, group: "Inventory" },
   { key: "purchases", module: "purchases", label: "Purchases", href: "/purchases", icon: PackagePlus, group: "Inventory" },
@@ -61,8 +61,8 @@ export function tabsFor(role: AppRole, groups: NavGroup[]): NavItem[] {
 // Quick actions for the command palette and shortcuts.
 export type QuickAction = { key: string; label: string; href: string; module: ModuleKey; shortcut?: string; keywords?: string };
 export const QUICK_ACTIONS: QuickAction[] = [
-  { key: "new-invoice", label: "New quotation", href: "/sales/new", module: "sales", shortcut: "I", keywords: "bill billing invoice sale create quote" },
-  { key: "new-order", label: "New order / quotation", href: "/sales/new", module: "sales", shortcut: "N", keywords: "order quotation draft" },
+  { key: "new-invoice", label: "New quotation", href: "/sales/new", module: "sales", shortcut: "N", keywords: "bill billing invoice sale create quote order" },
+  { key: "invoices", label: "Invoices", href: "/sales/invoices", module: "sales", shortcut: "I", keywords: "bills orders sales" },
   { key: "record-payment", label: "Record payment", href: "/payments/new", module: "payments", shortcut: "P", keywords: "collection receipt money" },
   { key: "new-retailer", label: "Add retailer", href: "/retailers/new", module: "retailers", keywords: "shop customer outlet" },
   { key: "stock-entry", label: "Stock entry", href: "/stock/entry", module: "stock", keywords: "inward outward adjust" },
@@ -74,8 +74,7 @@ export const QUICK_ACTIONS: QuickAction[] = [
 // "G then …" jumps.
 export const GO_KEYS: { key: string; nav: string; label: string }[] = [
   { key: "d", nav: "dashboard", label: "Dashboard" },
-  { key: "s", nav: "sales", label: "Billing" },
-  { key: "o", nav: "invoices", label: "Orders & invoices" },
+  { key: "s", nav: "sales", label: "Sales" },
   { key: "r", nav: "retailers", label: "Retailers" },
   { key: "k", nav: "stock", label: "Inventory" },
   { key: "u", nav: "products", label: "Products" },
