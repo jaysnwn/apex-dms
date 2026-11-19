@@ -3,8 +3,7 @@
 import { toast as notify } from "sonner";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { AlertTriangle, Check, FileText, Keyboard, LayoutGrid } from "lucide-react";
+import { AlertTriangle, Check, CloudOff, FileText, Keyboard, LayoutGrid, Loader2, XCircle } from "lucide-react";
 import * as m from "motion/react-m";
 import { AnimatePresence } from "motion/react";
 import { Alert, Badge, Button, Input, Kbd, Select, Textarea, cn } from "@/components/ui";
@@ -16,7 +15,8 @@ import { brandTone } from "@/lib/brand-style";
 import { addDays, calcLine, todayIST } from "@/lib/gst";
 import { date as fmtDate, inr, qty as fmtQty } from "@/lib/format";
 import { BillingDetailsDialog, RetailerSelect, missingTaxDetails, rememberRetailer } from "./retailer-select";
-import { loadBillingCatalogue, retailerUsuals, saveOrder, type PickerProduct, type PickerRetailer } from "./actions";
+import { cancelQuotation, loadBillingCatalogue, retailerUsuals, saveOrder, type PickerProduct, type PickerRetailer, type SaveResult } from "./actions";
+import { askConfirm } from "@/components/confirm";
 import { DocSteps } from "./doc-steps";
 import { tenantKey } from "@/lib/supabase/client";
 
@@ -84,7 +84,16 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
   const [recentProducts, setRecentProducts] = useState<string[]>([]);
   const [editingDetails, setEditingDetails] = useState(false);
   const [error, setError] = useState<{ message: string; hint?: string } | null>(null);
-  const [savedOrderId, setSavedOrderId] = useState<string | null>(initial?.orderId ?? null);
+  // Auto-save: once there is a retailer and a product, the cart is saved as a real
+  // quotation (one per brand) and every change updates the same quotation(s).
+  const initialBrand = initial?.lines[0]?.product.brand_id;
+  const [saved, setSaved] = useState<Record<string, { orderId: string; orderNo?: string }>>(
+    initial && initialBrand ? { [initialBrand]: { orderId: initial.orderId, orderNo: initial.orderNo } } : {});
+  const savedRef = useRef(saved);
+  savedRef.current = saved;
+  const [autoState, setAutoState] = useState<{ s: "idle" | "saving" | "saved" | "error" | "waiting"; msg?: string }>({ s: initial ? "saved" : "idle" });
+  const inFlight = useRef<Promise<SaveResult | null> | null>(null);
+  const retries = useRef(0);
   const [clientKey] = useState(newKey);
   const [pending, start] = useTransition();
   const searchRef = useRef<HTMLInputElement>(null);
@@ -195,31 +204,117 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
     if (days < 0 || days > 365) return "Credit period must be 0–365 days.";
     return null;
   }
-  // Step 1 only: save the quotation. The invoice is made from the quotation page
-  // (Create invoice → invoice draft → Confirm invoice).
+  // ---- saving ----------------------------------------------------------------
+  const payloadLines = lines.map((l) => ({ product_id: l.product.id, qty: l.qty, discount_pct: effDisc(l), unit_price: isMgr && l.price !== null ? l.price : null }));
+  const sig = retailer && lines.length ? JSON.stringify([retailer.id, days, notes, payloadLines]) : null;
+  const sigRef = useRef(sig);
+  sigRef.current = sig;
+  // What was last saved. Opening an existing quotation counts as saved, so it isn't
+  // re-saved (and re-priced) just by being opened.
+  const lastSig = useRef<string | null>(initial ? sig : null);
+  const ready = !!sig && validate() === null;
+
+  // Save the cart as it is now. Quotations of brands no longer in the cart are cancelled.
+  const persist = useCallback(async (): Promise<SaveResult | null> => {
+    while (inFlight.current) await inFlight.current;   // one save at a time
+    const mySig = sig;
+    if (!mySig || !retailer) return null;
+    if (sigRef.current !== mySig) return null;          // the cart changed meanwhile; the newer save handles it
+    const run = (async () => {
+      setAutoState({ s: "saving" });
+      const map = Object.fromEntries(Object.entries(savedRef.current).map(([b, v]) => [b, v.orderId]));
+      let res: SaveResult;
+      try {
+        res = await saveOrder({ orderIds: map, retailerId: retailer.id, creditDays: days, notes, lines: payloadLines, clientUuid: clientKey, confirm: false });
+      } catch {
+        // No connection: say so and try again a few times on its own.
+        const n = (retries.current += 1);
+        setAutoState({ s: "error", msg: n <= 3 ? "no connection, trying again…" : "no connection. It will save when you next change something." });
+        if (n <= 3) setTimeout(() => { if (sigRef.current === mySig) void persistRef.current(); }, 4000 * n);
+        return { error: "No connection. The quotation will be saved when the connection is back." };
+      }
+      retries.current = 0;
+      const next = { ...savedRef.current };
+      for (const d of res.docs ?? []) next[d.brandId] = { orderId: d.orderId, orderNo: d.orderNo };
+      if (!res.error) {
+        const inCart = new Set((res.docs ?? []).map((d) => d.brandId));
+        for (const [b, v] of Object.entries(next)) {
+          if (inCart.has(b)) continue;
+          await cancelQuotation(v.orderId, "All its products were removed while editing");
+          delete next[b];
+        }
+      }
+      setSaved(next);
+      savedRef.current = next;
+      if (res.error) { setAutoState({ s: "error", msg: res.error }); return res; }
+      lastSig.current = mySig;
+      setAutoState({ s: "saved" });
+      // The address now points at the saved quotation, so Back, Refresh and links return to it.
+      const first = Object.values(next)[0];
+      if (first && window.location.pathname !== `/sales/orders/${first.orderId}/edit`) {
+        window.history.replaceState(window.history.state, "", `/sales/orders/${first.orderId}/edit`);
+      }
+      return res;
+    })();
+    inFlight.current = run;
+    try { return await run; } finally { inFlight.current = null; }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the cart of this render; sig changes whenever it does
+  }, [sig, retailer, days, notes, clientKey]);
+
+  // Auto-save shortly after the last change.
+  useEffect(() => {
+    if (!sig) { setAutoState(Object.keys(savedRef.current).length ? { s: "waiting", msg: "it needs a retailer and at least one product. The last saved version is kept." } : { s: "idle" }); return; }
+    if (sig === lastSig.current) return;
+    if (!ready) { setAutoState({ s: "waiting", msg: validate() ?? undefined }); return; }
+    const t = setTimeout(() => { void persist(); }, 900);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- runs when the cart changes
+  }, [sig, ready]);
+
+  // Leaving with a change not yet saved: save it on the way out (in-app links), and ask
+  // the browser to hold on if the tab is being closed.
+  const dirty = !!sig && ready && sig !== lastSig.current;
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
+  const persistRef = useRef(persist);
+  persistRef.current = persist;
+  useEffect(() => {
+    const onUnload = (e: BeforeUnloadEvent) => { if (dirtyRef.current) { void persistRef.current(); e.preventDefault(); } };
+    window.addEventListener("beforeunload", onUnload);
+    return () => { window.removeEventListener("beforeunload", onUnload); if (dirtyRef.current) void persistRef.current(); };
+  }, []);
+
+  // "Save quotation": save now and open it.
   function submit() {
     const v = validate();
     if (v) return setError({ message: v });
     setError(null);
     start(async () => {
-      const res = await saveOrder({
-        orderId: savedOrderId, retailerId: retailer!.id, creditDays: days, notes,
-        lines: lines.map((l) => ({ product_id: l.product.id, qty: l.qty, discount_pct: effDisc(l), unit_price: isMgr && l.price !== null ? l.price : null })),
-        clientUuid: clientKey, confirm: false,
-      });
-      if (res.orderId) setSavedOrderId(res.orderId);
-      if (res.error) {
-        setError({ message: res.error, hint: res.hint });
-        if (res.hint === "RETAILER_DETAILS") setEditingDetails(true);
+      const res = sig === lastSig.current && !inFlight.current ? { docs: Object.values(savedRef.current) } : await persist();
+      if (!res || "error" in res && res.error) {
+        const r = res as SaveResult | null;
+        setError({ message: r?.error ?? "Could not save the quotation.", hint: r?.hint });
+        if (r?.hint === "RETAILER_DETAILS") setEditingDetails(true);
         return;
       }
       ls.set(`apex.recentProducts.${brandId || "all"}`, [...new Set([...lines.map((l) => l.product.id), ...recentProducts])].slice(0, 16));
       rememberRetailer(retailer!);
-      const docs = res.docs ?? [];
-      // A cart with two brands is saved as two quotations (one per brand).
+      const docs = Object.values(savedRef.current);
+      // A cart with two brands is two quotations (one per brand).
       if (docs.length > 1) router.push(`/sales/quotations?saved=${docs.map((d) => d.orderNo).filter(Boolean).join(",")}`);
-      else if (res.orderId) router.push(`/sales/orders/${res.orderId}?saved=1`);
+      else if (docs[0]) router.push(`/sales/orders/${docs[0].orderId}?saved=1`);
     });
+  }
+
+  async function cancelAll() {
+    const docs = Object.values(savedRef.current);
+    if (!docs.length) return;
+    const ok = await askConfirm(`Cancel quotation ${docs.map((d) => d.orderNo).filter(Boolean).join(" and ")}? It stays in the list as cancelled.`, { confirmLabel: "Cancel quotation", danger: true });
+    if (!ok) return;
+    while (inFlight.current) await inFlight.current;
+    for (const d of docs) await cancelQuotation(d.orderId, "Cancelled while making it");
+    lastSig.current = sigRef.current;   // nothing left to save
+    router.push("/sales/quotations");
   }
 
   // ---- keyboard shortcuts -----------------------------------------------------
@@ -261,22 +356,25 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
         </Button>
         <Button variant="secondary" className="h-10" onClick={() => setBrowse(true)}><LayoutGrid className="size-4" /> Catalogue</Button>
         {lines.length > 0 && <Button variant="ghost" className="h-10" onClick={clearCart}>Clear</Button>}
-        {initial && <Link href={`/sales/orders/${initial.orderId}`} className="inline-flex h-10 items-center rounded-[var(--radius-control)] px-3 text-sm font-medium text-text-2 hover:bg-sunken hover:text-text">Discard changes</Link>}
+        {Object.keys(saved).length > 0 && <Button variant="ghost" className="h-10 text-text-2" onClick={cancelAll}><XCircle className="size-4" /> Cancel quotation</Button>}
         <DocSteps at={0} className="ml-auto hidden md:flex" />
       </div>
       <p className="mb-4 -mt-1 text-[13px] text-text-2">
         {isOffice
-          ? "Save the quotation first. Then open it and choose Create invoice to check the invoice draft and confirm it."
-          : "The office turns your quotation into an invoice."}
+          ? "Saved automatically once it has a retailer and a product. Then open it and choose Create invoice."
+          : "Saved automatically once it has a shop and a product. The office turns it into an invoice."}
       </p>
 
       <div className="rounded-[var(--radius-sheet)] border border-line bg-surface shadow-[var(--shadow-card)]">
         {/* Document head */}
         <div className="px-4 pt-5 pb-4 sm:px-6 sm:pt-6">
           <div className="mb-5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <h2 className="text-[26px] font-semibold tracking-[-0.02em] text-text">{initial ? <span className="font-mono text-[22px]">{initial.orderNo}</span> : "New quotation"}</h2>
+            <h2 className="text-[26px] font-semibold tracking-[-0.02em] text-text">
+              {Object.keys(saved).length ? <span className="font-mono text-[22px]">{Object.values(saved).map((d) => d.orderNo).filter(Boolean).join(" + ")}</span> : "New quotation"}
+            </h2>
             <Badge tone="violet">Quotation</Badge>
-            {split.length > 1 && <span className="text-[13px] text-text-2">Saved as {split.length} quotations, one per brand</span>}
+            <AutoSaveStatus state={autoState} />
+            {split.length > 1 && <span className="text-[13px] text-text-2">{split.length} quotations, one per brand</span>}
           </div>
 
           <div className="grid gap-x-10 gap-y-4 lg:grid-cols-[1.25fr_1fr]">
@@ -469,4 +567,16 @@ function Row({ k, v, tone }: { k: string; v: string; tone?: "green" }) {
       <dd className={cn("font-medium", tone === "green" && "text-emerald-700")}>{v}</dd>
     </div>
   );
+}
+
+// Where auto-save stands, next to the quotation's title.
+function AutoSaveStatus({ state }: { state: { s: "idle" | "saving" | "saved" | "error" | "waiting"; msg?: string } }) {
+  if (state.s === "idle") return null;
+  const look = {
+    saving: { icon: <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" aria-hidden />, text: "Saving…", cls: "text-text-2" },
+    saved: { icon: <Check className="size-3.5" aria-hidden />, text: "Saved", cls: "text-green-700" },
+    error: { icon: <CloudOff className="size-3.5" aria-hidden />, text: `Not saved: ${state.msg ?? "try again"}`, cls: "text-red-700" },
+    waiting: { icon: <CloudOff className="size-3.5" aria-hidden />, text: state.msg ? `Not saved yet: ${state.msg}` : "Not saved yet", cls: "text-amber-800" },
+  }[state.s];
+  return <span role="status" className={cn("inline-flex items-center gap-1 text-[13px] font-medium", look.cls)}>{look.icon}{look.text}</span>;
 }

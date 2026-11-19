@@ -41,6 +41,10 @@
   Each one opens the right page. When there is nothing to do it says "All clear".
 
 ## Billing
+- **Quotations save themselves.** As soon as a quotation has a retailer and a product it is saved as a real
+  quotation (one per brand), and every change updates the same one; "Saved" shows next to its number. Going back,
+  refreshing or opening another page no longer loses it: it is in Quotations. Removing every product of a brand
+  cancels that brand's quotation; **Cancel quotation** cancels the whole thing.
 - **Three steps, like Odoo: quotation → invoice draft → confirm.** Billing (now "New quotation") only saves a
   quotation; there is no button that makes an invoice straight away. On the quotation, **Create invoice** opens the
   invoice draft: the bill-to details, invoice and due dates, the lines with stock, the GST-details, short-stock and

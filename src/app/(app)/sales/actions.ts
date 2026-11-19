@@ -23,6 +23,9 @@ export type OrderLineInput = { product_id: string; qty: number; discount_pct?: n
 // counter is applied to those invoices in turn.
 export async function saveOrder(input: {
   orderId?: string | null;
+  // Auto-save: the quotation already saved for each brand in this cart. When given,
+  // each brand's quotation is updated in place and orderId is not used.
+  orderIds?: Record<string, string>;
   retailerId: string;
   creditDays: number;
   notes: string;
@@ -51,7 +54,8 @@ export async function saveOrder(input: {
 
   // Editing a draft: it keeps its brand; any other brand in the cart becomes a new quotation.
   let editBrand: string | null = null;
-  if (input.orderId) {
+  const byBrand = input.orderIds;
+  if (!byBrand && input.orderId) {
     const { data: o } = await supabase.from("orders").select("brand_id").eq("id", input.orderId).maybeSingle();
     editBrand = (o?.brand_id as string | null) ?? null;
     if (editBrand && !groups.has(editBrand)) {
@@ -63,14 +67,18 @@ export async function saveOrder(input: {
   const docs: SavedDoc[] = [];
   for (const [i, brandId] of keys.entries()) {
     const g = groups.get(brandId)!;
-    const existing = input.orderId && (brandId === editBrand || (!editBrand && i === 0)) ? input.orderId : null;
+    const existing = byBrand
+      ? byBrand[brandId] ?? null
+      : input.orderId && (brandId === editBrand || (!editBrand && i === 0)) ? input.orderId : null;
     const { data: orderId, error } = await supabase.rpc("save_quotation", {
       p_order_id: existing,
       p_retailer_id: input.retailerId,
       p_credit_days: input.creditDays,
       p_notes: input.notes,
       p_lines: g.lines,
-      p_client_uuid: existing ? null : input.clientUuid ? brandKey(input.clientUuid, brandId, i === 0) : null,
+      // With auto-save every brand gets its own derived key, so a brand added later never
+      // reuses the key of a brand that was saved (and perhaps cancelled) before it.
+      p_client_uuid: existing ? null : input.clientUuid ? brandKey(input.clientUuid, brandId, byBrand ? false : i === 0) : null,
     });
     if (error) {
       const done = docs.map((d) => d.brandName).join(", ");
