@@ -12,9 +12,9 @@ const starts = (base: string) => (p: string) => p === base || p.startsWith(base 
 
 const ITEMS: (Omit<NavItem, "match"> & { match?: NavItem["match"]; group: string | null })[] = [
   { key: "dashboard", module: "dashboard", label: "Dashboard", short: "Home", href: "/dashboard", icon: LayoutDashboard, group: null },
-  // One menu item for all of Sales; its four tabs (New quotation, Quotations,
-  // Pending for dispatch, Invoices) live on the page itself.
-  { key: "sales", module: "sales", label: "Sales", href: "/sales/new", icon: ShoppingCart, group: null, match: starts("/sales") },
+  // One menu item for all of Sales. It opens /sales: four boxes (New quotation,
+  // Quotations, Pending for dispatch, Invoices), which then show as tabs.
+  { key: "sales", module: "sales", label: "Sales", href: "/sales", icon: ShoppingCart, group: null, match: starts("/sales") },
   { key: "retailers", module: "retailers", label: "Retailers", href: "/retailers", icon: Store, group: "Customers" },
   { key: "routes", module: "routes", label: "Routes", href: "/routes", icon: Route, group: "Customers" },
   { key: "stock", module: "stock", label: "Inventory", short: "Stock", href: "/stock", icon: Boxes, group: "Inventory" },

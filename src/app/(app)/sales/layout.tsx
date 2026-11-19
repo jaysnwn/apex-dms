@@ -13,6 +13,7 @@ export default async function SalesLayout({ children }: { children: React.ReactN
     <>
       <h1 className="mb-4 text-xl font-semibold tracking-tight sm:text-2xl">Sales</h1>
       <Tabs
+        hideOn={["/sales"]}
         items={profile.role === "warehouse" ? [
           { href: "/sales/pending", label: "Pending for dispatch", count: p.count ?? 0 },
           { href: "/sales/invoices", label: "Invoices" },

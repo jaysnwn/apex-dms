@@ -15,7 +15,7 @@ export function isTabActive(pathname: string, t: TabItem) {
 
 // Link tabs for a section. The underline slides to the chosen tab; on a phone the row
 // scrolls sideways and keeps the chosen tab in view.
-export function Tabs({ items }: { items: TabItem[] }) {
+export function Tabs({ items, hideOn }: { items: TabItem[]; hideOn?: string[] }) {
   const pathname = usePathname();
   const id = useId();
   const listRef = useRef<HTMLUListElement>(null);
@@ -25,6 +25,9 @@ export function Tabs({ items }: { items: TabItem[] }) {
     const el = listRef.current?.querySelector<HTMLElement>("[aria-current=page]");
     el?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [activeHref]);
+
+  // A section's start page shows its own boxes instead of the tab row.
+  if (hideOn?.includes(pathname)) return null;
 
   return (
     <nav aria-label="Section" className="relative -mx-4 mb-6 border-b border-line px-4 sm:mx-0 sm:px-0">
