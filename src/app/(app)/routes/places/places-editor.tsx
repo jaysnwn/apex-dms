@@ -86,7 +86,14 @@ function TownForm({ town, territories, onDone }: { town: TownRow | null; territo
       <h3 className="mb-3 font-semibold">{town ? `Edit ${town.name}` : "New town or village"}</h3>
       <div className="space-y-3">
         <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} autoFocus /></div>
-        <div><Label>Territory</Label><Select value={territory} onChange={(e) => setTerritory(e.target.value)}><option value="">—</option>{territories.filter((t) => t.is_active || t.id === territory).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select></div>
+        <div>
+          <Label>Territory <span className="font-normal text-text-3">(optional)</span></Label>
+          <Select value={territory} onChange={(e) => setTerritory(e.target.value)} disabled={territories.length === 0}>
+            <option value="">{territories.length === 0 ? "No territories yet" : "None"}</option>
+            {territories.filter((t) => t.is_active || t.id === territory).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </Select>
+          {territories.length === 0 && <p className="mt-1 text-xs text-text-2">Add one with <b>+ Add</b> under Territories.</p>}
+        </div>
         <div className="grid grid-cols-2 gap-2">
           <div><Label hint="optional">District / taluka</Label><Input value={district} onChange={(e) => setDistrict(e.target.value)} /></div>
           <div><Label hint="optional">PIN code</Label><Input value={pincode} onChange={(e) => setPincode(e.target.value)} inputMode="numeric" maxLength={6} /></div>

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Alert, Badge, Button, Card, Input, Label, Select, Textarea, cn } from "@/components/ui";
 import { date, dateTime } from "@/lib/format";
 import { ROUTE_FREQUENCY, WEEKDAYS } from "@/lib/status";
@@ -82,7 +83,16 @@ function DetailsForm({ route, territories, superAdmin }: { route: RouteRow | nul
             <Label hint={route ? (superAdmin ? "Super Admin can change it" : "set when created") : "leave empty to create it"}>Route code</Label>
             <Input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} disabled={!!route && !superAdmin} placeholder="GBAO-001" maxLength={20} className="font-mono" />
           </div>
-          <div><Label>Territory</Label><Select value={territory} onChange={(e) => setTerritory(e.target.value)}><option value="">—</option>{territories.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select></div>
+          <div>
+            <Label>Territory <span className="font-normal text-text-3">(optional)</span></Label>
+            <Select value={territory} onChange={(e) => setTerritory(e.target.value)} disabled={territories.length === 0}>
+              <option value="">{territories.length === 0 ? "No territories yet" : "None"}</option>
+              {territories.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </Select>
+            {territories.length === 0 && (
+              <p className="mt-1 text-xs text-text-2">A territory groups towns and routes by area. <Link href="/routes/places" className="font-medium text-primary-text hover:underline">Add one in Towns &amp; territories</Link></p>
+            )}
+          </div>
           <div className="sm:col-span-2"><Label hint="optional">Description</Label><Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={500} /></div>
           <div>
             <Label>Visit frequency</Label>
