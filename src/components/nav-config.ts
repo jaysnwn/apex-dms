@@ -12,7 +12,7 @@ const starts = (base: string) => (p: string) => p === base || p.startsWith(base 
 
 const ITEMS: (Omit<NavItem, "match"> & { match?: NavItem["match"]; group: string | null })[] = [
   { key: "dashboard", module: "dashboard", label: "Dashboard", short: "Home", href: "/dashboard", icon: LayoutDashboard, group: null },
-  // One menu item for all of Sales. It opens /sales: four boxes (New quotation,
+  // One menu item for all of Sales. It opens /sales: four boxes (New sale,
   // Quotations, Pending for dispatch, Invoices), which then show as tabs.
   { key: "sales", module: "sales", label: "Sales", href: "/sales", icon: ShoppingCart, group: null, match: starts("/sales") },
   { key: "retailers", module: "retailers", label: "Retailers", href: "/retailers", icon: Store, group: "Customers" },
@@ -61,7 +61,7 @@ export function tabsFor(role: AppRole, groups: NavGroup[]): NavItem[] {
 // Quick actions for the command palette and shortcuts.
 export type QuickAction = { key: string; label: string; href: string; module: ModuleKey; shortcut?: string; keywords?: string };
 export const QUICK_ACTIONS: QuickAction[] = [
-  { key: "new-invoice", label: "New quotation", href: "/sales/new", module: "sales", shortcut: "N", keywords: "bill billing invoice sale create quote order" },
+  { key: "new-invoice", label: "New sale", href: "/sales/new", module: "sales", shortcut: "N", keywords: "bill billing invoice sale create quote order" },
   { key: "invoices", label: "Invoices", href: "/sales/invoices", module: "sales", shortcut: "I", keywords: "bills orders sales" },
   { key: "record-payment", label: "Record payment", href: "/payments/new", module: "payments", shortcut: "P", keywords: "collection receipt money" },
   { key: "new-retailer", label: "Add retailer", href: "/retailers/new", module: "retailers", keywords: "shop customer outlet" },

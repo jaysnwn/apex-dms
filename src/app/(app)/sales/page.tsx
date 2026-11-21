@@ -26,8 +26,8 @@ export default async function SalesHome() {
   const salesman = profile.role === "salesman";
 
   const boxes: Box[] = [
-    { href: "/sales/new", label: salesman ? "New order" : "New quotation", icon: FilePlus2, primary: true,
-      line: salesman ? "Pick a shop and products, and send it to the office." : "Pick a retailer and products, then save the quotation." },
+    { href: "/sales/new", label: salesman ? "New order" : "New sale", icon: FilePlus2, primary: true,
+      line: salesman ? "Pick a shop and products, and send it to the office." : "Make a quotation for a retailer, then turn it into an invoice." },
     { href: "/sales/quotations", label: "Quotations", icon: FileText, count: quotes,
       line: quotes === 0 ? "Nothing waiting." : `${quotes} waiting to be invoiced.` },
     { href: "/sales/pending", label: "Pending for dispatch", icon: Truck, count: pending,

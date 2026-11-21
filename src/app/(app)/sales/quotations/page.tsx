@@ -53,7 +53,7 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
             <tr><th className="px-4 py-2.5">Order</th><th className="px-3 py-2.5">Retailer</th><th className="hidden px-3 py-2.5 sm:table-cell">Salesman</th><th className="px-3 py-2.5">Status</th><th className="px-4 py-2.5 text-right">Amount</th>{isOffice && <th className="px-4 py-2.5"><span className="sr-only">Next step</span></th>}</tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {(orders ?? []).length === 0 && <tr><td colSpan={isOffice ? 6 : 5}><EmptyState art="receipt" title="No quotations" action={{ href: "/sales/new", label: "New quotation" }} /></td></tr>}
+            {(orders ?? []).length === 0 && <tr><td colSpan={isOffice ? 6 : 5}><EmptyState art="receipt" title="No quotations" action={{ href: "/sales/new", label: "New sale" }} /></td></tr>}
             {(orders ?? []).map((o) => (
               <tr key={o.id} className="hover:bg-slate-50">
                 <td className="px-4 py-2.5"><Link href={`/sales/orders/${o.id}`} className="font-mono font-medium hover:underline">{o.order_no}</Link><div className="text-xs text-slate-500">{dateTime(o.created_at)}</div></td>
