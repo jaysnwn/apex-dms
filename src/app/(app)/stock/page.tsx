@@ -101,7 +101,7 @@ export default async function InventoryDashboard({ searchParams }: { searchParam
     <>
       <BrandFilter brands={ctx.brands} current={picked} path="/stock" params={sp} label="Inventory" />
 
-      <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+      <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3">
         <StatCard label="Total products" value={String(all.length)} icon={Package} tone="violet" href="/products" />
         <StatCard label="Total stock qty" value={qty(units)} icon={Boxes} tone="teal" hint="units on hand" />
         {seesCost && <StatCard label="Inventory value" value={inr(value, { decimals: false })} icon={IndianRupee} tone="green" hint="avg. cost, excl. GST" href="/reports/stock-valuation" />}
