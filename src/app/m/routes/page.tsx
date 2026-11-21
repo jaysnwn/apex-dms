@@ -28,7 +28,7 @@ export default async function MyRoutesPage() {
   return (
     <div className="space-y-4">
       <h1 className="px-1 text-xl font-bold">My routes</h1>
-      {(routes ?? []).length === 0 && <div className="rounded-2xl bg-white p-6 text-center text-sm text-slate-500 shadow-sm ring-1 ring-slate-200/70">No route is assigned to you yet. Your manager assigns routes.</div>}
+      {(routes ?? []).length === 0 && <div className="rounded-2xl bg-surface p-6 text-center text-sm text-slate-500 shadow-sm ring-1 ring-slate-200/70">No route is assigned to you yet. Your manager assigns routes.</div>}
       {(routes ?? []).map((r) => {
         const path = (towns ?? []).filter((t) => t.route_id === r.id).map((t) => (t.locations as unknown as { name: string } | null)?.name ?? "");
         const vs = (visits ?? []).filter((v) => v.route_id === r.id && v.status !== "rescheduled" && v.status !== "cancelled");
@@ -36,7 +36,7 @@ export default async function MyRoutesPage() {
         const paused = (asg ?? []).find((a) => a.route_id === r.id)?.status === "paused";
         const todayRoute = (r.visit_days as number[]).includes(dow) && r.visit_frequency !== "on_demand";
         return (
-          <Link key={r.id} href={`/m/routes/${r.id}`} className="block rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70 active:bg-slate-50">
+          <Link key={r.id} href={`/m/routes/${r.id}`} className="block rounded-2xl bg-surface p-4 shadow-sm ring-1 ring-slate-200/70 active:bg-slate-50">
             <div className="flex items-start gap-3">
               <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-teal-100 text-teal-700"><MapPin className="size-5" /></span>
               <div className="min-w-0 flex-1">

@@ -79,7 +79,7 @@ export default async function PurchasePage({ params, searchParams }: { params: P
             </>
           )}
           {received && balance > 0 && (
-            <LinkButton href={`/purchases/payments/new?supplier=${s.id}&bill=${p.id}`} className="bg-emerald-600 text-white hover:bg-emerald-700"><Wallet className="size-4" /> Pay this bill</LinkButton>
+            <LinkButton href={`/purchases/payments/new?supplier=${s.id}&bill=${p.id}`} className="bg-primary text-on-fill hover:bg-primary-hover"><Wallet className="size-4" /> Pay this bill</LinkButton>
           )}
           {received && (
             <ReturnButton purchaseId={p.id} lines={(lines ?? []).map((l) => {
@@ -111,10 +111,10 @@ export default async function PurchasePage({ params, searchParams }: { params: P
                   <tr key={l.id}>
                     <td className="px-4 py-2.5"><div className="font-medium">{pr.name}</div><div className="font-mono text-xs text-slate-500">{pr.sku}{pr.hsn_code ? ` · HSN ${pr.hsn_code}` : ""}</div></td>
                     <td className="tabular px-3 py-2.5 text-right">{qty(l.qty)} {pr.unit_code}</td>
-                    <td className="tabular px-3 py-2.5 text-right">{inr(l.unit_cost)}<div className="text-[11px] text-slate-400">{l.cost_mode === "inclusive" ? "incl. GST" : "+ GST"}</div></td>
+                    <td className="tabular px-3 py-2.5 text-right">{inr(l.unit_cost)}<div className="text-xs text-slate-400">{l.cost_mode === "inclusive" ? "incl. GST" : "+ GST"}</div></td>
                     <td className="tabular px-3 py-2.5 text-right">{Number(l.discount_pct) ? `${Number(l.discount_pct)}%` : "—"}</td>
                     <td className="tabular px-3 py-2.5 text-right">{inr(l.taxable_value)}</td>
-                    <td className="tabular px-3 py-2.5 text-right">{inr(Number(l.cgst) + Number(l.sgst) + Number(l.igst))}<div className="text-[11px] text-slate-400">{Number(l.gst_rate)}%</div></td>
+                    <td className="tabular px-3 py-2.5 text-right">{inr(Number(l.cgst) + Number(l.sgst) + Number(l.igst))}<div className="text-xs text-slate-400">{Number(l.gst_rate)}%</div></td>
                     <td className="tabular px-4 py-2.5 text-right font-semibold">{inr(l.line_total)}</td>
                   </tr>
                 );
@@ -126,7 +126,7 @@ export default async function PurchasePage({ params, searchParams }: { params: P
 
         <div className="space-y-6">
           <Card className="overflow-hidden">
-            <div className={cn("px-5 py-4 text-white", received ? "bg-gradient-to-br from-emerald-700 to-emerald-900" : "bg-gradient-to-br from-fuchsia-700 to-fuchsia-900")}>
+            <div className={cn("px-5 py-4 text-white", received ? "hero-blue" : "hero-blue")}>
               <div className="text-sm opacity-80">{received ? "Bill total" : "Order total"}</div>
               <div className="tabular text-2xl font-semibold">{inr(p.grand_total)}</div>
               {returnedTotal > 0 && <div className="text-sm opacity-90">Returned − {inr(returnedTotal)}</div>}

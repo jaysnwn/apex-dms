@@ -2,17 +2,19 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import {
-  AlertTriangle, Boxes, CalendarCheck, ClipboardList, Clock, HandCoins, IndianRupee, Package, PackagePlus, Receipt, Route as RouteIcon,
-  ShoppingCart, Store, TrendingUp, Truck, Users, Wallet,
+  AlertTriangle, CalendarCheck, ClipboardList, IndianRupee, Package, PackagePlus, Receipt, Route as RouteIcon,
+  ShoppingCart, TrendingUp, Truck, Wallet,
 } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { fetchAll } from "@/lib/reports";
-import { date, inr, qty } from "@/lib/format";
+import { date, inr, inrCompact, qty } from "@/lib/format";
 import { todayIST, addDays } from "@/lib/gst";
 import { ROLE_LABELS } from "@/lib/roles";
 import { Alert, Badge, Card, PageHeader } from "@/components/ui";
 import { StatCard } from "@/components/stat-card";
+import { ActionTile, KpiTile, MiniStat } from "@/components/kpi";
+import { Reveal } from "@/components/anim/reveal";
 import { ColumnChart, RankBars } from "@/components/charts";
 import { SERIES } from "@/lib/chart-colors";
 import { allRows } from "@/lib/all-rows";
@@ -27,11 +29,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   return (
     <>
-      <PageHeader title={`Hello, ${firstName}`} description={`${ROLE_LABELS[profile.role]} · ${date(new Date().toISOString())}`} />
+      <PageHeader title={`${greeting()}, ${firstName}`} description={`${ROLE_LABELS[profile.role]} · ${date(new Date().toISOString())}`} />
       {denied && <div className="mb-6"><Alert tone="amber">Your role does not have access to that page.</Alert></div>}
       {profile.role === "salesman" ? <SalesmanDash userId={profile.id} /> : profile.role === "warehouse" ? <WarehouseDash /> : <OfficeDash showProfit={profile.role !== "billing"} />}
     </>
   );
+}
+
+function greeting() {
+  const h = Number(new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", hourCycle: "h23" }).format(new Date()));
+  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
 }
 
 // ---------------------------------------------------------------------------
@@ -78,12 +85,17 @@ async function OfficeDash({ showProfit }: { showProfit: boolean }) {
   const cost = sumN(sales, (s) => costMap.get(s.line_id) ?? 0);
   const profit = taxable - cost;
 
+  const overdueShops = balances.filter((b) => Number(b.overdue) > 0).length;
+  const chequeTotal = sumN(cheques.data ?? [], (c) => Number(c.amount));
+
   // last 30 days sales
   const days: { label: string; value: number }[] = [];
   for (let i = 29; i >= 0; i--) {
     const d = addDays(today, -i);
     days.push({ label: new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short" }), value: sumN(invs.filter((x) => x.invoice_date === d), (x) => Number(x.grand_total)) });
   }
+  const collectedByDay: number[] = [];
+  for (let d = monthStart; d <= today; d = addDays(d, 1)) collectedByDay.push(sumN(pays.filter((p) => p.payment_date === d), (p) => Number(p.amount)));
   const byBrand = new Map<string, number>();
   for (const s of sales) byBrand.set(s.brand_name, (byBrand.get(s.brand_name) ?? 0) + Number(s.line_total));
   const byRetailer = new Map<string, { name: string; v: number }>();
@@ -102,27 +114,38 @@ async function OfficeDash({ showProfit }: { showProfit: boolean }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Today's sales" value={inr(todaySales, { decimals: false })} icon={ShoppingCart} tone="blue" href="/sales/invoices" />
-        <StatCard label="This month's sales" value={inr(monthSales, { decimals: false })} icon={TrendingUp} tone="violet" href="/reports/brand-sales" />
-        <StatCard label="Collected this month" value={inr(monthCollected, { decimals: false })} icon={Wallet} tone="green" href="/payments" />
-        <StatCard label="Collections to verify" value={inr(toVerify, { decimals: false })} icon={HandCoins} tone={toVerify > 0 ? "amber" : "slate"} alert={toVerify > 0} hint={`${(unverified ?? []).length} payment(s) with salesmen`} href="/payments/verify" />
-        <StatCard label="Total outstanding" value={inr(outstanding, { decimals: false })} icon={IndianRupee} tone="orange" href="/payments/outstanding" />
-        <StatCard label="Overdue" value={inr(overdue, { decimals: false })} icon={AlertTriangle} tone="red" alert={overdue > 0} href="/payments/outstanding" />
-        <StatCard label="Inventory value" value={inr(invValue, { decimals: false })} icon={Boxes} tone="teal" hint={`${qty(invUnits)} units`} href="/reports/stock-valuation" />
-        <StatCard label="Pending dispatch" value={String(pendingDispatch.count ?? 0)} icon={Truck} tone={(pendingDispatch.count ?? 0) > 0 ? "amber" : "slate"} href="/dispatch" />
-        <StatCard label="Low-stock items" value={String(stock.length)} icon={Package} tone={stock.length > 0 ? "red" : "slate"} alert={stock.length > 0} href="/stock?low=1" />
-        <StatCard label="Payable to suppliers" value={inr(payable, { decimals: false })} icon={PackagePlus} tone={payableOverdue > 0 ? "red" : "violet"} alert={payableOverdue > 0} hint={payableOverdue > 0 ? `${inr(payableOverdue, { decimals: false })} overdue` : "nothing overdue"} href="/purchases/payables" />
-        <StatCard label="Purchase orders to receive" value={String(toReceive.count ?? 0)} icon={ClipboardList} tone={(toReceive.count ?? 0) > 0 ? "amber" : "slate"} href="/purchases/orders" />
-        <StatCard label="Active retailers" value={String(counts.count ?? 0)} icon={Store} tone="violet" href="/retailers" />
-        <StatCard label="Active salesmen" value={String((salesmen.data ?? []).length)} icon={Users} tone="blue" href="/routes" />
-        <StatCard label="Expenses this month" value={inr(monthExpenses, { decimals: false })} icon={Receipt} tone="amber" href="/expenses?tab=all" />
-        {showProfit ? (
-          <StatCard label="Gross profit (month)" value={inr(profit, { decimals: false })} icon={TrendingUp} tone={profit >= 0 ? "green" : "red"} hint={taxable ? `${((profit / taxable) * 100).toFixed(1)}% margin` : undefined} href="/reports/gross-profit" />
-        ) : (
-          <StatCard label="Cheques not cleared" value={inr(sumN(cheques.data ?? [], (c) => Number(c.amount)), { decimals: false })} icon={Clock} tone="amber" href="/payments?status=cheque_pending&from=2000-01-01" />
-        )}
-      </div>
+      <section aria-labelledby="dash-attn">
+        <h2 id="dash-attn" className="mb-3 text-sm font-medium text-text-2">Needs attention</h2>
+        <Reveal className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <ActionTile id="overdue" label="Overdue" tone="red" value={overdue} format="inrCompact" full={inr(overdue)} hint={`${overdueShops} retailer${overdueShops === 1 ? "" : "s"} past due`} href="/payments/outstanding" cta="Open outstanding" />
+          <ActionTile id="verify" label="To verify" tone="blue" value={toVerify} format="inrCompact" full={inr(toVerify)} hint={`${(unverified ?? []).length} collection${(unverified ?? []).length === 1 ? "" : "s"} with salesmen`} href="/payments/verify" cta="Verify collections" />
+          <ActionTile id="dispatch" label="Pending dispatch" tone="amber" value={pendingDispatch.count ?? 0} format="int" hint="invoices waiting to go out" href="/dispatch" cta="Open dispatch" />
+          <ActionTile id="lowstock" label="Low stock" tone="red" value={stock.length} format="int" hint="products below minimum" href="/stock?low=1" cta="See what to reorder" />
+        </Reveal>
+      </section>
+
+      <section aria-labelledby="dash-month">
+        <h2 id="dash-month" className="mb-3 text-sm font-medium text-text-2">This month</h2>
+        <Reveal className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <KpiTile id="m-sales" label="Sales" value={monthSales} full={inr(monthSales)} sub={`Today ${inr(todaySales, { decimals: false })}`} href="/reports/brand-sales" trend={days.map((d) => d.value)} />
+          <KpiTile id="m-collected" label="Collected" value={monthCollected} full={inr(monthCollected)} sub={`${pays.length} payment${pays.length === 1 ? "" : "s"}`} href="/payments" trend={collectedByDay} />
+          <KpiTile id="m-outstanding" label="Total outstanding" value={outstanding} full={inr(outstanding)} sub={overdue > 0 ? `${inr(overdue, { decimals: false })} overdue` : "nothing overdue"} href="/payments/outstanding" />
+          {showProfit ? (
+            <KpiTile id="m-profit" label="Gross profit" value={profit} full={inr(profit)} sub={taxable ? `${((profit / taxable) * 100).toFixed(1)}% margin` : undefined} href="/reports/gross-profit" />
+          ) : (
+            <KpiTile id="m-cheques" label="Cheques not cleared" value={chequeTotal} full={inr(chequeTotal)} href="/payments?status=cheque_pending&from=2000-01-01" />
+          )}
+        </Reveal>
+      </section>
+
+      <Card className="grid grid-cols-2 gap-1 p-1.5 sm:grid-cols-3 lg:grid-cols-6">
+        <MiniStat label="Inventory value" value={inrCompact(invValue)} hint={`${qty(invUnits)} units`} href="/reports/stock-valuation" />
+        <MiniStat label="Payable to suppliers" value={inrCompact(payable)} hint={payableOverdue > 0 ? `${inr(payableOverdue, { decimals: false })} overdue` : "nothing overdue"} href="/purchases/payables" />
+        <MiniStat label="Orders to receive" value={String(toReceive.count ?? 0)} href="/purchases/orders" />
+        <MiniStat label="Expenses" value={inrCompact(monthExpenses)} hint="this month" href="/expenses?tab=all" />
+        <MiniStat label="Active retailers" value={String(counts.count ?? 0)} href="/retailers" />
+        <MiniStat label="Active salesmen" value={String((salesmen.data ?? []).length)} href="/routes" />
+      </Card>
 
       <Card className="p-5">
         <div className="mb-2 flex items-baseline justify-between">
@@ -247,13 +270,13 @@ async function SalesmanDash({ userId }: { userId: string }) {
     <div className="space-y-6">
       <Link href="/routes/today" className="block">
         <Card className="overflow-hidden">
-          <div className="flex items-center gap-4 bg-gradient-to-br from-ink-900 to-ink-700 p-5 text-white">
-            <span className="grid size-12 place-items-center rounded-xl bg-accent-500 text-ink-900"><RouteIcon className="size-6" /></span>
+          <div className="flex items-center gap-4 hero-blue p-5 text-white">
+            <span className="grid size-12 place-items-center rounded-xl bg-primary text-ink-900"><RouteIcon className="size-6" /></span>
             <div className="flex-1">
               <div className="text-lg font-semibold">Today&apos;s route</div>
-              <div className="text-sm text-slate-300">{v.length ? `${done} of ${v.length} visits done` : "No visits planned today"}</div>
+              <div className="text-sm text-white/85">{v.length ? `${done} of ${v.length} visits done` : "No visits planned today"}</div>
             </div>
-            <span className="text-sm font-medium text-accent-500">Open →</span>
+            <span className="text-sm font-medium text-white">Open →</span>
           </div>
         </Card>
       </Link>
@@ -271,7 +294,7 @@ async function SalesmanDash({ userId }: { userId: string }) {
             return (
               <div key={String(l)} className="mb-3">
                 <div className="mb-1 flex justify-between text-sm"><span>{l}</span><span className="tabular">{inr(Number(d), { decimals: false })} / {inr(Number(g), { decimals: false })}</span></div>
-                <div className="h-2.5 rounded-full bg-slate-100"><div className="h-2.5 rounded-full" style={{ width: `${pct}%`, background: pct >= 100 ? "#1baf7a" : SERIES[0] }} /></div>
+                <div className="h-2.5 rounded-full bg-slate-100"><div className="h-2.5 rounded-full" style={{ width: `${pct}%`, background: pct >= 100 ? "var(--green-600)" : SERIES[0] }} /></div>
               </div>
             );
           })}

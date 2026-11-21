@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useEffect, useRef, type ReactNode } from "react";
+import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Button } from "./ui";
+import { AsyncLabel } from "./async-label";
 
 export type FormResult = { ok?: string; error?: string; redirectTo?: string; resetForm?: boolean };
 type Action = (prev: FormResult, formData: FormData) => Promise<FormResult>;
@@ -29,9 +30,16 @@ export function ActionForm({
   const router = useRouter();
   const ref = useRef<HTMLFormElement>(null);
 
+  // A short tick on the button after a save, then back to the label.
+  const [done, setDone] = useState(false);
   useEffect(() => {
     if (state.redirectTo) router.push(state.redirectTo);
     if (state.ok && state.resetForm) ref.current?.reset();
+    if (state.ok) {
+      setDone(true);
+      const t = setTimeout(() => setDone(false), 1600);
+      return () => clearTimeout(t);
+    }
   }, [state, router]);
 
   return (
@@ -39,10 +47,10 @@ export function ActionForm({
       {children}
       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
         <Button type="submit" variant={submitVariant} disabled={pending}>
-          {pending ? pendingLabel : submitLabel}
+          <AsyncLabel state={pending ? "pending" : done ? "done" : "idle"} label={submitLabel} pendingLabel={pendingLabel} />
         </Button>
         {footer}
-        {state.error && <Alert>{state.error}</Alert>}
+        {state.error && <div key={state.error} className="nudge"><Alert>{state.error}</Alert></div>}
         {state.ok && <Alert tone="green">{state.ok}</Alert>}
       </div>
     </form>

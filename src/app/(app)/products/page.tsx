@@ -1,15 +1,16 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
 import type { Metadata } from "next";
 import { ArrowDownUp, ImageOff, LayoutGrid, List, Pencil, Plus, Settings2, Upload } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { brandScope, getBrandContext } from "@/lib/brand";
+import { brandScope, getBrandContext, pageBrand } from "@/lib/brand";
+import { BrandFilter } from "@/components/brand-filter";
 import { signProductImages } from "@/lib/images";
 import { inr, qty } from "@/lib/format";
 import { Badge, Card, PageHeader, cn } from "@/components/ui";
 import { SearchBar } from "@/components/search-bar";
 import { Chip } from "@/components/chip";
-import { BrandStrip } from "@/components/brand-badge";
 import { ArchiveButton } from "./archive-button";
 import { searchWords } from "@/lib/search-words";
 
@@ -18,9 +19,9 @@ export const metadata: Metadata = { title: "Products" };
 type CatalogRow = {
   id: string; name: string; sku: string; barcode: string | null; brand_id: string; brand_name: string;
   category_name: string | null; unit_code: string; retailer_price: number; retailer_price_mode: string;
-  mrp: number; gst_rate: number; is_active: boolean; image_path: string | null; created_at: string;
+  gst_rate: number; is_active: boolean; image_path: string | null; created_at: string;
 };
-type Sp = { q?: string; cat?: string; stock?: string; sort?: string; archived?: string; view?: string };
+type Sp = { q?: string; cat?: string; stock?: string; sort?: string; archived?: string; view?: string; brand?: string };
 
 const SORTS: Record<string, string> = { name: "Name A–Z", newest: "Newest", stock_low: "Stock: lowest first", stock_high: "Stock: highest first", price_high: "Price: highest first", price_low: "Price: lowest first" };
 
@@ -28,13 +29,14 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const { profile } = await requireRole();
   const sp = await searchParams;
   const ctx = await getBrandContext();
-  const scope = await brandScope();
+  const picked = await pageBrand(sp.brand);
+  const scope = await brandScope(sp.brand);
   const supabase = await createClient();
   const canEdit = profile.role === "super_admin" || profile.role === "manager";
   const seesCost = canEdit || profile.role === "billing";
   const archivedView = canEdit && sp.archived === "1";
 
-  const COLS = "id, name, sku, barcode, brand_id, brand_name, category_name, unit_code, retailer_price, retailer_price_mode, mrp, gst_rate, is_active, image_path, created_at";
+  const COLS = "id, name, sku, barcode, brand_id, brand_name, category_name, unit_code, retailer_price, retailer_price_mode, gst_rate, is_active, image_path, created_at";
   const words = searchWords(sp.q);
   const { data: rows } = await (words.length
     ? supabase.rpc("search_catalog", { p_words: words, p_limit: 1000, p_active: !archivedView }).select(COLS)
@@ -85,32 +87,32 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         description={`${visible.length} ${archivedView ? "archived " : ""}product${visible.length === 1 ? "" : "s"}`}
         actions={canEdit && (
           <>
-            <Link href="/products/settings" className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium hover:bg-slate-50">
+            <Link href="/products/settings" className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-surface px-3 text-sm font-medium hover:bg-slate-50">
               <Settings2 className="size-4" /> <span className="hidden sm:inline">Brands &amp; categories</span>
             </Link>
-            <Link href="/import?tab=products" className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium hover:bg-slate-50">
+            <Link href="/import?tab=products" className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-surface px-3 text-sm font-medium hover:bg-slate-50">
               <Upload className="size-4" /> <span className="hidden sm:inline">Import</span>
             </Link>
-            <Link href="/products/new" className="inline-flex h-10 items-center gap-2 rounded-lg bg-ink-900 px-4 text-sm font-medium text-white hover:bg-ink-800">
+            <Link href="/products/new" className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-on-fill hover:bg-primary-hover">
               <Plus className="size-4" /> Add product
             </Link>
           </>
         )}
       />
-      <BrandStrip name={ctx.current?.name} code={ctx.current?.code} all={ctx.isAll} />
+      <BrandFilter brands={ctx.brands} current={picked} path="/products" params={sp} label="Products of" />
 
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="flex-1"><SearchBar placeholder="Search name, SKU or barcode" scan /></div>
         <form className="flex items-center gap-2">
           {Object.entries(sp).filter(([k, v]) => v && k !== "sort").map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
           <ArrowDownUp className="size-4 text-slate-400" />
-          <select name="sort" defaultValue={sort} className="h-10 rounded-lg border border-slate-300 bg-white px-2 text-sm" aria-label="Sort">
+          <select name="sort" defaultValue={sort} className="h-10 rounded-lg border border-slate-300 bg-surface px-2 text-sm" aria-label="Sort">
             {Object.entries(SORTS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
-          <button className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium hover:bg-slate-50">Sort</button>
+          <button className="h-10 rounded-lg border border-slate-300 bg-surface px-3 text-sm font-medium hover:bg-slate-50">Sort</button>
           <span className="ml-1 flex overflow-hidden rounded-lg border border-slate-300">
-            <Link href={href({ view: undefined })} aria-label="Table view" className={cn("grid size-10 place-items-center", !grid ? "bg-ink-900 text-white" : "bg-white text-slate-600")}><List className="size-4" /></Link>
-            <Link href={href({ view: "grid" })} aria-label="Photo grid" className={cn("grid size-10 place-items-center", grid ? "bg-ink-900 text-white" : "bg-white text-slate-600")}><LayoutGrid className="size-4" /></Link>
+            <Link href={href({ view: undefined })} aria-label="Table view" className={cn("grid size-10 place-items-center", !grid ? "bg-primary text-on-fill" : "bg-surface text-slate-600")}><List className="size-4" /></Link>
+            <Link href={href({ view: "grid" })} aria-label="Photo grid" className={cn("grid size-10 place-items-center", grid ? "bg-primary text-on-fill" : "bg-surface text-slate-600")}><LayoutGrid className="size-4" /></Link>
           </span>
         </form>
       </div>
@@ -126,9 +128,10 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
       </div>
 
       {visible.length === 0 ? (
-        <Card className="p-10 text-center text-sm text-slate-500">
-          No products match.{" "}
-          {canEdit && <Link href="/products/new" className="font-medium text-ink-900 underline">Add a product</Link>}
+        <Card>
+          <EmptyState art="box" title="No products match" action={canEdit ? { href: "/products/new", label: "Add product" } : undefined}>
+            Try a model number, barcode or another category.
+          </EmptyState>
         </Card>
       ) : grid ? (
         <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
@@ -143,7 +146,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                     {img ? <img src={img} alt={p.name} className="h-full w-full object-contain p-3" loading="lazy" /> : <div className="grid h-full place-items-center text-slate-300"><ImageOff className="size-10" /></div>}
                   </div>
                   <div className="flex flex-1 flex-col p-3">
-                    <div className="text-[11px] font-semibold tracking-wide text-accent-700 uppercase">{p.category_name ?? p.brand_name}</div>
+                    <div className="text-xs font-semibold tracking-wide text-accent-700 uppercase">{p.category_name ?? p.brand_name}</div>
                     <div className="mt-0.5 line-clamp-2 text-sm font-medium text-slate-900">{p.name}</div>
                     <div className="mt-0.5 font-mono text-xs text-slate-500">{p.sku}</div>
                     <div className="mt-auto flex items-end justify-between gap-2 pt-3">
@@ -187,14 +190,14 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                         </span>
                         <span className="min-w-0">
                           <span className="block font-medium text-slate-900 hover:underline">{p.name}</span>
-                          {ctx.isAll && <span className="text-xs text-slate-500">{p.brand_name}</span>}
+                          {!picked && ctx.isAll && <span className="text-xs text-slate-500">{p.brand_name}</span>}
                         </span>
                       </Link>
                     </td>
                     <td className="px-3 py-2 font-mono text-xs text-slate-600">{p.sku}</td>
                     <td className="px-3 py-2 text-slate-600">{p.category_name ?? "—"}</td>
-                    {seesCost && <td className="tabular px-3 py-2 text-right text-slate-600">{c ? inr(c.purchase_cost) : "—"}{c?.purchase_cost_mode === "inclusive" && <span className="text-[10px] text-slate-400"> incl.</span>}</td>}
-                    <td className="tabular px-3 py-2 text-right font-semibold">{inr(p.retailer_price)}{p.retailer_price_mode === "inclusive" && <span className="text-[10px] font-normal text-slate-400"> incl.</span>}</td>
+                    {seesCost && <td className="tabular px-3 py-2 text-right text-slate-600">{c ? inr(c.purchase_cost) : "—"}{c?.purchase_cost_mode === "inclusive" && <span className="text-xs text-slate-400"> incl.</span>}</td>}
+                    <td className="tabular px-3 py-2 text-right font-semibold">{inr(p.retailer_price)}{p.retailer_price_mode === "inclusive" && <span className="text-xs font-normal text-slate-400"> incl.</span>}</td>
                     <td className="tabular px-3 py-2 text-right text-slate-600">{p.gst_rate}%</td>
                     <td className="tabular px-3 py-2 text-right font-semibold">{qty(avail(p.id))}</td>
                     <td className="px-3 py-2">{archivedView ? <Badge>Archived</Badge> : <StockPill st={st} />}</td>

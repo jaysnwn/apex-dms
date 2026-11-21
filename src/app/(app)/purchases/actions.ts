@@ -8,6 +8,7 @@ import { dbError, formObject, zodMessage } from "@/lib/actions";
 import type { FormResult } from "@/components/action-form";
 import { searchSource, searchWords } from "@/lib/search-words";
 import { enumParam } from "@/lib/enum-param";
+import { warehouseOr } from "@/lib/warehouse-scope";
 
 const OFFICE = ["super_admin", "manager", "billing"] as const;
 
@@ -33,6 +34,7 @@ export type PurchaseProduct = {
   id: string;
   name: string;
   sku: string;
+  brand_id: string;
   brand_name: string;
   unit_code: string;
   gst_rate: number;
@@ -62,6 +64,7 @@ export async function searchPurchaseProducts(q: string, brandId?: string, listAl
     id: r.id as string,
     name: r.name as string,
     sku: r.sku as string,
+    brand_id: r.brand_id as string,
     brand_name: (r.brands as unknown as { name: string } | null)?.name ?? "",
     unit_code: r.unit_code as string,
     gst_rate: Number(r.gst_rate),
@@ -283,7 +286,7 @@ export async function createReorderPurchases(input: { brandId: string; items: { 
   if (items.some((i) => !i.supplier_id)) return { error: "Some products have no supplier. Add a supplier for the brand, or buy them once on a normal purchase." };
   const supabase = await createClient();
   const [{ data: wh }, { data: sups }] = await Promise.all([
-    supabase.from("warehouses").select("id").eq("brand_id", input.brandId).eq("is_active", true).order("created_at").limit(1).maybeSingle(),
+    supabase.from("warehouses").select("id").or(warehouseOr([input.brandId])).eq("is_active", true).order("created_at").limit(1).maybeSingle(),
     supabase.from("suppliers").select("id, credit_days, lead_days").in("id", [...new Set(items.map((i) => i.supplier_id!))]),
   ]);
   if (!wh) return { error: "This brand has no active warehouse." };

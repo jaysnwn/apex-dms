@@ -149,7 +149,7 @@ export function ExpenseForm({ me, office, options, initial, onDone, compact }: {
           <div className="grid grid-cols-2 gap-2">
             {(["employee", "company"] as const).map((p) => (
               <button key={p} type="button" onClick={() => setPaidBy(p)}
-                className={cn("rounded-lg border px-3 py-2 text-left text-sm", paidBy === p ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300 hover:border-slate-400")}>
+                className={cn("rounded-lg border px-3 py-2 text-left text-sm", paidBy === p ? "border-primary bg-primary text-on-fill" : "border-slate-300 hover:border-slate-400")}>
                 <span className="font-medium">{p === "employee" ? "Employee" : "Company"}</span>
                 <span className={cn("block text-xs", paidBy === p ? "text-slate-300" : "text-slate-500")}>{p === "employee" ? "to be reimbursed" : "nothing to reimburse"}</span>
               </button>

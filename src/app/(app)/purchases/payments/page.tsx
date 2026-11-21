@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
 import type { Metadata } from "next";
 import { Building2, Plus, Wallet } from "lucide-react";
 import { requireRole } from "@/lib/auth";
@@ -37,7 +38,7 @@ export default async function SupplierPaymentsPage({ searchParams }: { searchPar
         <StatCard label="Paid in period" value={inr(total, { decimals: false })} icon={Wallet} tone="green" hint={`${live.length} payments`} />
         <StatCard label="Advances not yet used" value={inr(advance, { decimals: false })} icon={Building2} tone="blue" hint="applied to the next bill automatically" />
         <div className="flex items-center justify-end">
-          <LinkButton href="/purchases/payments/new" className="h-11 bg-emerald-600 px-5 text-white hover:bg-emerald-700"><Plus className="size-4" /> Pay a supplier</LinkButton>
+          <LinkButton href="/purchases/payments/new" className="h-11 bg-primary px-5 text-on-fill hover:bg-primary-hover"><Plus className="size-4" /> Pay a supplier</LinkButton>
         </div>
       </div>
       <form className="mb-4 grid gap-2 sm:grid-cols-4">
@@ -55,7 +56,7 @@ export default async function SupplierPaymentsPage({ searchParams }: { searchPar
             <tr><th className="px-4 py-2.5">Payment</th><th className="px-3 py-2.5">Supplier</th><th className="px-3 py-2.5">Mode</th><th className="px-3 py-2.5">Status</th><th className="px-4 py-2.5 text-right">Amount</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {(rows ?? []).length === 0 && <tr><td colSpan={5} className="px-4 py-10 text-center text-slate-500">No supplier payments in this period.</td></tr>}
+            {(rows ?? []).length === 0 && <tr><td colSpan={5}><EmptyState art="wallet" title="No supplier payments in this period" /></td></tr>}
             {(rows ?? []).map((p) => {
               const st = SUPPLIER_PAYMENT_STATUS[p.status];
               return (

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
 import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -7,6 +8,8 @@ import { DUE_STATUS, ORDER_STATUS } from "@/lib/status";
 import { Badge, Button, Card, Input, cn } from "@/components/ui";
 import { Chip } from "@/components/chip";
 import { searchSource, searchWords } from "@/lib/search-words";
+import { getBrandContext, pageBrand } from "@/lib/brand";
+import { BrandFilter } from "@/components/brand-filter";
 
 export const metadata: Metadata = { title: "Invoices" };
 
@@ -19,10 +22,11 @@ const FILTERS = [
   { key: "cancelled", label: "Cancelled" },
 ];
 
-export default async function InvoicesPage({ searchParams }: { searchParams: Promise<{ q?: string; due?: string; from?: string; to?: string }> }) {
+export default async function InvoicesPage({ searchParams }: { searchParams: Promise<{ q?: string; due?: string; from?: string; to?: string; brand?: string }> }) {
   await requireRole("super_admin", "manager", "billing", "salesman", "warehouse");
   const sp = await searchParams;
   const supabase = await createClient();
+  const [ctx, picked] = await Promise.all([getBrandContext(), pageBrand(sp.brand)]);
 
   const words = searchWords(sp.q);
   let query = searchSource(supabase, "invoices", "search_invoices", words)
@@ -30,6 +34,8 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
     .order("invoice_date", { ascending: false })
     .order("invoice_no", { ascending: false })
     .limit(300);
+  // Each brand's invoices on their own (?brand=BL / CQ); all brands by default.
+  if (picked) query = query.eq("brand_id", picked.id);
   if (sp.from) query = query.gte("invoice_date", sp.from);
   if (sp.to) query = query.lte("invoice_date", sp.to);
   if (sp.due === "cancelled") query = query.eq("status", "cancelled");
@@ -53,13 +59,16 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
     if (sp.from) n.set("from", sp.from);
     if (sp.to) n.set("to", sp.to);
     if (due) n.set("due", due);
+    if (picked) n.set("brand", picked.code);
     return `/sales/invoices?${n}`;
   };
 
   return (
     <>
+      <BrandFilter brands={ctx.brands} current={picked} path="/sales/invoices" params={sp} label="Invoices of" />
       <form className="mb-3 grid gap-2 sm:grid-cols-[1fr_auto_auto_auto]">
         {sp.due && <input type="hidden" name="due" value={sp.due} />}
+        {picked && <input type="hidden" name="brand" value={picked.code} />}
         <Input name="q" defaultValue={sp.q} placeholder="Invoice number or shop name" type="search" />
         <Input name="from" type="date" defaultValue={sp.from} aria-label="From" />
         <Input name="to" type="date" defaultValue={sp.to} aria-label="To" />
@@ -81,7 +90,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {rows.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-slate-500">No invoices match.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={6}><EmptyState art="receipt" title="No invoices match">Try another invoice number, shop name or date range.</EmptyState></td></tr>}
             {rows.map((i) => {
               const b = bMap.get(i.id);
               const ds = i.status === "cancelled" ? DUE_STATUS.cancelled : DUE_STATUS[b?.due_status ?? "not_yet_due"];

@@ -53,8 +53,8 @@ export default async function SupplierPage({ params }: { params: Promise<{ id: s
           {s.bank_details && <p className="mt-1 text-xs whitespace-pre-line text-slate-500">Bank: {s.bank_details}</p>}
         </div>
         <div className="flex flex-wrap gap-2">
-          <LinkButton href={`/purchases/new?supplier=${s.id}`} className="bg-fuchsia-700 text-white hover:bg-fuchsia-800"><PackagePlus className="size-4" /> New purchase</LinkButton>
-          <LinkButton href={`/purchases/payments/new?supplier=${s.id}`} className="bg-emerald-600 text-white hover:bg-emerald-700"><Wallet className="size-4" /> Pay</LinkButton>
+          <LinkButton href={`/purchases/new?supplier=${s.id}`} className="bg-primary text-on-fill hover:bg-primary-hover"><PackagePlus className="size-4" /> New purchase</LinkButton>
+          <LinkButton href={`/purchases/payments/new?supplier=${s.id}`} className="bg-primary text-on-fill hover:bg-primary-hover"><Wallet className="size-4" /> Pay</LinkButton>
           <LinkButton href={`/purchases/suppliers/${s.id}/edit`}><Pencil className="size-4" /> Edit</LinkButton>
         </div>
       </div>

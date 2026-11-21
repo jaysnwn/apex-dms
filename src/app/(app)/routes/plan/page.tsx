@@ -64,7 +64,7 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
             {rows.length === 0 && <tr><td colSpan={15} className="px-4 py-10 text-center text-sm text-slate-500">No salesmen or routes yet.</td></tr>}
             {rows.map((r) => (
               <tr key={r.id || "none"} className="align-top">
-                <td className="sticky left-0 bg-white px-3 py-2 text-sm font-medium whitespace-nowrap">{r.name}</td>
+                <td className="sticky left-0 bg-surface px-3 py-2 text-sm font-medium whitespace-nowrap">{r.name}</td>
                 {days.map((d) => (
                   <td key={d} className="px-1 py-1.5">
                     {cell(r.id, d).map((s) => {
@@ -82,7 +82,7 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
             ))}
           </tbody>
         </table>
-        <div className="flex flex-wrap gap-3 border-t border-slate-100 px-3 py-2 text-[11px] text-slate-500">
+        <div className="flex flex-wrap gap-3 border-t border-slate-100 px-3 py-2 text-xs text-slate-500">
           <span><span className="rounded bg-emerald-50 px-1 ring-1 ring-emerald-200">CODE · n</span> planned, n outlets</span>
           <span><span className="rounded bg-violet-50 px-1 ring-1 ring-violet-200">extra</span> one-time day</span>
           <span><span className="rounded bg-amber-50 px-1 ring-1 ring-amber-200">skipped / paused</span></span>

@@ -61,7 +61,7 @@ function CategoryForm({ initial, onDone }: { initial: Draft; onDone: () => void 
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
   const toggle = (k: "receipt_required" | "route_required" | "approval_required" | "is_active", label: string, hint: string) => (
     <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50">
-      <input type="checkbox" className="mt-0.5 size-4 accent-ink-900" checked={d[k]} onChange={(e) => set(k, e.target.checked)} />
+      <input type="checkbox" className="mt-0.5 size-4 accent-primary" checked={d[k]} onChange={(e) => set(k, e.target.checked)} />
       <span><span className="block text-sm font-medium">{label}</span><span className="block text-xs text-slate-500">{hint}</span></span>
     </label>
   );

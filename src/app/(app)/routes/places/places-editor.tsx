@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
@@ -42,7 +43,10 @@ export function PlacesEditor({ territories, towns, routesOf, shops }: { territor
                   <td className="px-3 py-2">{tName.get(t.territory_id ?? "") ?? "—"}</td>
                   <td className="px-3 py-2 text-xs">{routesOf[t.id]?.join(", ") ?? <span className="text-slate-400">none</span>}</td>
                   <td className="tabular px-3 py-2 text-right">{shops[t.id] ?? 0}</td>
-                  <td className="px-4 py-2 text-right"><button className="text-sm text-accent-700 hover:underline" onClick={() => { setEditTown(t); setEditTerr(null); }}>Edit</button></td>
+                  <td className="px-4 py-2 text-right whitespace-nowrap">
+                    <Link href={`/reports/statements?type=town&town=${t.id}`} className="mr-3 text-sm text-accent-700 hover:underline">Statement</Link>
+                    <button className="text-sm text-accent-700 hover:underline" onClick={() => { setEditTown(t); setEditTerr(null); }}>Edit</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -60,6 +64,7 @@ export function PlacesEditor({ territories, towns, routesOf, shops }: { territor
               <li key={t.id} className="flex items-center gap-2 px-4 py-2">
                 <span className={cn("flex-1", !t.is_active && "text-slate-400")}><span className="font-medium">{t.name}</span> {t.code && <span className="font-mono text-xs text-slate-500">{t.code}</span>}</span>
                 <span className="text-xs text-slate-500">{towns.filter((x) => x.territory_id === t.id).length} towns</span>
+                <Link href={`/reports/statements?type=territory&territory=${t.id}`} className="text-sm text-accent-700 hover:underline">Statement</Link>
                 <button className="text-sm text-accent-700 hover:underline" onClick={() => { setEditTerr(t); setEditTown(null); }}>Edit</button>
               </li>
             ))}
@@ -86,14 +91,21 @@ function TownForm({ town, territories, onDone }: { town: TownRow | null; territo
       <h3 className="mb-3 font-semibold">{town ? `Edit ${town.name}` : "New town or village"}</h3>
       <div className="space-y-3">
         <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} autoFocus /></div>
-        <div><Label>Territory</Label><Select value={territory} onChange={(e) => setTerritory(e.target.value)}><option value="">—</option>{territories.filter((t) => t.is_active || t.id === territory).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select></div>
+        <div>
+          <Label>Territory <span className="font-normal text-text-3">(optional)</span></Label>
+          <Select value={territory} onChange={(e) => setTerritory(e.target.value)} disabled={territories.length === 0}>
+            <option value="">{territories.length === 0 ? "No territories yet" : "None"}</option>
+            {territories.filter((t) => t.is_active || t.id === territory).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </Select>
+          {territories.length === 0 && <p className="mt-1 text-xs text-text-2">Add one with <b>+ Add</b> under Territories.</p>}
+        </div>
         <div className="grid grid-cols-2 gap-2">
           <div><Label hint="optional">District / taluka</Label><Input value={district} onChange={(e) => setDistrict(e.target.value)} /></div>
           <div><Label hint="optional">PIN code</Label><Input value={pincode} onChange={(e) => setPincode(e.target.value)} inputMode="numeric" maxLength={6} /></div>
         </div>
         <div><Label hint="optional — Google Maps link or lat, long">Town centre location</Label><Input value={ll} onChange={(e) => setLl(e.target.value)} placeholder="19.5712, 74.2083" />
           {ll.trim() && !parsed && <p className="mt-1 text-xs text-red-700">Could not read a location.</p>}</div>
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-ink-900" checked={active} onChange={(e) => setActive(e.target.checked)} /> In use</label>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-primary" checked={active} onChange={(e) => setActive(e.target.checked)} /> In use</label>
       </div>
       {error && <div className="mt-3"><Alert>{error}</Alert></div>}
       <div className="mt-4 flex gap-2">
@@ -123,7 +135,7 @@ function TerritoryForm({ territory, onDone }: { territory: Territory | null; onD
         <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Junnar belt" autoFocus /></div>
         <div><Label hint="optional">Code</Label><Input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} maxLength={10} className="font-mono" /></div>
         <div><Label hint="optional">Description</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-ink-900" checked={active} onChange={(e) => setActive(e.target.checked)} /> In use</label>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-primary" checked={active} onChange={(e) => setActive(e.target.checked)} /> In use</label>
       </div>
       {error && <div className="mt-3"><Alert>{error}</Alert></div>}
       <div className="mt-4 flex gap-2">

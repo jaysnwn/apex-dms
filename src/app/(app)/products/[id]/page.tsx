@@ -62,8 +62,6 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     ["Unit", p.unit_code],
     ["GST rate", `${p.gst_rate}%`],
     ["Retailer price", `${inr(p.retailer_price)} ${p.retailer_price_mode === "inclusive" ? "incl. GST" : "+ GST"}`],
-    ["Distributor price", Number(p.distributor_price) > 0 ? `${inr(p.distributor_price)} ${p.distributor_price_mode === "inclusive" ? "incl. GST" : "+ GST"}` : "—"],
-    ["MRP", `${inr(p.mrp)} ${p.mrp_mode === "inclusive" ? "incl. GST" : "+ GST"}`],
     ...(seesCost && cost.data
       ? ([["Avg. purchase cost", `${inr(cost.data.avg_cost)} excl. GST`]] as [string, React.ReactNode][])
       : []),

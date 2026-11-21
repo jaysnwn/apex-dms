@@ -1,20 +1,22 @@
 import "server-only";
 
 import { cache } from "react";
-import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { getSession } from "@/lib/auth";
 
 export type Brand = { id: string; name: string; code: string; logo_path: string | null };
-export const BRAND_COOKIE = "dms_brand";
 export const ALL = "all";
+// Old switcher cookie; only still named so sign-out / org switch can clear it.
+export const BRAND_COOKIE = "dms_brand";
 
 // Brands this user may work with (the database decides: Super Admin = all,
-// everyone else = their profile_brands) and the one picked in the switcher.
-// `current` is null only when a manager chose "All brands" (consolidated view).
+// everyone else = their profile_brands).
+//
+// There is no global brand switcher: every screen shows all of the user's
+// brands together, and list / report pages offer their own brand filter in the
+// URL (?brand=BL). `current` is the single brand only when the user has just
+// one; otherwise it is null and `isAll` is true.
 export const getBrandContext = cache(async () => {
   const supabase = await createClient();
-  const session = await getSession();
   const [{ data: ids }, { data: all }] = await Promise.all([
     supabase.rpc("my_brand_ids"),
     supabase.from("brands").select("id, name, code, logo_path, is_active").order("name"),
@@ -24,24 +26,32 @@ export const getBrandContext = cache(async () => {
     .filter((b) => b.is_active && allowed.has(b.id))
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((b) => ({ id: b.id, name: b.name, code: b.code, logo_path: b.logo_path }));
-  const role = session?.profile?.role;
-  const canSeeAll = brands.length > 1 && (role === "super_admin" || role === "manager");
-
-  const picked = (await cookies()).get(BRAND_COOKIE)?.value;
-  let current: Brand | null = brands.find((b) => b.id === picked) ?? null;
-  if (!current && !(picked === ALL && canSeeAll)) current = brands[0] ?? null;
+  const current: Brand | null = brands.length === 1 ? brands[0] : null;
+  const canSeeAll = brands.length > 1;
   return { brands, current, canSeeAll, isAll: current === null && canSeeAll };
 });
 
-// For pages that need exactly one brand (forms, stock entry, counts):
-// the picked brand, or the first brand when "All brands" is on.
-export async function requireOneBrand() {
+// The brand a page is filtered to, from its ?brand= value (brand code or id).
+// null = all of the user's brands.
+export async function pageBrand(value?: string | string[] | null): Promise<Brand | null> {
   const ctx = await getBrandContext();
-  return { ...ctx, brand: ctx.current ?? ctx.brands[0] ?? null };
+  if (ctx.current) return ctx.current;
+  const v = (Array.isArray(value) ? value[0] : value)?.trim();
+  if (!v || v === ALL) return null;
+  return ctx.brands.find((b) => b.id === v || b.code.toLowerCase() === v.toLowerCase()) ?? null;
 }
 
-// Brand ids to show on list pages: the picked brand, or every allowed brand.
-export async function brandScope(): Promise<string[]> {
+// For forms that need a default brand (e.g. a new product): the filtered brand
+// or the first one.
+export async function requireOneBrand(value?: string | string[] | null) {
   const ctx = await getBrandContext();
-  return ctx.current ? [ctx.current.id] : ctx.brands.map((b) => b.id);
+  const picked = await pageBrand(value);
+  return { ...ctx, brand: picked ?? ctx.brands[0] ?? null };
+}
+
+// Brand ids to show on a list page: the filtered brand, or every allowed brand.
+export async function brandScope(value?: string | string[] | null): Promise<string[]> {
+  const ctx = await getBrandContext();
+  const picked = await pageBrand(value);
+  return picked ? [picked.id] : ctx.brands.map((b) => b.id);
 }

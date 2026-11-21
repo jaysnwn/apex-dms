@@ -26,7 +26,7 @@ export default async function MyRoutePage({ params }: { params: Promise<{ id: st
       return (
         <div className="space-y-4">
           <Link href="/m/routes" className="flex items-center gap-1 px-1 text-sm font-medium text-slate-600"><ArrowLeft className="size-4" /> My routes</Link>
-          <div className="rounded-2xl bg-white p-6 text-center text-sm text-slate-500 shadow-sm ring-1 ring-slate-200/70">{route.name} has no outlets for you right now.</div>
+          <div className="rounded-2xl bg-surface p-6 text-center text-sm text-slate-500 shadow-sm ring-1 ring-slate-200/70">{route.name} has no outlets for you right now.</div>
         </div>
       );
     }

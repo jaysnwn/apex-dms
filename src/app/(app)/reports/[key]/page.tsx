@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -96,7 +97,7 @@ export default async function ReportPage({ params, searchParams }: { params: Pro
           <Button type="submit" variant="secondary">Apply</Button>
           <div className="ml-auto flex flex-wrap gap-1.5">
             {PRESETS(today).map((p) => (
-              <Link key={p.label} href={presetHref(p)} className={cn("rounded-full border px-3 py-1 text-xs", f.from === p.from && f.to === p.to ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300 hover:border-slate-400")}>{p.label}</Link>
+              <Link key={p.label} href={presetHref(p)} className={cn("rounded-full border px-3 py-1 text-xs", f.from === p.from && f.to === p.to ? "border-primary bg-primary text-on-fill" : "border-slate-300 hover:border-slate-400")}>{p.label}</Link>
             ))}
           </div>
         </form>
@@ -109,7 +110,7 @@ export default async function ReportPage({ params, searchParams }: { params: Pro
             <tr>{result.columns.map((c) => <th key={c.key} className={cn("px-3 py-2.5 whitespace-nowrap first:pl-4 last:pr-4", numeric(c) && "text-right")}>{c.label}</th>)}</tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {result.rows.length === 0 && <tr><td colSpan={result.columns.length} className="px-4 py-10 text-center text-slate-500">No data for these filters.</td></tr>}
+            {result.rows.length === 0 && <tr><td colSpan={result.columns.length}><EmptyState art="search" title="No data for these filters">Widen the dates or clear a filter.</EmptyState></td></tr>}
             {result.rows.map((r, i) => (
               <tr key={i} className="hover:bg-slate-50">
                 {result.columns.map((c) => (

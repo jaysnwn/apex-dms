@@ -6,6 +6,7 @@ import { Chip } from "@/components/chip";
 import { PageHeader } from "@/components/ui";
 import { DispatchBoard, type DispatchedRow, type PendingInvoice } from "./dispatch-board";
 import { allRows } from "@/lib/all-rows";
+import { warehouseOr } from "@/lib/warehouse-scope";
 
 export const metadata: Metadata = { title: "Dispatch" };
 
@@ -16,7 +17,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
   const supabase = await createClient();
   const scope = await brandScope();
   const [{ data: warehouses }, { data: brandRows }] = await Promise.all([
-    supabase.from("warehouses").select("id, name, brand_id").eq("is_active", true).in("brand_id", scope).order("name"),
+    supabase.from("warehouses").select("id, name, brand_id").eq("is_active", true).or(warehouseOr(scope)).order("name"),
     supabase.from("brands").select("id, name"),
   ]);
   const brandName = new Map((brandRows ?? []).map((b) => [b.id as string, b.name as string]));

@@ -2,25 +2,15 @@ import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { Card, cn } from "./ui";
 
-const TONES = {
-  blue: "bg-sky-50 text-sky-600",
-  green: "bg-emerald-50 text-emerald-600",
-  red: "bg-red-50 text-red-600",
-  amber: "bg-amber-50 text-amber-600",
-  orange: "bg-accent-50 text-accent-600",
-  violet: "bg-violet-50 text-violet-600",
-  teal: "bg-teal-50 text-teal-600",
-  slate: "bg-slate-100 text-slate-600",
-} as const;
+// Kept for older call sites: tones no longer paint the tile (colour is for status only);
+// an alert turns the figure red and adds a soft red edge.
+export type StatTone = "blue" | "green" | "red" | "amber" | "orange" | "violet" | "teal" | "slate";
 
-export type StatTone = keyof typeof TONES;
-
-// KPI tile: coloured icon chip, big number, optional hint and link.
+// KPI tile: quiet icon, the figure (wraps instead of being cut off), optional hint and link.
 export function StatCard({
   label,
   value,
   icon: Icon,
-  tone = "blue",
   hint,
   href,
   alert,
@@ -34,18 +24,24 @@ export function StatCard({
   alert?: boolean;
 }) {
   const body = (
-    <Card className={cn("h-full p-4 transition", href && "hover:border-slate-300 hover:shadow-sm", alert && "border-red-200 bg-red-50/40")}>
+    <Card
+      className={cn(
+        "h-full p-4 transition-[transform,box-shadow,border-color] duration-[160ms] ease-out",
+        href && "hover:-translate-y-0.5 hover:border-field/40 hover:shadow-[var(--shadow-raised)] motion-reduce:hover:translate-y-0",
+        alert && "border-red-200"
+      )}
+    >
       <div className="flex items-start gap-3">
-        <span className={cn("grid size-10 shrink-0 place-items-center rounded-lg", TONES[tone])}>
-          <Icon className="size-5" />
+        <span className={cn("grid size-9 shrink-0 place-items-center rounded-full", alert ? "bg-red-50 text-red-600" : "bg-sunken text-text-2")}>
+          <Icon className="size-[18px]" aria-hidden />
         </span>
         <div className="min-w-0">
-          <div className="text-sm text-slate-500">{label}</div>
-          <div className={cn("tabular truncate text-xl font-semibold tracking-tight sm:text-2xl", alert && "text-red-700")}>{value}</div>
-          {hint && <div className="mt-0.5 truncate text-xs text-slate-500">{hint}</div>}
+          <div className="text-[13px] text-text-2">{label}</div>
+          <div className={cn("tabular text-lg leading-snug font-semibold tracking-[-0.015em] break-words sm:text-[22px]", alert ? "text-red-700" : "text-text")}>{value}</div>
+          {hint && <div className="mt-0.5 text-xs text-text-2">{hint}</div>}
         </div>
       </div>
     </Card>
   );
-  return href ? <Link href={href} className="block">{body}</Link> : body;
+  return href ? <Link href={href} className="block h-full">{body}</Link> : body;
 }

@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { OrderTimeline } from "@/components/order-timeline";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { CheckCircle2, Circle, Truck, Wallet } from "lucide-react";
+import { Truck, Wallet } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { date, dateTime, inr, qty } from "@/lib/format";
@@ -28,7 +29,8 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
     supabase.from("dispatches").select("*").eq("invoice_id", id).maybeSingle(),
     supabase.from("payment_allocations").select("amount, payment_id, payments(receipt_no, payment_date, method, status)").eq("invoice_id", id),
     supabase.from("credit_notes").select("id, credit_note_no, note_date, reason, grand_total, status").eq("invoice_id", id).order("created_at"),
-    supabase.from("orders").select("order_no, notes").eq("id", inv.order_id).maybeSingle(),
+    // opening-balance invoices (carried over from Odoo) have no order
+    inv.order_id ? supabase.from("orders").select("order_no, notes").eq("id", inv.order_id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   const { data: cnl } = (cns ?? []).length
     ? await supabase.from("credit_note_lines").select("invoice_line_id, qty").in("credit_note_id", (cns ?? []).map((c) => c.id))
@@ -71,12 +73,12 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
         <div className="flex flex-wrap gap-2">
           <DocButtons kind="invoice" id={id} />
           {!cancelled && (
-            <a href={`/api/pdf/delivery-note/${id}`} target="_blank" rel="noopener" className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium hover:bg-slate-50">
+            <a href={`/api/pdf/delivery-note/${id}`} target="_blank" rel="noopener" className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-surface px-4 text-sm font-medium hover:bg-slate-50">
               <Truck className="size-4" /> Delivery note
             </a>
           )}
           {isOffice && !cancelled && Number(bal?.balance ?? 0) > 0 && (
-            <Link href={`/payments/new?retailer=${inv.retailer_id}&invoice=${id}`} className="inline-flex h-10 items-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700">
+            <Link href={`/payments/new?retailer=${inv.retailer_id}&invoice=${id}`} className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-on-fill hover:bg-primary-hover">
               <Wallet className="size-4" /> Record payment
             </Link>
           )}
@@ -97,15 +99,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
 
       {!cancelled && (
         <Card className="p-4">
-          <ol className="grid grid-cols-4 gap-2">
-            {steps.map((s) => (
-              <li key={s.label} className="flex flex-col items-center text-center">
-                {s.done ? <CheckCircle2 className="size-6 text-emerald-600" /> : <Circle className="size-6 text-slate-300" />}
-                <span className={cn("mt-1 text-sm font-medium", s.done ? "text-slate-900" : "text-slate-400")}>{s.label}</span>
-                {s.when && <span className="text-[11px] text-slate-500">{s.when}</span>}
-              </li>
-            ))}
-          </ol>
+          <OrderTimeline steps={steps} />
         </Card>
       )}
 
@@ -153,7 +147,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
 
         <div className="space-y-6">
           <Card className="overflow-hidden">
-            <div className={cn("px-5 py-4 text-white", cancelled ? "bg-slate-500" : Number(bal?.balance ?? 0) <= 0 ? "bg-emerald-600" : bal?.due_status === "overdue" ? "bg-red-600" : "bg-ink-900")}>
+            <div className={cn("px-5 py-4 text-on-fill", cancelled ? "bg-slate-500" : Number(bal?.balance ?? 0) <= 0 ? "bg-primary" : bal?.due_status === "overdue" ? "bg-red-600" : "bg-primary")}>
               <div className="text-sm opacity-80">{cancelled ? "Cancelled" : Number(bal?.balance ?? 0) <= 0 ? "Fully paid" : "Balance due"}</div>
               <div className="tabular text-3xl font-semibold">{inr(cancelled ? 0 : Math.max(0, Number(bal?.balance ?? 0)))}</div>
               <div className="text-xs opacity-80">of {inr(inv.grand_total)}</div>

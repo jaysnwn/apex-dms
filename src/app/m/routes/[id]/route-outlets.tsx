@@ -51,7 +51,7 @@ export function RouteOutlets({ towns, outlets }: { towns: Town[]; outlets: Outle
               const st = t ? VISIT_STATUS[t.status] : null;
               const nav = o.latitude != null ? `https://www.google.com/maps/dir/?api=1&destination=${o.latitude},${o.longitude}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${o.shop_name} ${o.address}`)}`;
               return (
-                <li key={o.retailer_id} className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70">
+                <li key={o.retailer_id} className="overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-slate-200/70">
                   <div className="p-3.5">
                     <div className="flex items-start gap-2">
                       <span className="tabular mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">{n}</span>
@@ -59,19 +59,21 @@ export function RouteOutlets({ towns, outlets }: { towns: Town[]; outlets: Outle
                         <Link href={`/m/outlets/${o.retailer_id}`} className="font-semibold">{o.shop_name}</Link>
                         <div className="truncate text-xs text-slate-500">{[o.mobile, o.address].filter(Boolean).join(" · ")}</div>
                       </div>
-                      {st ? <Badge tone={st.tone}>{st.label}</Badge> : <span className="text-[11px] text-slate-400">not today</span>}
+                      {st ? <Badge tone={st.tone}>{st.label}</Badge> : <span className="text-xs text-slate-400">not today</span>}
                     </div>
                     {t?.geo_status && <div className="mt-1 pl-8"><Badge tone={GEO_STATUS[t.geo_status].tone}>{GEO_STATUS[t.geo_status].label}</Badge></div>}
                     <div className="mt-2.5 grid grid-cols-2 gap-1.5 text-center">
-                      <div className="rounded-lg bg-slate-50 p-1.5"><div className="text-[10px] text-slate-500">Outstanding</div><div className="tabular text-sm font-semibold">{inr(o.outstanding, { decimals: false })}</div></div>
-                      <div className={cn("rounded-lg p-1.5", o.overdue > 0 ? "bg-red-50" : "bg-slate-50")}><div className="text-[10px] text-slate-500">Overdue</div><div className={cn("tabular text-sm font-semibold", o.overdue > 0 ? "text-red-700" : "text-slate-400")}>{inr(o.overdue, { decimals: false })}</div></div>
+                      <div className="rounded-lg bg-slate-50 p-1.5"><div className="text-xs text-slate-500">Outstanding</div><div className="tabular text-sm font-semibold">{inr(o.outstanding, { decimals: false })}</div></div>
+                      <div className={cn("rounded-lg p-1.5", o.overdue > 0 ? "bg-red-50" : "bg-slate-50")}><div className="text-xs text-slate-500">Overdue</div><div className={cn("tabular text-sm font-semibold", o.overdue > 0 ? "text-red-700" : "text-slate-400")}>{inr(o.overdue, { decimals: false })}</div></div>
                     </div>
-                    <div className="mt-1.5 text-[11px] text-slate-500">
+                    <div className="mt-1.5 text-xs text-slate-500">
                       Visited {o.last_visit ? date(o.last_visit) : "—"} · ordered {o.last_order ? `${date(o.last_order.date)} (${inr(o.last_order.amount, { decimals: false })})` : "—"} · paid {o.last_payment ? `${date(o.last_payment.date)} (${inr(o.last_payment.amount, { decimals: false })})` : "—"}
                     </div>
                   </div>
-                  <div className="grid grid-cols-5 border-t border-slate-100 text-[11px] font-medium">
-                    <a href={`tel:${o.mobile}`} className="flex flex-col items-center gap-0.5 py-2 text-slate-700"><Phone className="size-4" /> Call</a>
+                  <div className="grid grid-cols-5 border-t border-slate-100 text-xs font-medium">
+                    {o.mobile
+                      ? <a href={`tel:${o.mobile}`} className="flex flex-col items-center gap-0.5 py-2 text-slate-700"><Phone className="size-4" /> Call</a>
+                      : <span title="No number on file" className="flex flex-col items-center gap-0.5 py-2 text-slate-300"><Phone className="size-4" /> Call</span>}
                     <a href={nav} target="_blank" rel="noopener" className="flex flex-col items-center gap-0.5 py-2 text-slate-700"><Navigation className="size-4" /> Go</a>
                     <a href={`/api/pdf/statement/${o.retailer_id}`} target="_blank" rel="noopener" className="flex flex-col items-center gap-0.5 py-2 text-slate-700"><FileText className="size-4" /> Statement</a>
                     <Link href={`/m/outlets/${o.retailer_id}`} className="flex flex-col items-center gap-0.5 py-2 text-emerald-700"><IndianRupee className="size-4" /> Collect</Link>
@@ -80,9 +82,9 @@ export function RouteOutlets({ towns, outlets }: { towns: Town[]; outlets: Outle
                   {(!t || t.status === "planned" || t.status === "in_progress") && (
                     <div className="border-t border-slate-100 bg-slate-50/60 p-2">
                       {t ? (
-                        <Link href="/m/route" className="flex h-10 items-center justify-center gap-1.5 rounded-xl bg-blue-600 text-sm font-semibold text-white">{t.status === "in_progress" ? "Finish the visit in Today's route" : "Visit in Today's route"}</Link>
+                        <Link href="/m/route" className="flex h-10 items-center justify-center gap-1.5 rounded-xl bg-primary text-sm font-semibold text-on-fill">{t.status === "in_progress" ? "Finish the visit in Today's route" : "Visit in Today's route"}</Link>
                       ) : (
-                        <button onClick={() => checkIn(o)} disabled={busy === o.retailer_id} className="flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-white text-sm font-semibold text-blue-700 ring-1 ring-blue-200 disabled:opacity-60">
+                        <button onClick={() => checkIn(o)} disabled={busy === o.retailer_id} className="flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-surface text-sm font-semibold text-blue-700 ring-1 ring-blue-200 disabled:opacity-60">
                           <LogIn className="size-4" /> {busy === o.retailer_id ? "Getting GPS…" : "Check in now (not planned today)"}
                         </button>
                       )}

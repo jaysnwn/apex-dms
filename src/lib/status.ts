@@ -10,7 +10,7 @@ type S = Record<string, { label: string; tone: Tone }>;
 
 export const ORDER_STATUS: S = {
   quotation: { label: "Quotation", tone: "violet" },
-  invoiced: { label: "Pending dispatch", tone: "blue" },
+  invoiced: { label: "Pending dispatch", tone: "amber" },
   dispatched: { label: "Dispatched", tone: "teal" },
   delivered: { label: "Delivered", tone: "green" },
   cancelled: { label: "Cancelled", tone: "slate" },

@@ -34,7 +34,7 @@ export function SortableList<T>({ items, keyOf, render, onReorder, disabled, cla
           onDragLeave={() => setOver((o) => (o === i ? null : o))}
           onDrop={(e) => { e.preventDefault(); if (drag !== null) move(drag, i); setDrag(null); setOver(null); }}
           onDragEnd={() => { setDrag(null); setOver(null); }}
-          className={cn("flex items-center gap-2 bg-white", drag === i && "opacity-40", over === i && drag !== null && drag !== i && "ring-2 ring-accent-400 ring-inset")}>
+          className={cn("flex items-center gap-2 bg-surface", drag === i && "opacity-40", over === i && drag !== null && drag !== i && "ring-2 ring-primary ring-inset")}>
           {!disabled && <GripVertical className="ml-1 size-4 shrink-0 cursor-grab text-slate-300" aria-hidden />}
           <div className="min-w-0 flex-1">{render(it, i)}</div>
           {!disabled && (

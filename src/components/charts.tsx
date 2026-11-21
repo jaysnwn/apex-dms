@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { usePrefs } from "./prefs-provider";
 
 // Reference categorical palette (validated, fixed order — never cycled).
 import { SERIES } from "@/lib/chart-colors";
@@ -18,8 +19,26 @@ function niceMax(v: number) {
 }
 
 // Column chart over time (one series). Hover shows the exact value.
-export function ColumnChart({ data, height = 200, label = "Sales", color = SERIES[0] }: { data: { label: string; value: number }[]; height?: number; label?: string; color?: string }) {
+export function ColumnChart({ data, height = 200, label = "Sales", color = "var(--blue-600)" }: { data: { label: string; value: number }[]; height?: number; label?: string; color?: string }) {
   const [hover, setHover] = useState<number | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const { reduced } = usePrefs();
+  // Columns grow up from the baseline, one after another, once when the chart appears.
+  useEffect(() => {
+    const bars = svgRef.current?.querySelectorAll<SVGPathElement>("[data-bar]");
+    if (!bars?.length || reduced) return;
+    let anim: { revert: () => void } | null = null;
+    let cancelled = false;
+    (async () => {
+      const { animate, stagger } = await import("animejs");
+      if (cancelled) return;
+      anim = animate(bars, { scaleY: [0, 1], duration: 520, delay: stagger(14), ease: "outExpo" });
+    })();
+    return () => {
+      cancelled = true;
+      anim?.revert();
+    };
+  }, [reduced, data.length]);
   const max = niceMax(Math.max(...data.map((d) => d.value), 0));
   const W = 720, H = height, padL = 44, padB = 22, padT = 10;
   const innerW = W - padL - 8, innerH = H - padB - padT;
@@ -28,13 +47,13 @@ export function ColumnChart({ data, height = 200, label = "Sales", color = SERIE
   const ticks = [0, max / 2, max];
   return (
     <div className="relative">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={`${label} chart`}>
+      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={`${label} chart`}>
         {ticks.map((t) => {
           const y = padT + innerH - (t / max) * innerH;
           return (
             <g key={t}>
-              <line x1={padL} x2={W - 8} y1={y} y2={y} stroke="#e2e8f0" strokeWidth={1} />
-              <text x={padL - 6} y={y + 3} textAnchor="end" fontSize={10} fill="#64748b">{compact(t)}</text>
+              <line x1={padL} x2={W - 8} y1={y} y2={y} stroke="var(--line)" strokeWidth={1} />
+              <text x={padL - 6} y={y + 3} textAnchor="end" fontSize={10} fill="var(--text-2)">{compact(t)}</text>
             </g>
           );
         })}
@@ -49,19 +68,21 @@ export function ColumnChart({ data, height = 200, label = "Sales", color = SERIE
               {h > 0 && (
                 <path
                   d={`M${x},${y + h} V${y + r} Q${x},${y} ${x + r},${y} H${x + bw - r} Q${x + bw},${y} ${x + bw},${y + r} V${y + h} Z`}
+                  data-bar
                   fill={color}
+                  style={{ transformBox: "fill-box", transformOrigin: "bottom", transition: "opacity 160ms" }}
                   opacity={hover === null || hover === i ? 1 : 0.45}
                 />
               )}
               {(i % Math.ceil(data.length / 8) === 0 || i === data.length - 1) && (
-                <text x={padL + i * slot + slot / 2} y={H - 6} textAnchor="middle" fontSize={10} fill="#64748b">{d.label}</text>
+                <text x={padL + i * slot + slot / 2} y={H - 6} textAnchor="middle" fontSize={10} fill="var(--text-2)">{d.label}</text>
               )}
             </g>
           );
         })}
       </svg>
       {hover !== null && data[hover] && (
-        <div className="pointer-events-none absolute top-0 rounded-md bg-ink-900 px-2 py-1 text-xs text-white shadow" style={{ left: `${((padL + hover * slot + slot / 2) / W) * 100}%`, transform: "translateX(-50%)" }}>
+        <div className="pointer-events-none absolute top-0 rounded-md bg-neutral-900 px-2 py-1 text-xs text-on-fill shadow-[var(--shadow-raised)]" style={{ left: `${((padL + hover * slot + slot / 2) / W) * 100}%`, transform: "translateX(-50%)" }}>
           {data[hover].label}: <span className="tabular font-semibold">{money(data[hover].value)}</span>
         </div>
       )}
@@ -72,7 +93,7 @@ export function ColumnChart({ data, height = 200, label = "Sales", color = SERIE
 // Horizontal bars for ranking (brands, products, salesmen). Labels in text ink, value at the tip.
 export function RankBars({ data, color = SERIES[0], format = money }: { data: { label: string; value: number; sub?: string }[]; color?: string; format?: (n: number) => string }) {
   const max = Math.max(...data.map((d) => d.value), 1);
-  if (data.length === 0) return <p className="text-sm text-slate-500">No data yet.</p>;
+  if (data.length === 0) return <p className="py-6 text-center text-sm text-text-2">Nothing this month yet.</p>;
   return (
     <ul className="space-y-2.5">
       {data.map((d) => (
@@ -82,7 +103,7 @@ export function RankBars({ data, color = SERIES[0], format = money }: { data: { 
             <span className="tabular shrink-0 font-medium text-slate-900">{format(d.value)}</span>
           </div>
           <div className="h-2 rounded-full bg-slate-100">
-            <div className="h-2 rounded-full" style={{ width: `${(d.value / max) * 100}%`, background: color }} />
+            <div className="grow-x h-2 rounded-full" style={{ width: `${(d.value / max) * 100}%`, background: color }} />
           </div>
         </li>
       ))}

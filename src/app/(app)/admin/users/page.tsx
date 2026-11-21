@@ -49,7 +49,7 @@ export default async function UsersPage() {
       <h2 className="mb-3 text-sm font-semibold text-slate-900">All users ({users.length})</h2>
       <div className="space-y-3">
         {users.map((u) => (
-          <details key={u.id} className="group rounded-xl border border-slate-200 bg-white open:shadow-sm">
+          <details key={u.id} className="group rounded-xl border border-slate-200 bg-surface open:shadow-sm">
             <summary className="flex cursor-pointer list-none items-center gap-3 p-4">
               <div className="grid size-9 shrink-0 place-items-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600">
                 {(u.full_name || u.email || "?").slice(0, 1).toUpperCase()}

@@ -35,7 +35,7 @@ export function ReceiveButton({ purchaseId, purchaseNo, creditDays, showCostOpti
 
   return (
     <>
-      <Button size={size} className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setOpen(true)}>
+      <Button size={size} className="bg-primary hover:bg-primary-hover" onClick={() => setOpen(true)}>
         <PackageCheck className="size-4" /> Receive goods
       </Button>
       {open && (
@@ -57,7 +57,7 @@ export function ReceiveButton({ purchaseId, purchaseNo, creditDays, showCostOpti
           {error && <div className="mt-3"><Alert>{error}</Alert></div>}
           <div className="mt-5 flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setOpen(false)}>Close</Button>
-            <Button className="bg-emerald-600 hover:bg-emerald-700" disabled={pending} onClick={save}>{pending ? "Saving…" : "Add to stock"}</Button>
+            <Button className="bg-primary hover:bg-primary-hover" disabled={pending} onClick={save}>{pending ? "Saving…" : "Add to stock"}</Button>
           </div>
         </Dialog>
       )}

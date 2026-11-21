@@ -55,7 +55,7 @@ export default async function SelectOrgPage({ searchParams }: { searchParams: Pr
               const body = (
                 <>
                   {logos.get(t.id) ? (
-                    <span className="grid h-10 w-24 shrink-0 place-items-center rounded-lg bg-white ring-1 ring-slate-200">
+                    <span className="grid h-10 w-24 shrink-0 place-items-center rounded-lg bg-surface ring-1 ring-slate-200">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={logos.get(t.id)!} alt="" className="max-h-8 max-w-20 object-contain" />
                     </span>
@@ -75,7 +75,7 @@ export default async function SelectOrgPage({ searchParams }: { searchParams: Pr
                 <li key={t.id}>
                   {open ? (
                     <Link href={`/o/${t.slug}?next=${encodeURIComponent(goto)}`} prefetch={false}
-                      className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 hover:border-slate-300 hover:shadow-sm">
+                      className="flex items-center gap-3 rounded-xl border border-slate-200 bg-surface p-3 hover:border-slate-300 hover:shadow-sm">
                       {body}
                     </Link>
                   ) : (

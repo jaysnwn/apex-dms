@@ -50,7 +50,7 @@ export function ExpenseTable({ rows, me, office, options, selectable, showEmploy
             <tr>
               {selectable && (
                 <th className="w-10 pl-4">
-                  <input type="checkbox" aria-label="Select all" className="size-4 accent-ink-900"
+                  <input type="checkbox" aria-label="Select all" className="size-4 accent-primary"
                     checked={reviewable.length > 0 && reviewable.every((r) => sel.has(r.id))}
                     onChange={(e) => setSel(e.target.checked ? new Set(reviewable.map((r) => r.id)) : new Set())} />
                 </th>
@@ -71,24 +71,24 @@ export function ExpenseTable({ rows, me, office, options, selectable, showEmploy
                 <tr key={r.id} className="cursor-pointer hover:bg-slate-50" onClick={() => setOpen(r.id)}>
                   {selectable && (
                     <td className="pl-4" onClick={(e) => e.stopPropagation()}>
-                      <input type="checkbox" className="size-4 accent-ink-900" disabled={!canReview} checked={sel.has(r.id)} onChange={() => toggle(r.id)}
+                      <input type="checkbox" className="size-4 accent-primary" disabled={!canReview} checked={sel.has(r.id)} onChange={() => toggle(r.id)}
                         aria-label={`Select ${r.expense_no}`} title={canReview ? undefined : "You cannot approve your own expense"} />
                     </td>
                   )}
                   <td className="px-4 py-2.5 whitespace-nowrap">
                     {date(r.expense_date)}
-                    <div className="text-[11px] text-slate-400">{r.expense_no ?? "Draft"}</div>
+                    <div className="text-xs text-slate-400">{r.expense_no ?? "Draft"}</div>
                   </td>
                   {showEmployee && (
                     <td className="px-3 py-2.5 whitespace-nowrap">
                       <span className="font-medium">{r.employee_name}</span>
-                      <div className="text-[11px] text-slate-500">{r.created_by === r.employee_id ? (r.source === "salesman_app" ? "self · salesman app" : "self · office") : `by ${r.created_by_name ?? "office"} · office`}</div>
+                      <div className="text-xs text-slate-500">{r.created_by === r.employee_id ? (r.source === "salesman_app" ? "self · salesman app" : "self · office") : `by ${r.created_by_name ?? "office"} · office`}</div>
                     </td>
                   )}
                   <td className="max-w-60 px-3 py-2.5">
                     <span className="font-medium">{r.category_name}</span>
-                    {r.receipt_path ? <Paperclip className="ml-1 inline size-3.5 text-emerald-600" aria-label="Has receipt" /> : <span className="ml-1 text-[11px] text-slate-400">no receipt</span>}
-                    {r.possible_duplicate && <span className="ml-1.5 inline-flex items-center gap-0.5 text-[11px] font-medium text-amber-700"><AlertTriangle className="size-3" /> possible duplicate</span>}
+                    {r.receipt_path ? <Paperclip className="ml-1 inline size-3.5 text-emerald-600" aria-label="Has receipt" /> : <span className="ml-1 text-xs text-slate-400">no receipt</span>}
+                    {r.possible_duplicate && <span className="ml-1.5 inline-flex items-center gap-0.5 text-xs font-medium text-amber-700"><AlertTriangle className="size-3" /> possible duplicate</span>}
                     <div className="truncate text-xs text-slate-500">{r.description ?? "—"}</div>
                     {(r.status === "rejected" || r.status === "returned") && r.rejection_reason && <div className="truncate text-xs text-red-700">{r.rejection_reason}</div>}
                   </td>
@@ -98,9 +98,9 @@ export function ExpenseTable({ rows, me, office, options, selectable, showEmploy
                   </td>
                   <td className="tabular px-3 py-2.5 text-right whitespace-nowrap">
                     <span className="font-medium">{inr(r.amount)}</span>
-                    {r.approved_amount !== null && Number(r.approved_amount) !== Number(r.amount) && <div className="text-[11px] text-slate-500">approved {inr(r.approved_amount)}</div>}
-                    {Number(r.outstanding) > 0 && Number(r.reimbursed_amount) > 0 && <div className="text-[11px] text-violet-700">due {inr(r.outstanding)}</div>}
-                    <div className="text-[11px] text-slate-500">{r.paid_by === "company" ? "Company" : "Employee"}{r.payment_method ? ` · ${EXPENSE_PAYMENT_METHOD[r.payment_method]}` : ""}</div>
+                    {r.approved_amount !== null && Number(r.approved_amount) !== Number(r.amount) && <div className="text-xs text-slate-500">approved {inr(r.approved_amount)}</div>}
+                    {Number(r.outstanding) > 0 && Number(r.reimbursed_amount) > 0 && <div className="text-xs text-violet-700">due {inr(r.outstanding)}</div>}
+                    <div className="text-xs text-slate-500">{r.paid_by === "company" ? "Company" : "Employee"}{r.payment_method ? ` · ${EXPENSE_PAYMENT_METHOD[r.payment_method]}` : ""}</div>
                   </td>
                   <td className="px-4 py-2.5"><StatusBadges e={r} /></td>
                 </tr>
@@ -128,17 +128,17 @@ function BulkBar({ rows, onDone }: { rows: ExpenseRow[]; onDone: () => void }) {
     setMode(null); setReason(""); onDone(); router.refresh();
   });
   return (
-    <div className="sticky top-2 z-10 mb-3 rounded-xl bg-ink-900 p-3 text-white shadow-lg">
+    <div className="sticky top-2 z-10 mb-3 rounded-xl bg-primary p-3 text-on-fill shadow-lg">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm"><b>{rows.length}</b> selected · <b className="tabular">{inr(total)}</b></span>
         <div className="ml-auto flex gap-2">
-          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setMode("approve")}><Check className="size-4" /> Approve</Button>
+          <Button size="sm" className="bg-primary hover:bg-primary-hover" onClick={() => setMode("approve")}><Check className="size-4" /> Approve</Button>
           <Button size="sm" variant="secondary" onClick={() => setMode("return")}><CornerUpLeft className="size-4" /> Return</Button>
           <Button size="sm" variant="secondary" className="text-red-700" onClick={() => setMode("reject")}><X className="size-4" /> Reject</Button>
         </div>
       </div>
       {mode && (
-        <div className="mt-3 rounded-lg bg-white p-3 text-slate-900">
+        <div className="mt-3 rounded-lg bg-surface p-3 text-slate-900">
           {mode === "approve"
             ? <p className="text-sm">Approve <b>{rows.length}</b> expense{rows.length > 1 ? "s" : ""} for <b>{inr(total)}</b>? Each one is recorded separately in its history.</p>
             : <><Label>{mode === "reject" ? "Reason for rejection" : "What must be corrected?"}</Label><Textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} autoFocus /></>}
@@ -233,7 +233,7 @@ export function ExpenseDetailDialog({ id, me, office, options, onClose }: { id: 
 
             {can && step === null && (
               <div className="flex flex-wrap gap-2">
-                {can.review && <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setStep("approve")}><Check className="size-4" /> Approve</Button>}
+                {can.review && <Button className="bg-primary hover:bg-primary-hover" onClick={() => setStep("approve")}><Check className="size-4" /> Approve</Button>}
                 {can.review && <Button variant="secondary" onClick={() => setStep("return")}><CornerUpLeft className="size-4" /> Return for correction</Button>}
                 {can.review && <Button variant="secondary" className="text-red-700" onClick={() => setStep("reject")}><X className="size-4" /> Reject</Button>}
                 {can.edit && <Button variant="secondary" onClick={() => setStep("edit")}><Pencil className="size-4" /> Edit</Button>}
@@ -266,7 +266,7 @@ export function ExpenseDetailDialog({ id, me, office, options, onClose }: { id: 
                 <div className="mt-3 flex justify-end gap-2">
                   <Button variant="secondary" onClick={() => { setStep(null); setError(null); setReason(""); }}>Back</Button>
                   <Button disabled={pending || ((step === "reject" || step === "return" || step === "cancel") && !reason.trim())}
-                    className={step === "approve" ? "bg-emerald-600 hover:bg-emerald-700" : step === "reject" || step === "cancel" || step === "delete" ? "bg-red-600 hover:bg-red-700" : undefined}
+                    className={step === "approve" ? "bg-primary hover:bg-primary-hover" : step === "reject" || step === "cancel" || step === "delete" ? "bg-red-600 hover:bg-red-700" : undefined}
                     onClick={() => {
                       if (step === "approve") {
                         const a = Number(approveAmt);

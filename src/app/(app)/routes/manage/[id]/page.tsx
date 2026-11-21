@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
+import { LinkButton } from "@/components/chip";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { todayIST } from "@/lib/gst";
@@ -53,7 +54,8 @@ export default async function RoutePage({ params }: { params: Promise<{ id: stri
   return (
     <>
       <Link href="/routes/manage" className="mb-2 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800"><ArrowLeft className="size-4" /> Routes</Link>
-      <PageHeader title={route.name} description={`${route.code ?? ""}${towns.length ? " · " + towns.map((t) => t.name).join(" → ") : ""}`} />
+      <PageHeader title={route.name} description={`${route.code ?? ""}${towns.length ? " · " + towns.map((t) => t.name).join(" → ") : ""}`}
+        actions={<LinkButton href={`/reports/statements?type=route&route=${id}`}><FileText className="size-4" /> Route statement</LinkButton>} />
       <RouteEditor route={route} territories={territories ?? []} locations={locations ?? []} salesmen={(salesmen ?? []).map((s) => ({ id: required(s.id, "Salesman id"), name: required(s.full_name, "Salesman name") }))}
         towns={towns} outlets={outlets} assignments={assignments} schedule={schedule} events={events} today={today} superAdmin={profile.role === "super_admin"} />
     </>

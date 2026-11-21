@@ -5,7 +5,7 @@ import { OrderBuilder } from "../order-builder";
 import { builderOptions } from "../data";
 import { loadBillingCatalogue, type PickerRetailer } from "../actions";
 
-export const metadata: Metadata = { title: "Billing" };
+export const metadata: Metadata = { title: "New sale" };
 
 export default async function NewOrderPage({ searchParams }: { searchParams: Promise<{ retailer?: string }> }) {
   const { profile } = await requireRole("super_admin", "manager", "billing", "salesman");
@@ -20,7 +20,8 @@ export default async function NewOrderPage({ searchParams }: { searchParams: Pro
     ]);
     if (r) retailer = { ...r, credit_days: Number(r.credit_days), credit_limit: Number(r.credit_limit), outstanding: Number(b?.outstanding ?? 0), overdue: Number(b?.overdue ?? 0) } as PickerRetailer;
   }
-  const brandId = options.defaultBrandId ?? options.brands[0]?.id;
-  const initialCatalogue = brandId ? { brandId, ...(await loadBillingCatalogue(brandId)) } : undefined;
+  // The catalogue opens on all brands; the cart may mix them (split per brand on save).
+  const brandId = options.brands.length === 1 ? options.brands[0].id : "";
+  const initialCatalogue = { brandId, ...(await loadBillingCatalogue(brandId || null)) };
   return <OrderBuilder key={rid ?? "new"} role={profile.role} {...options} presetRetailer={retailer} initialCatalogue={initialCatalogue} />;
 }

@@ -13,6 +13,7 @@ npx esbuild@0.25 ../../src/lib/password-policy.ts --format=esm --outfile=build/p
 npx esbuild@0.25 ../../src/lib/supabase/row-cap.ts --bundle --format=esm --outfile=build/row-cap.mjs --log-level=error
 npx esbuild@0.25 ../../src/lib/all-rows.ts --format=esm --outfile=build/all-rows.mjs --log-level=error
 npx esbuild@0.25 ../../src/lib/offline-reset.ts --format=esm --outfile=build/offline-reset.mjs --log-level=error
+npx esbuild@0.25 ../../src/lib/due-windows.ts --bundle --format=esm --outfile=build/due-windows.mjs --log-level=error
 python3 client-imports.check.py
 # zod's .uuid() rejects ids Postgres accepts (e.g. 31000000-0000-0000-0000-000000000001),
 # so forms silently refused those records. Use .guid() for database ids.

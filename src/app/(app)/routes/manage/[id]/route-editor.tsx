@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Alert, Badge, Button, Card, Input, Label, Select, Textarea, cn } from "@/components/ui";
 import { date, dateTime } from "@/lib/format";
 import { ROUTE_FREQUENCY, WEEKDAYS } from "@/lib/status";
@@ -43,7 +44,7 @@ export function RouteEditor(p: {
       <nav className="-mx-4 overflow-x-auto border-b border-slate-200 px-4 sm:mx-0 sm:px-0">
         <ul className="flex gap-1">
           {TABS.map((t) => (
-            <li key={t.k}><button onClick={() => setTab(t.k)} className={cn("border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap", tab === t.k ? "border-accent-500 text-slate-900" : "border-transparent text-slate-500 hover:text-slate-800")}>{t.label}</button></li>
+            <li key={t.k}><button onClick={() => setTab(t.k)} className={cn("border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap", tab === t.k ? "border-primary text-slate-900" : "border-transparent text-slate-500 hover:text-slate-800")}>{t.label}</button></li>
           ))}
         </ul>
       </nav>
@@ -82,7 +83,16 @@ function DetailsForm({ route, territories, superAdmin }: { route: RouteRow | nul
             <Label hint={route ? (superAdmin ? "Super Admin can change it" : "set when created") : "leave empty to create it"}>Route code</Label>
             <Input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} disabled={!!route && !superAdmin} placeholder="GBAO-001" maxLength={20} className="font-mono" />
           </div>
-          <div><Label>Territory</Label><Select value={territory} onChange={(e) => setTerritory(e.target.value)}><option value="">—</option>{territories.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select></div>
+          <div>
+            <Label>Territory <span className="font-normal text-text-3">(optional)</span></Label>
+            <Select value={territory} onChange={(e) => setTerritory(e.target.value)} disabled={territories.length === 0}>
+              <option value="">{territories.length === 0 ? "No territories yet" : "None"}</option>
+              {territories.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </Select>
+            {territories.length === 0 && (
+              <p className="mt-1 text-xs text-text-2">A territory groups towns and routes by area. <Link href="/routes/places" className="font-medium text-primary-text hover:underline">Add one in Towns &amp; territories</Link></p>
+            )}
+          </div>
           <div className="sm:col-span-2"><Label hint="optional">Description</Label><Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={500} /></div>
           <div>
             <Label>Visit frequency</Label>
@@ -95,14 +105,14 @@ function DetailsForm({ route, territories, superAdmin }: { route: RouteRow | nul
               <div className="flex flex-wrap gap-1.5">
                 {WEEKDAYS.map((d, i) => {
                   const on = days.includes(i + 1);
-                  return <button key={d} type="button" onClick={() => setDays(on ? days.filter((x) => x !== i + 1) : [...days, i + 1].sort())} className={cn("h-9 w-12 rounded-lg border text-sm font-medium", on ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300 hover:border-slate-400")}>{d}</button>;
+                  return <button key={d} type="button" onClick={() => setDays(on ? days.filter((x) => x !== i + 1) : [...days, i + 1].sort())} className={cn("h-9 w-12 rounded-lg border text-sm font-medium", on ? "border-primary bg-primary text-on-fill" : "border-slate-300 hover:border-slate-400")}>{d}</button>;
                 })}
               </div>
               <p className="mt-1 text-xs text-slate-500">Twice a week (e.g. Mon + Thu) is fine. Each outlet can also be set to once a week, every 2 weeks or once a month.</p>
             </div>
           )}
           {frequency === "fortnightly" && <div><Label hint="the route runs in this week, then every second week">A week it runs</Label><Input type="date" value={anchor} onChange={(e) => setAnchor(e.target.value)} /></div>}
-          <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" className="size-4 accent-ink-900" checked={active} onChange={(e) => setActive(e.target.checked)} /> Active — visits are planned for this route</label>
+          <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" className="size-4 accent-primary" checked={active} onChange={(e) => setActive(e.target.checked)} /> Active — visits are planned for this route</label>
         </div>
         {msg.error && <div className="mt-3"><Alert>{msg.error}</Alert></div>}
         {msg.ok && <div className="mt-3"><Alert tone="green">{msg.ok}</Alert></div>}

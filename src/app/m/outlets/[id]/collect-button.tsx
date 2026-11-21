@@ -41,24 +41,24 @@ export function CollectButton({ retailerId, shop, outstanding, overdue }: { reta
   return (
     <>
       <button onClick={() => { setOpen(true); setSaved(null); setAmount(overdue > 0 ? String(Math.round(overdue)) : ""); }}
-        className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-emerald-600 font-bold text-white shadow-md shadow-emerald-600/30 active:scale-[0.98]">
+        className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-primary font-bold text-on-fill shadow-md active:scale-[0.98]">
         <IndianRupee className="size-5" /> Collect
       </button>
       {open && (
         <Sheet title={saved ? "Payment saved" : `Collect from ${shop}`} onClose={() => setOpen(false)}
           footer={saved ? (
-            <button onClick={() => setOpen(false)} className="h-12 w-full rounded-2xl bg-ink-900 font-semibold text-white">Done</button>
+            <button onClick={() => setOpen(false)} className="h-12 w-full rounded-2xl bg-primary font-semibold text-on-fill">Done</button>
           ) : (
             <>
               {error && <p className="mb-2 rounded-xl bg-red-50 p-2.5 text-sm text-red-800">{error}</p>}
-              <button disabled={busy} onClick={save} className="h-14 w-full rounded-2xl bg-emerald-600 text-lg font-bold text-white disabled:opacity-60">
+              <button disabled={busy} onClick={save} className="h-14 w-full rounded-2xl bg-primary text-lg font-bold text-on-fill disabled:opacity-60">
                 {busy ? "Saving…" : `Save ${Number(amount) > 0 ? inr(Number(amount), { decimals: false }) : "payment"}`}
               </button>
             </>
           )}>
           {saved ? (
             <div className="py-6 text-center">
-              <span className="mx-auto grid size-16 place-items-center rounded-full bg-emerald-500 text-white"><Check className="size-9" strokeWidth={3} /></span>
+              <span className="mx-auto grid size-16 place-items-center rounded-full bg-emerald-500 text-on-fill"><Check className="size-9" strokeWidth={3} /></span>
               <p className="mt-3 text-lg font-semibold">{inr(saved, { decimals: false })} received</p>
               <p className="text-sm text-slate-500">Applied to the oldest bills first.</p>
               <p className="mx-auto mt-3 max-w-xs rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
@@ -77,7 +77,7 @@ export function CollectButton({ retailerId, shop, outstanding, overdue }: { reta
               )}
               <div className="grid grid-cols-4 gap-2">
                 {METHODS.map((m) => (
-                  <button key={m.k} onClick={() => setMethod(m.k)} className={cn("h-11 rounded-xl text-sm font-semibold", method === m.k ? "bg-emerald-600 text-white" : "bg-white ring-1 ring-slate-300")}>{m.label}</button>
+                  <button key={m.k} onClick={() => setMethod(m.k)} className={cn("h-11 rounded-xl text-sm font-semibold", method === m.k ? "bg-primary text-on-fill" : "bg-surface ring-1 ring-slate-300")}>{m.label}</button>
                 ))}
               </div>
               {method !== "cash" && <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder={method === "cheque" ? "Cheque number" : "UPI / UTR reference"} className="h-12 w-full rounded-xl border border-slate-300 px-3 text-base" />}

@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth";
 import { ROLE_LABELS } from "@/lib/roles";
 import { Card, PageHeader } from "@/components/ui";
 import { PasswordForm } from "./password-form";
+import { DisplaySettings } from "@/components/display-settings";
 
 export const metadata: Metadata = { title: "My account" };
 
@@ -33,6 +34,11 @@ export default async function AccountPage() {
             </div>
           </dl>
           <p className="mt-4 text-xs text-slate-400">Ask the Super Administrator to change your name, role or mobile.</p>
+        </Card>
+        <Card className="p-5">
+          <h2 className="mb-1 font-semibold">Display</h2>
+          <p className="mb-5 text-[13px] text-text-2">Saved on this device.</p>
+          <DisplaySettings />
         </Card>
         <Card className="p-5">
           <h2 className="mb-4 font-semibold">Change password</h2>
