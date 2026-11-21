@@ -4773,6 +4773,7 @@ export type Database = {
       };
       current_tenant_id: { Args: Record<PropertyKey, never>; Returns: string };
       dearmor: { Args: { "": string }; Returns: string };
+      delete_retailer: { Args: { p_id: string }; Returns: string };
       dispatch_invoice: {
         Args: {
           p_invoice_id: string;

@@ -40,6 +40,14 @@
 - **Needs attention** comes first: overdue money, collections to verify, invoices waiting for dispatch and low stock.
   Each one opens the right page. When there is nothing to do it says "All clear".
 
+## Retailers
+- **Delete retailer** (Super Admin, Manager) at the bottom of a shop's Edit page, for a duplicate or a mistake. Only a
+  shop with no quotations, invoices, payments, visits or route can be deleted; otherwise it says why and points to
+  setting it Inactive. Needs migration 0038.
+
+## Routes
+- The Territory list says "No territories yet" with a link to Towns & territories, and is marked optional.
+
 ## Billing
 - **Quotations save themselves.** As soon as a quotation has a retailer and a product it is saved as a real
   quotation (one per brand), and every change updates the same one; "Saved" shows next to its number. Going back,

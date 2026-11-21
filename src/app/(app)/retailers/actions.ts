@@ -134,3 +134,14 @@ export async function runClassification() {
   revalidatePath("/retailers");
   return { ok: true, changed: data as number };
 }
+
+// Delete a retailer that has no history (a duplicate entered by mistake). The database
+// refuses one with quotations, invoices, payments, visits or a route, and says which.
+export async function deleteRetailer(id: string): Promise<{ ok?: boolean; name?: string; error?: string }> {
+  await requireRole("super_admin", "manager");
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("delete_retailer", { p_id: id });
+  if (error) return { error: dbError(error) };
+  revalidatePath("/retailers");
+  return { ok: true, name: data as string };
+}
