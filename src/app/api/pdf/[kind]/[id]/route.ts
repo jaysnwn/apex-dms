@@ -5,7 +5,10 @@ import { renderPdf, type PdfKind } from "@/pdf/render";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const KINDS: PdfKind[] = ["invoice", "credit-note", "receipt", "statement", "picking", "purchase-order", "quotation", "delivery-note"];
+const KINDS: PdfKind[] = ["invoice", "credit-note", "receipt", "statement", "town-statement", "route-statement", "territory-statement", "picking", "purchase-order", "quotation", "delivery-note"];
+
+// A territory statement of a few hundred shops takes a few seconds to draw.
+export const maxDuration = 60;
 
 // GET /api/pdf/invoice/<id>  (add ?download=1 to download instead of view)
 export async function GET(request: NextRequest, { params }: { params: Promise<{ kind: string; id: string }> }) {

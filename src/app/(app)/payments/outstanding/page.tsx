@@ -1,12 +1,12 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Banknote, CalendarClock, CalendarRange, Wallet } from "lucide-react";
+import { Banknote, CalendarClock, CalendarRange, FileText, Wallet } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { date, inr } from "@/lib/format";
 import { DUE_STATUS, RETAILER_CLASS } from "@/lib/status";
 import { Badge, Button, Card, Select, cn } from "@/components/ui";
-import { Chip } from "@/components/chip";
+import { Chip, LinkButton } from "@/components/chip";
 import { StatCard } from "@/components/stat-card";
 import { allRows } from "@/lib/all-rows";
 import { required } from "@/lib/required";
@@ -191,6 +191,7 @@ export default async function OutstandingPage({ searchParams }: { searchParams: 
             </Select>
           )}
           <Button type="submit" variant="secondary">Filter</Button>
+          {isOffice && sp.route && <LinkButton href={`/reports/statements?type=route&route=${sp.route}`}><FileText className="size-4" /> Route statement</LinkButton>}
         </form>
       </div>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
@@ -42,7 +43,10 @@ export function PlacesEditor({ territories, towns, routesOf, shops }: { territor
                   <td className="px-3 py-2">{tName.get(t.territory_id ?? "") ?? "—"}</td>
                   <td className="px-3 py-2 text-xs">{routesOf[t.id]?.join(", ") ?? <span className="text-slate-400">none</span>}</td>
                   <td className="tabular px-3 py-2 text-right">{shops[t.id] ?? 0}</td>
-                  <td className="px-4 py-2 text-right"><button className="text-sm text-accent-700 hover:underline" onClick={() => { setEditTown(t); setEditTerr(null); }}>Edit</button></td>
+                  <td className="px-4 py-2 text-right whitespace-nowrap">
+                    <Link href={`/reports/statements?type=town&town=${t.id}`} className="mr-3 text-sm text-accent-700 hover:underline">Statement</Link>
+                    <button className="text-sm text-accent-700 hover:underline" onClick={() => { setEditTown(t); setEditTerr(null); }}>Edit</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -60,6 +64,7 @@ export function PlacesEditor({ territories, towns, routesOf, shops }: { territor
               <li key={t.id} className="flex items-center gap-2 px-4 py-2">
                 <span className={cn("flex-1", !t.is_active && "text-slate-400")}><span className="font-medium">{t.name}</span> {t.code && <span className="font-mono text-xs text-slate-500">{t.code}</span>}</span>
                 <span className="text-xs text-slate-500">{towns.filter((x) => x.territory_id === t.id).length} towns</span>
+                <Link href={`/reports/statements?type=territory&territory=${t.id}`} className="text-sm text-accent-700 hover:underline">Statement</Link>
                 <button className="text-sm text-accent-700 hover:underline" onClick={() => { setEditTerr(t); setEditTown(null); }}>Edit</button>
               </li>
             ))}

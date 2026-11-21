@@ -4698,6 +4698,63 @@ export type Database = {
       };
     };
     Functions: {
+      account_statement: {
+        Args: { p_from?: string; p_id: string; p_scope: string; p_to?: string };
+        Returns: {
+          advance: number;
+          billing_address: string;
+          billing_city: string;
+          bills_due: number;
+          carried_over: number;
+          closing: number;
+          code: string;
+          collected: number;
+          credit_days: number;
+          credit_limit: number;
+          credit_notes: number;
+          entries: number;
+          gstin: string;
+          invoiced: number;
+          mobile: string;
+          opening: number;
+          overdue: number;
+          owner_name: string;
+          retailer_id: string;
+          retailer_status: string;
+          route_code: string;
+          route_id: string;
+          route_name: string;
+          shop_name: string;
+          shop_position: number;
+          territory_id: string;
+          territory_name: string;
+          town_id: string;
+          town_name: string;
+          unverified: number;
+        }[];
+      };
+      account_statement_entries: {
+        Args: { p_from?: string; p_id: string; p_scope: string; p_to?: string };
+        Returns: {
+          against: string;
+          balance: number;
+          credit: number;
+          debit: number;
+          doc_id: string;
+          doc_no: string;
+          due_date: string;
+          entry_date: string;
+          is_opening: boolean;
+          kind: string;
+          line_no: number;
+          method: string;
+          on_account: number;
+          reason: string;
+          reference_no: string;
+          retailer_id: string;
+          shop_position: number;
+        }[];
+      };
       add_member: {
         Args: { p_email: string; p_role: Database["public"]["Enums"]["app_role"] };
         Returns: string;
@@ -5464,6 +5521,20 @@ export type Database = {
       start_stock_count: {
         Args: { p_brand_id?: string; p_notes?: string; p_warehouse_id: string };
         Returns: string;
+      };
+      statement_retailers: {
+        Args: { p_id: string; p_scope: string };
+        Returns: {
+          retailer_id: string;
+          route_code: string;
+          route_id: string;
+          route_name: string;
+          shop_position: number;
+          territory_id: string;
+          territory_name: string;
+          town_id: string;
+          town_name: string;
+        }[];
       };
       storage_object_tenant: { Args: { p_name: string }; Returns: string };
       storage_user_folder: { Args: { p_name: string }; Returns: string };
