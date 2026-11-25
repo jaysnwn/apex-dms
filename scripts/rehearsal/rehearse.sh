@@ -3,7 +3,7 @@
 #
 #   SOURCE_URL   production connection string (read-only use: pg_dump + SELECTs)
 #   RESTORE_URL  an EMPTY scratch Postgres 17 database (the CI service)
-#   SKIP_DUMP=1  for testing: RESTORE_URL already holds a database at 0018
+#   SKIP_DUMP=1  for testing: RESTORE_URL already holds a copy of production
 #
 # 1. dump production (one consistent read-only snapshot) and restore it into
 #    the scratch database WITH owners and grants, plus production's ensure_rls
@@ -11,11 +11,14 @@
 # 2. check the restore is identical to production (row counts + checksums)
 # 3. record: schema fingerprint, business totals, a checksum of every row,
 #    and what every existing login can see through row-level security
-# 4. apply every upgrade migration from 0019 on, each in one transaction, as on Supabase
+# 4. apply the migrations production has not had yet (found by name in
+#    supabase_migrations.schema_migrations, exactly as scripts/deploy/migrate.sh
+#    finds them), oldest first, each in one transaction with its record line
 # 5. check: every old row unchanged, every row stamped Apex, business totals
 #    equal, every login sees the same as before
-# 6. roll back to 0018 with the rollback scripts and check schema, totals and
-#    every row are exactly as before the upgrade
+# 6. roll back what step 4 applied, newest first, with each migration's own
+#    rollback script, and check schema, totals and every row are exactly as
+#    before the upgrade
 # The repository is public, so this prints only PASS/FAIL, table names and
 # counts: never data, amounts or names.
 set -euo pipefail
@@ -69,19 +72,33 @@ Q -f "$HERE/rows_before.sql"
 Q -v phase=before -f "$HERE/visible.sql"
 log "recorded: $(Q -c 'select count(*) from rh.rows') rows in $(Q -c 'select count(*) from rh.cols') tables, $(Q -c "select count(distinct who) from rh.visible") logins"
 
-# 4. upgrade
+# 4. upgrade: only what production is missing, in file order
+APPLIED=$(Q -c "select coalesce(string_agg(name, '|'), '') from supabase_migrations.schema_migrations where name is not null")
+PENDING=(); ROLLBACKS=()
 for f in "$ROOT"/supabase/migrations/*.sql; do
-  n=$(basename "$f" | cut -d_ -f1 | tail -c 5)
-  [ "$((10#$n))" -gt 18 ] || continue   # production is at 0018
-  s=$(date +%s%N)
-  if Q -1 -f "$f" > "$WORK/m.out" 2>&1; then
-    LAST=$n
-    log "migration $n applied in $(( ($(date +%s%N) - s) / 1000000 )) ms"
-  else
-    fail "Migration $n applies"; sed -n '1,15p' "$WORK/m.out"; break
-  fi
+  base=$(basename "$f" .sql); version=${base%%_*}; name=${base#*_}
+  case "|$APPLIED|" in *"|$name|"*) continue ;; esac
+  PENDING+=("$f")
+  rb=$(ls "$ROOT"/supabase/rollback/"${version}"_to_*_down.sql 2>/dev/null | head -1 || true)
+  if [ -z "$rb" ]; then fail "Migration $name has a rollback script"; fi
+  ROLLBACKS+=("$rb")
 done
-[ "$FAILS" = 0 ] && pass "All upgrade migrations (0019-$LAST) applied, each in one transaction"
+log "pending on production: ${#PENDING[@]} migration(s)"
+APPLIED_N=0
+if [ "$FAILS" = 0 ]; then
+  for f in "${PENDING[@]}"; do
+    base=$(basename "$f" .sql); version=${base%%_*}; name=${base#*_}
+    s=$(date +%s%N)
+    if Q -1 -f "$f" -c "insert into supabase_migrations.schema_migrations (version, name) values ('$version', '$name') on conflict (version) do nothing" > "$WORK/m.out" 2>&1; then
+      APPLIED_N=$((APPLIED_N + 1))
+      log "migration $name applied in $(( ($(date +%s%N) - s) / 1000000 )) ms"
+    else
+      fail "Migration $name applies"; sed -n '1,15p' "$WORK/m.out"; break
+    fi
+  done
+fi
+[ "$FAILS" = 0 ] && [ "${#PENDING[@]}" -gt 0 ] && pass "All ${#PENDING[@]} pending migrations applied, each in one transaction ($(basename "${PENDING[0]}" .sql | cut -d_ -f2-) .. $(basename "${PENDING[-1]}" .sql | cut -d_ -f2-))"
+[ "${#PENDING[@]}" -gt 0 ] || pass "Nothing pending: production is up to date"
 
 if [ "$FAILS" = 0 ]; then
   # 5. after
@@ -118,8 +135,12 @@ if [ "$FAILS" = 0 ]; then
   else fail "Every login sees the same records"; echo "  $VIS"; fi
 
   # 6. roll back
-  for f in $(ls -r "$ROOT"/supabase/rollback/*_down.sql); do
-    if ! Q -1 -f "$f" > "$WORK/r.out" 2>&1; then fail "Rollback $(basename "$f") applies"; sed -n '1,15p' "$WORK/r.out"; break; fi
+  for ((i = ${#ROLLBACKS[@]} - 1; i >= 0; i--)); do
+    f=${ROLLBACKS[$i]}; base=$(basename "${PENDING[$i]}" .sql)
+    if ! Q -1 -f "$f" -c "delete from supabase_migrations.schema_migrations where version = '${base%%_*}'" > "$WORK/r.out" 2>&1; then
+      fail "Rollback $(basename "$f") applies"; sed -n '1,15p' "$WORK/r.out"; break
+    fi
+    log "rolled back $(basename "$f")"
   done
   if [ "$FAILS" = 0 ]; then
     Q -f "$ROOT/tests/db/schema_fingerprint.sql" > "$WORK/schema2.txt"
@@ -128,14 +149,14 @@ if [ "$FAILS" = 0 ]; then
     Q -c "truncate rh.after" -c "drop table rh.after" >/dev/null
     Q -F '|' -f "$HERE/rows_after.sql" > "$WORK/rows2.txt"
     # Functions are compared on their logic: production's copies were stored
-    # without comments (stripped by the tool that applied 0001-0018), while a
-    # rollback restores some from the migration files, comments included.
+    # without comments (stripped by the tool that applied the early migrations),
+    # while a rollback restores some from the migration files, comments included.
     FN_CODE=$(join -t'|' -a1 -a2 -e MISSING -o 0,1.3,2.3 "$WORK/fn0.txt" "$WORK/fn2.txt" | awk -F'|' '$2 != $3 {print $1}' | paste -sd, -)
     FN_NOTE=$(join -t'|' -a1 -a2 -e MISSING -o 0,1.2,1.3,2.2,2.3 "$WORK/fn0.txt" "$WORK/fn2.txt" | awk -F'|' '$2 != $4 && $3 == $5 {print $1}' | paste -sd, -)
     OTHER=$(diff "$WORK/schema0.txt" "$WORK/schema2.txt" | grep '^[<>]' | cut -d'|' -f1 | sed 's/^[<>] //' | grep -v '^functions$' | sort -u | paste -sd, - || true)
     ROWDIFF=$(awk -F'|' '$4 > 0 || $5 > 0 {print $1}' "$WORK/rows2.txt" | paste -sd, -)
     if [ -z "$FN_CODE" ] && [ -z "$OTHER" ] && [ -z "$ROWDIFF" ] && cmp -s "$WORK/biz0.json" "$WORK/biz2.json"; then
-      pass "Rollback to 0018 returns schema, function logic, totals and every row exactly to the starting state"
+      pass "Rollback of all ${#PENDING[@]} returns schema, function logic, totals and every row exactly to the starting state"
       [ -z "$FN_NOTE" ] || { log "  note: comments differ in $FN_NOTE (logic identical)"; echo "| Note: only comments differ in $FN_NOTE after rollback | info |" >> "$SUMMARY"; }
     else
       fail "Rollback returns exactly to the starting state"
