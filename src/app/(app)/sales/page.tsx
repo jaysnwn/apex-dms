@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { todayIST } from "@/lib/gst";
 import { inrCompact } from "@/lib/format";
-import { SalesBoxes, type Box } from "./sales-boxes";
+import { SectionBoxes, type Box } from "@/components/section-boxes";
 
 export const metadata: Metadata = { title: "Sales" };
 
@@ -37,5 +37,5 @@ export default async function SalesHome() {
   ];
   const shown = profile.role === "warehouse" ? boxes.slice(2) : boxes;
 
-  return <SalesBoxes boxes={shown} />;
+  return <SectionBoxes boxes={shown} />;
 }

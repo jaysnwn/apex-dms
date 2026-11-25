@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Camera, FileText, X } from "lucide-react";
 import { Alert, Button, Card, Input, Label, Select, Textarea, cn } from "@/components/ui";
@@ -174,7 +175,7 @@ export function ExpenseForm({ me, office, options, initial, onDone, compact }: {
         {office && <div className="sm:col-span-2"><Label hint="office only — the employee does not see this">Internal notes</Label><Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={1000} /></div>}
       </div>
       {msg.error && <div className="mt-3"><Alert>{msg.error}</Alert></div>}
-      {msg.ok && <div className="mt-3"><Alert tone="green">{msg.ok}</Alert></div>}
+      {msg.ok && <div className="mt-3"><Alert tone="green">{msg.ok}{!compact && !editing && <> <Link href={office ? "/expenses/all" : "/expenses/mine"} className="font-medium underline underline-offset-2">See the list</Link></>}</Alert></div>}
       <div className="mt-4 flex flex-wrap gap-2">
         {(!editing || initial?.status === "draft" || initial?.status === "returned") && (
           <Button disabled={pending} onClick={() => save(true)}>{pending ? "Saving…" : editing && initial?.status === "returned" ? "Resubmit" : "Submit expense"}</Button>
@@ -187,9 +188,9 @@ export function ExpenseForm({ me, office, options, initial, onDone, compact }: {
 
   if (compact) return body;
   return (
-    <Card className="p-5">
-      <h2 className="mb-1 font-semibold">Add an expense</h2>
-      <p className="mb-4 text-xs text-slate-500">{office ? "For yourself, a salesman or another employee." : "It goes to your manager for approval."}</p>
+    <Card className="p-5 sm:p-6">
+      <h2 className="mb-1 text-lg font-semibold tracking-[-0.01em]">Add an expense</h2>
+      <p className="mb-5 text-sm text-text-2">{office ? "For yourself, a salesman or another employee." : "It goes to your manager for approval."}</p>
       {body}
     </Card>
   );

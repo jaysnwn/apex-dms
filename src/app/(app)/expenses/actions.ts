@@ -15,7 +15,7 @@ function fail(e: { message: string; hint?: string | null } | null): { error: str
   return { error: e?.message ?? "Something went wrong", hint: e?.hint ?? undefined };
 }
 function refresh() {
-  revalidatePath("/expenses");
+  revalidatePath("/expenses", "layout");
   revalidatePath("/m/expenses");
   revalidatePath("/m");
 }

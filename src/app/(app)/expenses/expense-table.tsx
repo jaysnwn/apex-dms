@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, Check, CornerUpLeft, Paperclip, Pencil, Send, Trash2, X } from "lucide-react";
 import { Alert, Badge, Button, Card, Input, Label, Textarea, cn } from "@/components/ui";
 import { Dialog } from "@/components/dialog";
+import { EmptyState, type EmptyArt } from "@/components/empty-state";
 import { date, dateTime, inr } from "@/lib/format";
 import {
   EVENT_LABEL, EXPENSE_PAYMENT_METHOD, EXPENSE_STATUS, REIMBURSE_METHOD, REIMBURSEMENT_STATUS,
@@ -26,8 +27,10 @@ export function StatusBadges({ e }: { e: Pick<ExpenseRow, "status" | "reimbursem
   );
 }
 
-export function ExpenseTable({ rows, me, office, options, selectable, showEmployee, empty }: {
+export function ExpenseTable({ rows, me, office, options, selectable, showEmployee, empty, emptyArt = "receipt", addHref }: {
   rows: ExpenseRow[];
+  emptyArt?: EmptyArt;
+  addHref?: string;
   me: Me;
   office: boolean;
   options: FormOptions;
@@ -58,13 +61,13 @@ export function ExpenseTable({ rows, me, office, options, selectable, showEmploy
               <th className="px-4 py-2.5">Date</th>
               {showEmployee && <th className="px-3 py-2.5">Employee · entered by</th>}
               <th className="px-3 py-2.5">Category · description</th>
-              <th className="px-3 py-2.5">Route · brand</th>
+              <th className="hidden px-3 py-2.5 lg:table-cell">Route · brand</th>
               <th className="px-3 py-2.5 text-right">Amount · paid by</th>
               <th className="px-4 py-2.5">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {rows.length === 0 && <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-500">{empty}</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={7}><EmptyState art={emptyArt} title={empty} action={addHref ? { href: addHref, label: "Add expense" } : undefined} /></td></tr>}
             {rows.map((r) => {
               const canReview = expensePermissions(r, me).review;
               return (
@@ -87,12 +90,12 @@ export function ExpenseTable({ rows, me, office, options, selectable, showEmploy
                   )}
                   <td className="max-w-60 px-3 py-2.5">
                     <span className="font-medium">{r.category_name}</span>
-                    {r.receipt_path ? <Paperclip className="ml-1 inline size-3.5 text-emerald-600" aria-label="Has receipt" /> : <span className="ml-1 text-xs text-slate-400">no receipt</span>}
+                    {r.receipt_path && <Paperclip className="ml-1 inline size-3.5 text-emerald-600" aria-label="Has receipt" />}
                     {r.possible_duplicate && <span className="ml-1.5 inline-flex items-center gap-0.5 text-xs font-medium text-amber-700"><AlertTriangle className="size-3" /> possible duplicate</span>}
                     <div className="truncate text-xs text-slate-500">{r.description ?? "—"}</div>
                     {(r.status === "rejected" || r.status === "returned") && r.rejection_reason && <div className="truncate text-xs text-red-700">{r.rejection_reason}</div>}
                   </td>
-                  <td className="px-3 py-2.5 text-xs text-slate-600">
+                  <td className="hidden px-3 py-2.5 text-xs text-slate-600 lg:table-cell">
                     <div>{r.route_name ?? "—"}</div>
                     <div className="text-slate-400">{r.brand_name ?? "All brands"}</div>
                   </td>
