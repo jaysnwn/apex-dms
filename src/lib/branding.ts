@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { SUPABASE_URL } from "@/lib/supabase/env";
+import { cachedFile } from "@/lib/file-cache";
 
 // Each business's own logo (Admin → Company). The file sits in the public
 // "branding" bucket, in that business's folder: a logo is printed on every
@@ -37,7 +38,10 @@ export async function getCompanyLogoFile(): Promise<{ data: Buffer; format: "png
   const { data } = await supabase.from("company_settings").select("logo_path").limit(1).maybeSingle();
   const path = data?.logo_path as string | null | undefined;
   if (!path || !LOGO_PATH_RE.test(path)) return null;
-  const { data: blob } = await supabase.storage.from(LOGO_BUCKET).download(path);
-  if (!blob) return null;
-  return { data: Buffer.from(await blob.arrayBuffer()), format: path.endsWith(".png") ? "png" : "jpg" };
+  const file = await cachedFile(`${LOGO_BUCKET}/${path}`, async () => {
+    const { data: blob } = await supabase.storage.from(LOGO_BUCKET).download(path);
+    return blob ? Buffer.from(await blob.arrayBuffer()) : null;
+  });
+  if (!file) return null;
+  return { data: file, format: path.endsWith(".png") ? "png" : "jpg" };
 }

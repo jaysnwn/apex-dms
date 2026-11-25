@@ -51,6 +51,10 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: { bodySizeLimit: "5mb" }, // Excel imports
+    // Going back to a screen seen in the last 30 seconds (Home → Outlets → Home)
+    // shows it at once instead of asking the server again over a slow phone
+    // connection. Every save (server action) and pull-to-refresh still reloads.
+    staleTimes: { dynamic: 30, static: 180 },
   },
   async headers() {
     return [
