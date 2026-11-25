@@ -44,7 +44,7 @@ if [ "${SKIP_DUMP:-}" != 1 ]; then
   psql "$SOURCE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "begin isolation level repeatable read read only" \
     -f "$ROOT/scripts/backup/fingerprint.sql" -c "commit" > "$WORK/source.txt"
   pg_dump "$SOURCE_URL" --serializable-deferrable --format=custom \
-    --schema=public --schema=auth --schema=storage --schema=supabase_migrations \
+    --schema=public --schema=auth --schema=storage --schema=supabase_migrations --schema=mt_rollback \
     "${EXCLUDE[@]}" --file="$WORK/db.dump"
   log "production dumped ($(du -h "$WORK/db.dump" | cut -f1)), read-only"
   Q -f "$HERE/prep.sql"

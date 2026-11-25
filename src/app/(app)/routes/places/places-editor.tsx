@@ -20,15 +20,15 @@ export function PlacesEditor({ territories, towns, routesOf, shops }: { territor
   const list = towns.filter((t) => (!filter || (filter === "none" ? !t.territory_id : t.territory_id === filter)) && (!q || t.name.toLowerCase().includes(q.toLowerCase())));
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
-      <div className="space-y-4">
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="min-w-0 space-y-4">
         <div className="flex flex-wrap items-center gap-2">
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search towns" className="w-56" />
-          <Select value={filter} onChange={(e) => setFilter(e.target.value)} className="w-48" aria-label="Territory">
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search towns" className="w-full sm:w-56" />
+          <Select value={filter} onChange={(e) => setFilter(e.target.value)} className="w-full sm:w-48" aria-label="Territory">
             <option value="">All territories</option><option value="none">No territory</option>
             {territories.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </Select>
-          <Button className="ml-auto" onClick={() => { setEditTown("new"); setEditTerr(null); }}><Plus className="size-4" /> Town / village</Button>
+          <Button className="w-full sm:ml-auto sm:w-auto" onClick={() => { setEditTown("new"); setEditTerr(null); }}><Plus className="size-4" /> Town / village</Button>
         </div>
         <Card className="overflow-x-auto">
           <table className="w-full text-sm">

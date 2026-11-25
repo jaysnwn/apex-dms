@@ -15,8 +15,9 @@ import { BillingDetailsDialog, missingTaxDetails, rememberRetailer } from "../..
 import { confirmInvoiceDraft, type PickerRetailer } from "../../actions";
 import { DocSteps } from "../../doc-steps";
 
-type Method = "cash" | "upi" | "bank_transfer" | "cheque";
-const METHODS: { k: Method; label: string }[] = [{ k: "cash", label: "Cash" }, { k: "upi", label: "UPI" }, { k: "bank_transfer", label: "Bank" }, { k: "cheque", label: "Cheque" }];
+// Shops pay only in cash or by UPI.
+type Method = "cash" | "upi";
+const METHODS: { k: Method; label: string }[] = [{ k: "cash", label: "Cash" }, { k: "upi", label: "UPI" }];
 const newKey = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
 
 export type DraftLine = {
@@ -201,7 +202,7 @@ export function InvoiceDraft({
                     </button>
                   ))}
                 </div>
-                {method !== "cash" && <Input value={payRef} onChange={(e) => setPayRef(e.target.value)} placeholder={method === "cheque" ? "Cheque no." : "UTR / reference"} className="h-9 w-48" aria-label="Payment reference" />}
+                {method !== "cash" && <Input value={payRef} onChange={(e) => setPayRef(e.target.value)} placeholder="UPI reference / UTR" className="h-9 w-48" aria-label="Payment reference" />}
               </div>
             )}
             {notes && <p className="rounded-[var(--radius-control)] bg-sunken p-3 text-[13px] text-text-2"><span className="font-medium text-text">Note: </span>{notes}</p>}

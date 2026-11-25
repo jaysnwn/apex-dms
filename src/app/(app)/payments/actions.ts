@@ -57,6 +57,7 @@ export async function recordPayment(input: {
   clientUuid?: string;
 }): Promise<{ id?: string; error?: string }> {
   await requireRole("super_admin", "manager", "billing", "salesman");
+  if (input.method !== "cash" && input.method !== "upi") return { error: "Shops pay by cash or UPI only." };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("record_payment", {
     p_retailer_id: input.retailerId,

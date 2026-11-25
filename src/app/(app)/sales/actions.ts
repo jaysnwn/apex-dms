@@ -34,7 +34,7 @@ export async function saveOrder(input: {
   confirm?: boolean;
   overrideCredit?: boolean;
   overrideStock?: boolean;
-  payment?: { amount: number; method: "cash" | "upi" | "bank_transfer" | "cheque"; reference?: string } | null;
+  payment?: { amount: number; method: "cash" | "upi"; reference?: string } | null;
 }): Promise<SaveResult> {
   const { profile } = await requireRole("super_admin", "manager", "billing", "salesman");
   if (!input.retailerId) return { error: "Choose a retailer." };
@@ -116,9 +116,10 @@ export async function saveOrder(input: {
 async function payAtCounter(
   retailerId: string,
   invoiceIds: string[],
-  payment: { amount: number; method: "cash" | "upi" | "bank_transfer" | "cheque"; reference?: string },
+  payment: { amount: number; method: "cash" | "upi"; reference?: string },
   clientUuid?: string,
 ): Promise<{ paid?: number; error?: string }> {
+  if (payment.method !== "cash" && payment.method !== "upi") return { error: "Invoice created, but the payment was not saved: shops pay by cash or UPI only." };
   const supabase = await createClient();
   const { data: invs } = await supabase.from("invoices").select("id, grand_total").in("id", invoiceIds);
   const totalOf = new Map((invs ?? []).map((v) => [v.id as string, Number(v.grand_total)]));
@@ -148,7 +149,7 @@ export async function confirmInvoiceDraft(input: {
   orderId: string;
   overrideCredit?: boolean;
   overrideStock?: boolean;
-  payment?: { amount: number; method: "cash" | "upi" | "bank_transfer" | "cheque"; reference?: string } | null;
+  payment?: { amount: number; method: "cash" | "upi"; reference?: string } | null;
   clientUuid?: string;
 }): Promise<SaveResult> {
   const res = await confirmOrder(input.orderId, input.overrideCredit ?? false, input.overrideStock ?? false);

@@ -47,7 +47,7 @@ export default async function QuotationsPage({ searchParams }: { searchParams: P
           <Chip href="/sales/quotations?show=cancelled" active={sp.show === "cancelled"}>Cancelled</Chip>
         </div>
       </div>
-      <Card className="overflow-x-auto">
+      <Card className="relative overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium text-slate-500">
             <tr><th className="px-4 py-2.5">Order</th><th className="px-3 py-2.5">Retailer</th><th className="hidden px-3 py-2.5 sm:table-cell">Salesman</th><th className="px-3 py-2.5">Status</th><th className="px-4 py-2.5 text-right">Amount</th>{isOffice && <th className="px-4 py-2.5"><span className="sr-only">Next step</span></th>}</tr>

@@ -83,12 +83,12 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,360px)_1fr]">
-        <div>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+        <div className="min-w-0">
           <PhotoManager productId={id} photos={photos} canEdit={canEdit} />
         </div>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <div className="grid gap-4 sm:grid-cols-3">
             <Stat label="Available to sell" value={qty(s?.available ?? 0)} tone={s?.is_low ? "red" : "green"} hint={s?.is_low ? "Low stock" : undefined} />
             <Stat label="On hand" value={qty(s?.on_hand ?? 0)} />

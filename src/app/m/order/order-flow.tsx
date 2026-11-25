@@ -68,7 +68,11 @@ export function OrderFlow({ initialOutlets, initialCatalogue, presetRetailer, co
   const cartLines = Object.entries(cart).filter(([, l]) => l.qty > 0).map(([id, l]) => ({ item: byId.get(id)!, ...l })).filter((l) => l.item);
   const calc = cartLines.map((l) => calcLine(l.qty, l.item.price, l.item.price_mode, l.discount, l.item.gst_rate));
   const totals = orderTotals(calc, false);
-  const grand = Math.round(totals.taxable + totals.tax);
+  // One quotation per brand, each rounded to the rupee on its own: add the
+  // rounded brand totals so the cart shows exactly what the quotations will.
+  const perBrand = new Map<string, number>();
+  cartLines.forEach((l, i) => perBrand.set(l.item.brand_id, (perBrand.get(l.item.brand_id) ?? 0) + calc[i].taxable + calc[i].tax));
+  const grand = [...perBrand.values()].reduce((t, v) => t + Math.round(Math.round(v * 100) / 100), 0);
   const units = cartLines.reduce((t, l) => t + l.qty, 0);
 
   function setQty(id: string, qty: number) {

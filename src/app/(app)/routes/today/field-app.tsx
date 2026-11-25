@@ -450,11 +450,10 @@ function Progress({ label, done, goal }: { label: string; done: number; goal: nu
   );
 }
 
-function CollectDialog({ visit, onClose, onSave }: { visit: FieldVisit; onClose: () => void; onSave: (p: { amount: number; method: "cash" | "upi" | "bank_transfer" | "cheque"; reference?: string; bank?: string; notes?: string }) => Promise<void> }) {
+function CollectDialog({ visit, onClose, onSave }: { visit: FieldVisit; onClose: () => void; onSave: (p: { amount: number; method: "cash" | "upi"; reference?: string; notes?: string }) => Promise<void> }) {
   const [amount, setAmount] = useState(visit.overdue > 0 ? String(visit.overdue) : "");
-  const [method, setMethod] = useState<"cash" | "upi" | "bank_transfer" | "cheque">("cash");
+  const [method, setMethod] = useState<"cash" | "upi">("cash");
   const [reference, setReference] = useState("");
-  const [bank, setBank] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   return (
@@ -462,15 +461,14 @@ function CollectDialog({ visit, onClose, onSave }: { visit: FieldVisit; onClose:
       <p className="mb-3 text-sm text-slate-600">Outstanding {inr(visit.outstanding)} · overdue <span className="font-medium text-red-700">{inr(visit.overdue)}</span>. Applied to the oldest bills first.</p>
       <div className="space-y-3">
         <div><Label>Amount (₹)</Label><Input type="number" inputMode="decimal" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} className="tabular h-12 text-lg font-semibold" autoFocus /></div>
-        <div className="grid grid-cols-4 gap-1.5">
-          {(["cash", "upi", "bank_transfer", "cheque"] as const).map((m) => (
+        <div className="grid grid-cols-2 gap-1.5">
+          {(["cash", "upi"] as const).map((m) => (
             <button key={m} type="button" onClick={() => setMethod(m)} className={cn("rounded-lg border py-2 text-xs font-medium", method === m ? "border-emerald-600 bg-emerald-50 text-emerald-800" : "border-slate-300")}>
-              {m === "bank_transfer" ? "Bank" : m === "upi" ? "UPI" : m[0].toUpperCase() + m.slice(1)}
+              {m === "upi" ? "UPI" : "Cash"}
             </button>
           ))}
         </div>
-        {method !== "cash" && <div><Label>{method === "cheque" ? "Cheque number" : "Reference / UTR"}</Label><Input value={reference} onChange={(e) => setReference(e.target.value)} /></div>}
-        {method === "cheque" && <div><Label>Bank</Label><Input value={bank} onChange={(e) => setBank(e.target.value)} /></div>}
+        {method !== "cash" && <div><Label>UPI reference / UTR</Label><Input value={reference} onChange={(e) => setReference(e.target.value)} /></div>}
       </div>
       {error && <div className="mt-3"><Alert>{error}</Alert></div>}
       <div className="mt-5 flex justify-end gap-2">
@@ -478,9 +476,9 @@ function CollectDialog({ visit, onClose, onSave }: { visit: FieldVisit; onClose:
         <Button className="bg-primary hover:bg-primary-hover" disabled={busy} onClick={async () => {
           const amt = Number(amount);
           if (!(amt > 0)) return setError("Enter the amount.");
-          if (method !== "cash" && !reference.trim()) return setError("Enter the reference number.");
+          if (method !== "cash" && !reference.trim()) return setError("Enter the UPI reference number.");
           setBusy(true);
-          await onSave({ amount: amt, method, reference, bank });
+          await onSave({ amount: amt, method, reference });
           setBusy(false);
         }}>{busy ? "Saving…" : `Save ${amount ? inr(Number(amount), { decimals: false }) : ""}`}</Button>
       </div>
