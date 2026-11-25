@@ -92,14 +92,29 @@ function ReturnDialog({ invoiceId, lines, dispatched, canCancel, onClose }: { in
     );
   }
 
+  // A return before dispatch would leave the warehouse shipping the full bill
+  // while the shop is billed for less: returns are recorded once goods have left.
+  if (!dispatched) {
+    return (
+      <Dialog title="Return items" onClose={onClose}>
+        <div className="space-y-3 text-sm text-slate-600">
+          <Alert tone="blue">These goods have not left the warehouse yet, so nothing can come back.</Alert>
+          {canCancel ? (
+            <p>If the bill is wrong, use <span className="font-medium text-slate-900">Cancel invoice</span> and make a new one with the right items.</p>
+          ) : (
+            <p>This bill can no longer be cancelled (it has a payment or a return). Dispatch it first; then record the items that came back here, and they go back into stock.</p>
+          )}
+        </div>
+        <div className="mt-5 flex justify-end"><Button variant="secondary" onClick={onClose}>Close</Button></div>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog title="Return items" onClose={onClose} wide>
       <p className="mb-3 text-sm text-slate-600">
         Enter how many of each item came back. The amount comes off this bill. If the shop has already paid, the extra goes to their other unpaid bills and the rest becomes shop credit for the next bill.
       </p>
-      {!dispatched && canCancel && (
-        <div className="mb-3"><Alert tone="blue">These goods have not left the warehouse yet. If the whole bill is wrong, use Cancel invoice and make a new one instead.</Alert></div>
-      )}
       <div className="mb-4 overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-left text-xs text-slate-500">
@@ -129,18 +144,16 @@ function ReturnDialog({ invoiceId, lines, dispatched, canCancel, onClose }: { in
       </div>
       <Label>Reason</Label>
       <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. 2 units returned damaged" />
-      {dispatched && (
-        <label className="mt-3 flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={restock} onChange={(e) => setRestock(e.target.checked)} className="size-4" />
-          Put the items back in stock
-        </label>
-      )}
+      <label className="mt-3 flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={restock} onChange={(e) => setRestock(e.target.checked)} className="size-4" />
+        Put the items back in stock
+      </label>
       <p className="mt-3 text-xs text-slate-500">A GST credit note is made for this return, rounded to whole rupees like the invoice.</p>
       {error && <div className="mt-3"><Alert>{error}</Alert></div>}
       <div className="mt-5 flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose}>Close</Button>
         <Button disabled={pending || !reason.trim() || picked.length === 0} onClick={() => start(async () => {
-          const res = await createCreditNote(invoiceId, reason, dispatched && restock, picked);
+          const res = await createCreditNote(invoiceId, reason, restock, picked);
           if (res.error) setError(res.error); else if (res.returned) setDone(res.returned); else { onClose(); router.refresh(); }
         })}>{pending ? "Saving…" : "Record return"}</Button>
       </div>

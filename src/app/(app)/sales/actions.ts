@@ -202,6 +202,9 @@ export async function createCreditNote(
 ): Promise<SaveResult & { creditNoteId?: string; returned?: ReturnSummary }> {
   await requireRole("super_admin", "manager", "billing");
   const supabase = await createClient();
+  const { data: disp } = await supabase.from("dispatches").select("status").eq("invoice_id", invoiceId).maybeSingle();
+  if (disp?.status !== "dispatched" && disp?.status !== "delivered")
+    return { error: "These goods have not been dispatched yet. Cancel the invoice and make a new one, or dispatch it first and then record the return." };
   const { data: inv } = await supabase.from("invoices").select("retailer_id").eq("id", invoiceId).maybeSingle();
   const [before, invBefore] = inv
     ? await Promise.all([
