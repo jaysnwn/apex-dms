@@ -29,6 +29,7 @@ export type Totals = {
   carriedOver: number;
   creditNotes: number;
   collected: number;
+  refunded: number; // shop credit given back in cash / UPI
   closing: number; // net: bills due − advance
   billsDue: number;
   advance: number;
@@ -41,11 +42,11 @@ export type Totals = {
 };
 
 export function totals(rows: ShopRow[]): Totals {
-  const t = { opening: 0, invoiced: 0, carriedOver: 0, creditNotes: 0, collected: 0, closing: 0, billsDue: 0, advance: 0, overdue: 0, unverified: 0 };
+  const t = { opening: 0, invoiced: 0, carriedOver: 0, creditNotes: 0, collected: 0, refunded: 0, closing: 0, billsDue: 0, advance: 0, overdue: 0, unverified: 0 };
   let withDues = 0, zero = 0, inCredit = 0, active = 0;
   for (const s of rows) {
     t.opening += p(s.opening); t.invoiced += p(s.invoiced); t.carriedOver += p(s.carried_over); t.creditNotes += p(s.credit_notes);
-    t.collected += p(s.collected); t.closing += p(s.closing); t.billsDue += p(s.bills_due); t.advance += p(s.advance);
+    t.collected += p(s.collected); t.refunded += p(s.refunded); t.closing += p(s.closing); t.billsDue += p(s.bills_due); t.advance += p(s.advance);
     t.overdue += p(s.overdue); t.unverified += p(s.unverified);
     const c = p(s.closing);
     if (c > 0) withDues++; else if (c < 0) inCredit++; else zero++;
@@ -54,7 +55,7 @@ export function totals(rows: ShopRow[]): Totals {
   return {
     shops: rows.length, withDues, zero, inCredit, active,
     opening: r(t.opening), invoiced: r(t.invoiced), sales: r(t.invoiced - t.carriedOver), carriedOver: r(t.carriedOver),
-    creditNotes: r(t.creditNotes), collected: r(t.collected), closing: r(t.closing), billsDue: r(t.billsDue),
+    creditNotes: r(t.creditNotes), collected: r(t.collected), refunded: r(t.refunded), closing: r(t.closing), billsDue: r(t.billsDue),
     advance: r(t.advance), overdue: r(t.overdue), unverified: r(t.unverified),
   };
 }
@@ -110,7 +111,10 @@ export function particulars(e: EntryRow, fmtDate: (d: string) => string, fmtMone
     return `Sales invoice${e.is_opening ? " (brought forward)" : ""}${e.due_date ? ` · due ${fmtDate(e.due_date)}` : ""}`;
   }
   if (e.kind === "credit_note") {
-    return `Credit note${e.reason ? ` · ${e.reason}` : ""}${e.against ? ` · against ${e.against}` : ""}`;
+    return `Return (credit note)${e.reason ? ` · ${e.reason}` : ""}${e.against ? ` · against ${e.against}` : ""}`;
+  }
+  if (e.kind === "refund") {
+    return `Money given back · ${methodLabel(e.method)}${e.reason ? ` · ${e.reason}` : ""}`;
   }
   const parts = [`${methodLabel(e.method)} received`];
   if (e.against) parts.push(`against ${e.against}`);
@@ -120,7 +124,7 @@ export function particulars(e: EntryRow, fmtDate: (d: string) => string, fmtMone
 
 // Document column: the invoice / credit note number, or the receipt number with the UPI reference
 export function documentRef(e: EntryRow): { no: string; ref: string | null } {
-  return { no: e.doc_no ?? "", ref: e.kind === "payment" && e.reference_no ? `Ref ${e.reference_no}` : null };
+  return { no: e.doc_no ?? "", ref: (e.kind === "payment" || e.kind === "refund") && e.reference_no ? `Ref ${e.reference_no}` : null };
 }
 
 // ---------------------------------------------------------------------------

@@ -12,6 +12,7 @@ import { Badge, Button, Card, Input, PageHeader, cn } from "@/components/ui";
 import { Chip, LinkButton } from "@/components/chip";
 import { DocButtons } from "@/components/doc-buttons";
 import { PromiseForm } from "./promise-form";
+import { CancelRefundButton, RefundButton } from "./refund-button";
 import { allRows } from "@/lib/all-rows";
 import { required } from "@/lib/required";
 
@@ -50,6 +51,7 @@ export default async function RetailerPage({ params, searchParams }: { params: P
     { label: "Total purchases", value: Number(bal?.total_invoiced ?? 0), cls: "text-slate-900" },
     { label: "Total paid", value: Number(bal?.total_received ?? 0), cls: "text-slate-900" },
   ];
+  const shopCredit = Number(bal?.unallocated ?? 0);
   const creditUse = Number(r.credit_limit) > 0 ? Math.min(100, (Number(bal?.outstanding ?? 0) / Number(r.credit_limit)) * 100) : null;
 
   return (
@@ -83,6 +85,16 @@ export default async function RetailerPage({ params, searchParams }: { params: P
           </Card>
         ))}
       </div>
+      {shopCredit > 0 && (
+        <Card className="mb-6 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="text-xs text-slate-500">Shop credit</div>
+            <div className="tabular mt-1 text-lg font-semibold text-emerald-700">{inr(shopCredit)}</div>
+            <div className="text-xs text-slate-500">From returns or extra payments. Used on the next bill automatically.</div>
+          </div>
+          {canEdit && <RefundButton retailerId={id} shop={required(r.shop_name, "Shop name")} credit={shopCredit} />}
+        </Card>
+      )}
       {creditUse !== null && (
         <Card className="mb-6 p-4">
           <div className="mb-1.5 flex justify-between text-sm"><span className="text-slate-500">Credit limit used</span><span className="tabular font-medium">{inr(bal?.outstanding ?? 0, { decimals: false })} of {inr(r.credit_limit, { decimals: false })}</span></div>
@@ -98,7 +110,7 @@ export default async function RetailerPage({ params, searchParams }: { params: P
 
       {tab === "statement" && <Statement id={id} from={sp.from} to={sp.to} />}
       {tab === "invoices" && <Invoices id={id} />}
-      {tab === "payments" && <Payments id={id} />}
+      {tab === "payments" && <Payments id={id} canCancelRefund={role === "super_admin" || role === "manager"} />}
       {tab === "orders" && <Orders id={id} />}
       {tab === "promises" && <Promises id={id} canAdd={canSell} />}
       {tab === "visits" && <Visits id={id} />}
@@ -141,7 +153,7 @@ async function Statement({ id, from: f, to: t }: { id: string; from?: string; to
   ]);
   const opening = (before ?? []).reduce((s, e) => s + Number(e.debit) - Number(e.credit), 0);
   let running = opening;
-  const href = (k: string, docId: string) => (k === "invoice" ? `/sales/invoices/${docId}` : k === "payment" ? `/payments/${docId}` : `/api/pdf/credit-note/${docId}`);
+  const href = (k: string, docId: string) => (k === "invoice" ? `/sales/invoices/${docId}` : k === "payment" ? `/payments/${docId}` : k === "refund" ? `/retailers/${id}?tab=payments` : null);
   return (
     <Card className="overflow-hidden">
       <div className="flex flex-col gap-3 border-b border-slate-100 p-4 lg:flex-row lg:items-end lg:justify-between">
@@ -165,7 +177,7 @@ async function Statement({ id, from: f, to: t }: { id: string; from?: string; to
               return (
                 <tr key={i}>
                   <td className="px-4 py-2 whitespace-nowrap text-slate-500">{date(e.entry_date)}</td>
-                  <td className="px-3 py-2"><Link href={href(required(e.kind, "Ledger entry kind"), required(e.doc_id, "Ledger entry document"))} className="font-mono text-xs hover:underline">{e.doc_no}</Link></td>
+                  <td className="px-3 py-2"><DocLink href={href(required(e.kind, "Ledger entry kind"), required(e.doc_id, "Ledger entry document"))} pdf={`/api/pdf/credit-note/${e.doc_id}`}>{e.doc_no}</DocLink></td>
                   <td className="px-3 py-2 text-slate-600">{e.narration}</td>
                   <td className="tabular px-3 py-2 text-right">{Number(e.debit) ? inr(e.debit) : ""}</td>
                   <td className="tabular px-3 py-2 text-right text-emerald-700">{Number(e.credit) ? inr(e.credit) : ""}</td>
@@ -213,10 +225,22 @@ async function Invoices({ id }: { id: string }) {
   );
 }
 
-async function Payments({ id }: { id: string }) {
+// A page link for invoices, payments and refunds; the return's PDF opens as a
+// plain link (a Link would prefetch the PDF on every statement view).
+function DocLink({ href, pdf, children }: { href: string | null; pdf: string; children: React.ReactNode }) {
+  return href
+    ? <Link href={href} className="font-mono text-xs hover:underline">{children}</Link>
+    : <a href={pdf} target="_blank" rel="noopener" className="font-mono text-xs hover:underline">{children}</a>;
+}
+
+async function Payments({ id, canCancelRefund }: { id: string; canCancelRefund: boolean }) {
   const supabase = await createClient();
-  const { data } = await supabase.from("payments").select("id, receipt_no, payment_date, amount, method, reference_no, status").eq("retailer_id", id).order("payment_date", { ascending: false }).limit(200);
+  const [{ data }, { data: refunds }] = await Promise.all([
+    supabase.from("payments").select("id, receipt_no, payment_date, amount, method, reference_no, status").eq("retailer_id", id).order("payment_date", { ascending: false }).limit(200),
+    supabase.from("retailer_refunds").select("id, refund_no, refund_date, amount, method, reference_no, notes, status, cancel_reason").eq("retailer_id", id).order("refund_date", { ascending: false }).limit(100),
+  ]);
   return (
+    <div className="space-y-6">
     <Card className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="bg-slate-50 text-left text-xs font-medium text-slate-500"><tr><th className="px-4 py-2">Receipt</th><th className="px-3 py-2">Mode</th><th className="px-3 py-2">Status</th><th className="px-4 py-2 text-right">Amount</th></tr></thead>
@@ -233,6 +257,29 @@ async function Payments({ id }: { id: string }) {
         </tbody>
       </table>
     </Card>
+    {(refunds ?? []).length > 0 && (
+      <Card className="overflow-x-auto">
+        <div className="border-b border-slate-100 px-4 py-3 font-semibold">Money given back</div>
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 text-left text-xs font-medium text-slate-500"><tr><th className="px-4 py-2">Refund</th><th className="px-3 py-2">Mode</th><th className="px-3 py-2">Status</th><th className="px-4 py-2 text-right">Amount</th></tr></thead>
+          <tbody className="divide-y divide-slate-100">
+            {(refunds ?? []).map((f) => (
+              <tr key={f.id}>
+                <td className="px-4 py-2"><span className="font-mono text-xs font-medium">{f.refund_no}</span><div className="text-xs text-slate-500">{date(f.refund_date)}{f.notes ? ` · ${f.notes}` : ""}</div></td>
+                <td className="px-3 py-2">{PAYMENT_METHOD[f.method]}{f.reference_no && <div className="text-xs text-slate-500">{f.reference_no}</div>}</td>
+                <td className="px-3 py-2">
+                  {f.status === "issued" ? <Badge tone="green">Given back</Badge> : <Badge tone="slate">Cancelled</Badge>}
+                  {f.status === "cancelled" && f.cancel_reason && <div className="text-xs text-slate-500">{f.cancel_reason}</div>}
+                  {f.status === "issued" && canCancelRefund && <div><CancelRefundButton id={f.id} retailerId={id} number={f.refund_no} /></div>}
+                </td>
+                <td className="tabular px-4 py-2 text-right font-medium">{inr(f.amount)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+    )}
+    </div>
   );
 }
 

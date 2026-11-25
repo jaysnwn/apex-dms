@@ -198,9 +198,16 @@ export async function createCreditNote(
   reason: string,
   restock: boolean,
   lines: { invoice_line_id: string; qty: number }[]
-): Promise<SaveResult & { creditNoteId?: string }> {
+): Promise<SaveResult & { creditNoteId?: string; returned?: ReturnSummary }> {
   await requireRole("super_admin", "manager", "billing");
   const supabase = await createClient();
+  const { data: inv } = await supabase.from("invoices").select("retailer_id").eq("id", invoiceId).maybeSingle();
+  const [before, invBefore] = inv
+    ? await Promise.all([
+        supabase.from("retailer_balances").select("outstanding, unallocated").eq("retailer_id", inv.retailer_id).maybeSingle(),
+        supabase.from("invoice_balances").select("balance").eq("invoice_id", invoiceId).maybeSingle(),
+      ])
+    : [null, null];
   const { data, error } = await supabase.rpc("create_credit_note", {
     p_invoice_id: invoiceId,
     p_reason: reason,
@@ -208,9 +215,40 @@ export async function createCreditNote(
     p_lines: lines.filter((l) => l.qty > 0),
   });
   if (error) return { error: error.message };
+  const [{ data: cn }, after] = await Promise.all([
+    supabase.from("credit_notes").select("credit_note_no, grand_total, restock").eq("id", data as string).maybeSingle(),
+    inv ? supabase.from("retailer_balances").select("outstanding, unallocated").eq("retailer_id", inv.retailer_id).maybeSingle() : Promise.resolve({ data: null }),
+  ]);
   revalidatePath(`/sales/invoices/${invoiceId}`);
-  return { ok: true, creditNoteId: data as string };
+  if (inv) revalidatePath(`/retailers/${inv.retailer_id}`);
+  revalidatePath("/payments/outstanding");
+  const credit = Number(after?.data?.unallocated ?? 0);
+  return {
+    ok: true,
+    creditNoteId: data as string,
+    returned: {
+      number: cn?.credit_note_no ?? "",
+      amount: Number(cn?.grand_total ?? 0),
+      restocked: !!cn?.restock,
+      outstanding: Number(after?.data?.outstanding ?? 0),
+      outstandingBefore: Number(before?.data?.outstanding ?? 0),
+      credit,
+      creditBefore: Number(before?.data?.unallocated ?? 0),
+      invoiceUnpaidBefore: Math.max(0, Number(invBefore?.data?.balance ?? 0)),
+    },
+  };
 }
+
+export type ReturnSummary = {
+  number: string;
+  amount: number;
+  restocked: boolean;
+  outstanding: number;
+  outstandingBefore: number;
+  credit: number;
+  creditBefore: number;
+  invoiceUnpaidBefore: number;
+};
 
 // ---------- Lookups for the order builder ----------
 
@@ -331,6 +369,8 @@ export type PickerRetailer = {
   status: string;
   outstanding: number;
   overdue: number;
+  credit?: number; // shop credit, spent on the next invoice
+
   gstin?: string | null;
   billing_address?: string | null;
   billing_pincode?: string | null;
@@ -350,7 +390,7 @@ export async function searchRetailers(q: string): Promise<PickerRetailer[]> {
   const rows = data ?? [];
   const ids = rows.map((r) => r.id);
   const { data: bal } = ids.length
-    ? await supabase.from("retailer_balances").select("retailer_id, outstanding, overdue").in("retailer_id", ids)
+    ? await supabase.from("retailer_balances").select("retailer_id, outstanding, overdue, unallocated").in("retailer_id", ids)
     : { data: [] };
   const bMap = new Map((bal ?? []).map((b) => [b.retailer_id as string, b]));
   return rows.map((r) => ({
@@ -358,6 +398,7 @@ export async function searchRetailers(q: string): Promise<PickerRetailer[]> {
     credit_days: Number(r.credit_days),
     credit_limit: Number(r.credit_limit),
     outstanding: Number(bMap.get(r.id)?.outstanding ?? 0),
+    credit: Number(bMap.get(r.id)?.unallocated ?? 0),
     overdue: Number(bMap.get(r.id)?.overdue ?? 0),
   })) as PickerRetailer[];
 }
@@ -450,9 +491,9 @@ export async function updateRetailerBilling(id: string, input: z.input<typeof bi
     billing_pincode: v.billing_pincode, billing_state_code: v.billing_state_code, ...(v.owner_name ? { owner_name: v.owner_name } : {}),
   }).eq("id", id).select(RETAILER_COLS).single();
   if (error) return { error: dbError(error) };
-  const { data: b } = await supabase.from("retailer_balances").select("outstanding, overdue").eq("retailer_id", id).maybeSingle();
+  const { data: b } = await supabase.from("retailer_balances").select("outstanding, overdue, unallocated").eq("retailer_id", id).maybeSingle();
   revalidatePath("/retailers");
-  return { retailer: { ...data, credit_days: Number(data.credit_days), credit_limit: Number(data.credit_limit), outstanding: Number(b?.outstanding ?? 0), overdue: Number(b?.overdue ?? 0) } as PickerRetailer };
+  return { retailer: { ...data, credit_days: Number(data.credit_days), credit_limit: Number(data.credit_limit), outstanding: Number(b?.outstanding ?? 0), overdue: Number(b?.overdue ?? 0), credit: Number(b?.unallocated ?? 0) } as PickerRetailer };
 }
 
 // Change the payment terms of an issued invoice (Manager / Super Admin).

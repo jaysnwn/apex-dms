@@ -48,7 +48,7 @@ export function InvoiceDraft({
   const due = addDays(today, creditDays);
   const paidNum = Math.min(Math.max(0, Number(paid) || 0), grand);
   const short = lines.filter((l) => l.qty > l.available).map((l) => ({ id: l.id, name: l.name, need: l.qty, have: l.available }));
-  const overLimit = retailer.credit_limit > 0 && retailer.outstanding + grand - paidNum > retailer.credit_limit;
+  const overLimit = retailer.credit_limit > 0 && retailer.outstanding - (retailer.credit ?? 0) + grand - paidNum > retailer.credit_limit;
   const missing = missingTaxDetails(retailer, grand);
   const showCreditOverride = isManager && (overLimit || error?.hint === "CREDIT_LIMIT");
   const blocked = missing.length > 0 || (short.length > 0 && !overrideStock) || (showCreditOverride && !overrideCredit);

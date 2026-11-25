@@ -127,7 +127,7 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
     if (!p) return null;
     const [{ data: r }, { data: allocs }, { data: who }] = await Promise.all([
       supabase.from("retailers").select("shop_name, code, mobile, billing_city").eq("id", p.retailer_id).single(),
-      supabase.from("payment_allocations").select("amount, invoices(invoice_no, invoice_date)").eq("payment_id", id),
+      supabase.from("payment_allocations").select("amount, invoices(invoice_no, invoice_date)").eq("payment_id", id).not("invoice_id", "is", null),
       p.collected_by ? supabase.from("tenant_people").select("full_name").eq("id", p.collected_by).maybeSingle() : Promise.resolve({ data: null }),
     ]);
     const allocations = (allocs ?? []).map((a) => {

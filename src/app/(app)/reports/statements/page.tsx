@@ -163,8 +163,8 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
           </div>
           <div className="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatCard label="Opening balance" value={balText(all.opening)} icon={Scale} hint={from ? `before ${date(from)}` : "from the first transaction"} />
-            <StatCard label="Invoices" value={inr(all.invoiced, { decimals: false })} icon={Receipt} hint={all.creditNotes > 0 ? `credit notes ${inr(all.creditNotes, { decimals: false })}` : "in this period"} />
-            <StatCard label="Payments received" value={inr(all.collected, { decimals: false })} icon={Banknote} hint="cash and UPI, in this period" />
+            <StatCard label="Invoices" value={inr(all.invoiced, { decimals: false })} icon={Receipt} hint={all.creditNotes > 0 ? `returns ${inr(all.creditNotes, { decimals: false })}` : "in this period"} />
+            <StatCard label="Payments received" value={inr(all.collected, { decimals: false })} icon={Banknote} hint={all.refunded > 0 ? `cash and UPI · ${inr(all.refunded, { decimals: false })} given back` : "cash and UPI, in this period"} />
             <StatCard label="Closing outstanding" value={balText(all.closing)} icon={Wallet} alert={all.overdue > 0}
               hint={[all.overdue > 0 ? `${inr(all.overdue, { decimals: false })} overdue` : "nothing overdue", all.advance > 0 ? `advance ${inr(all.advance, { decimals: false })}` : null].filter(Boolean).join(" · ")} />
           </div>

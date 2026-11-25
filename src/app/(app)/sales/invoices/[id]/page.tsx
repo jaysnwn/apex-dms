@@ -104,7 +104,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
       )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <Card className="grid gap-4 p-5 sm:grid-cols-2">
             <div>
               <div className="text-xs font-semibold text-slate-500 uppercase">Bill to</div>
@@ -157,7 +157,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
               {inv.is_igst ? <R k="IGST" v={inr(inv.igst_total)} /> : (<><R k="CGST" v={inr(inv.cgst_total)} /><R k="SGST" v={inr(inv.sgst_total)} /></>)}
               {Number(inv.round_off) !== 0 && <R k="Round off" v={inr(inv.round_off)} />}
               <R k="Invoice total" v={inr(inv.grand_total)} strong />
-              {Number(bal?.credited ?? 0) > 0 && <R k="Credit notes" v={`− ${inr(bal?.credited)}`} />}
+              {Number(bal?.credited ?? 0) > 0 && <R k="Returns" v={`− ${inr(bal?.credited)}`} />}
               {Number(bal?.paid ?? 0) > 0 && <R k="Paid" v={`− ${inr(bal?.paid)}`} />}
               {Number(bal?.cheque_pending ?? 0) > 0 && <R k="Cheques not cleared" v={inr(bal?.cheque_pending)} />}
             </dl>
@@ -186,7 +186,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
 
           {(cns ?? []).length > 0 && (
             <Card className="p-5">
-              <h3 className="mb-2 font-semibold">Credit notes</h3>
+              <h3 className="mb-2 font-semibold">Returns</h3>
               <ul className="space-y-3 text-sm">
                 {(cns ?? []).map((c) => (
                   <li key={c.id}>

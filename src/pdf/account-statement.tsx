@@ -123,7 +123,8 @@ function ShopLedger({ shop, entries, period, bare, first = true, last = true, of
           <Kv k="Opening balance" v={bal(Number(shop.opening))} />
           <Kv k="Total invoice amount" v={money(shop.invoiced)} />
           <Kv k="Total payments received" v={money(shop.collected)} tone={GREEN} />
-          <Kv k="Credit notes / adjustments" v={money(shop.credit_notes)} />
+          <Kv k="Returns (credit notes)" v={money(shop.credit_notes)} />
+          {Number(shop.refunded) > 0 && <Kv k="Money given back" v={money(shop.refunded)} />}
         </View>
         <View style={[s.box, { flex: 1, borderColor: INK, borderWidth: 1.2 }]}>
           <Text style={[s.small, s.muted]}>{closing < 0 ? "CLOSING BALANCE (IN CREDIT)" : "CLOSING OUTSTANDING BALANCE"}</Text>

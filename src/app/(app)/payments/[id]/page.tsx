@@ -21,10 +21,11 @@ export default async function PaymentPage({ params, searchParams }: { params: Pr
   if (!p) notFound();
   const [{ data: r }, { data: allocs }, { data: who }] = await Promise.all([
     supabase.from("retailers").select("id, shop_name, code, mobile").eq("id", p.retailer_id).single(),
-    supabase.from("payment_allocations").select("invoice_id, amount, is_auto, invoices(invoice_no, invoice_date, due_date)").eq("payment_id", id),
+    supabase.from("payment_allocations").select("invoice_id, refund_id, amount, is_auto, invoices(invoice_no, invoice_date, due_date), retailer_refunds(refund_no, refund_date)").eq("payment_id", id),
     p.collected_by ? supabase.from("tenant_people").select("full_name").eq("id", p.collected_by).maybeSingle() : Promise.resolve({ data: null }),
   ]);
-  const allocated = (allocs ?? []).reduce((t, a) => t + Number(a.amount), 0);
+  const allocated = (allocs ?? []).filter((a) => a.invoice_id).reduce((t, a) => t + Number(a.amount), 0);
+  const givenBack = (allocs ?? []).filter((a) => a.refund_id).reduce((t, a) => t + Number(a.amount), 0);
   const st = PAYMENT_STATUS[p.status];
   const isOffice = ["super_admin", "manager", "billing"].includes(profile.role);
 
@@ -65,6 +66,16 @@ export default async function PaymentPage({ params, searchParams }: { params: Pr
             <tbody className="divide-y divide-slate-100">
               {(allocs ?? []).length === 0 && <tr><td colSpan={3} className="px-5 py-6 text-center text-slate-500">{p.status === "bounced" || p.status === "cancelled" ? "Released — invoices are due again." : "Not applied yet (advance)."}</td></tr>}
               {(allocs ?? []).map((a) => {
+                if (a.refund_id) {
+                  const rf = a.retailer_refunds as unknown as { refund_no: string; refund_date: string } | null;
+                  return (
+                    <tr key={a.refund_id}>
+                      <td className="px-5 py-2.5"><span className="text-slate-600">Given back to the shop</span> <span className="font-mono text-xs">{rf?.refund_no}</span></td>
+                      <td className="px-3 py-2.5 text-slate-500">{date(rf?.refund_date)}</td>
+                      <td className="tabular px-5 py-2.5 text-right font-medium">{inr(a.amount)}</td>
+                    </tr>
+                  );
+                }
                 const inv = a.invoices as unknown as { invoice_no: string; invoice_date: string; due_date: string };
                 return (
                   <tr key={a.invoice_id}>
@@ -81,7 +92,7 @@ export default async function PaymentPage({ params, searchParams }: { params: Pr
           <Card className={cn("p-5", p.status === "received" ? "bg-emerald-50" : p.status === "cheque_pending" ? "bg-amber-50" : "bg-red-50")}>
             <div className="text-sm text-slate-600">Amount</div>
             <div className="tabular text-3xl font-semibold">{inr(p.amount)}</div>
-            <div className="mt-2 text-sm text-slate-600">Applied {inr(allocated)}{Number(p.amount) - allocated > 0.009 && p.status !== "bounced" && p.status !== "cancelled" ? ` · advance ${inr(Number(p.amount) - allocated)}` : ""}</div>
+            <div className="mt-2 text-sm text-slate-600">Applied {inr(allocated)}{givenBack > 0 ? ` · given back ${inr(givenBack)}` : ""}{Number(p.amount) - allocated - givenBack > 0.009 && p.status !== "bounced" && p.status !== "cancelled" ? ` · advance ${inr(Number(p.amount) - allocated - givenBack)}` : ""}</div>
             {p.bank_name && <div className="text-sm text-slate-600">Bank: {p.bank_name}{p.cheque_date ? ` · dated ${date(p.cheque_date)}` : ""}</div>}
           </Card>
           {p.notes && <Card className="p-4 text-sm text-slate-600">{p.notes}</Card>}

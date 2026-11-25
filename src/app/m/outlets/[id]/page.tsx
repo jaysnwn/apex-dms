@@ -22,7 +22,7 @@ export default async function OutletPage({ params }: { params: Promise<{ id: str
     .maybeSingle();
   if (!r) notFound();
   const [{ data: bal }, { data: bills }, { data: orders }, { data: pays }, { data: promise }] = await Promise.all([
-    supabase.from("retailer_balances").select("outstanding, overdue").eq("retailer_id", id).maybeSingle(),
+    supabase.from("retailer_balances").select("outstanding, overdue, unallocated").eq("retailer_id", id).maybeSingle(),
     supabase.from("invoice_balances").select("invoice_id, invoice_no, invoice_date, due_date, balance, days_past_due").eq("retailer_id", id).gt("balance", 0).order("due_date"),
     supabase.from("orders").select("id, order_no, status, grand_total, created_at").eq("retailer_id", id).order("created_at", { ascending: false }).limit(5),
     supabase.from("payments").select("receipt_no, payment_date, amount, method, status, verified_at, notes").eq("retailer_id", id).order("payment_date", { ascending: false }).limit(3),
@@ -30,6 +30,7 @@ export default async function OutletPage({ params }: { params: Promise<{ id: str
   ]);
   const outstanding = Number(bal?.outstanding ?? 0);
   const overdue = Number(bal?.overdue ?? 0);
+  const shopCredit = Number(bal?.unallocated ?? 0);
   const cls = r.classification ? RETAILER_CLASS[r.classification] : null;
   const map = r.latitude != null && r.longitude != null
     ? `https://www.google.com/maps/dir/?api=1&destination=${r.latitude},${r.longitude}`
@@ -80,6 +81,8 @@ export default async function OutletPage({ params }: { params: Promise<{ id: str
           <div className="text-xs text-slate-500">{overdue > 0 ? "collect today" : "nothing overdue"}</div>
         </div>
       </section>
+
+      {shopCredit > 0 && <p className="rounded-2xl bg-emerald-50 p-3 text-sm text-emerald-900">Shop credit {inr(shopCredit, { decimals: false })} from a return or extra payment. The office uses it on the next bill.</p>}
 
       {promise && <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">Promised to pay {inr(promise.amount, { decimals: false })} on {date(promise.promised_date)}</p>}
 

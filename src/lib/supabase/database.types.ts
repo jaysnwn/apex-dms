@@ -300,6 +300,7 @@ export type Database = {
           reason: string;
           restock: boolean;
           retailer_id: string;
+          round_off: number;
           sgst_total: number;
           status: Database["public"]["Enums"]["credit_note_status"];
           taxable_total: number;
@@ -321,6 +322,7 @@ export type Database = {
           reason: string;
           restock?: boolean;
           retailer_id: string;
+          round_off?: number;
           sgst_total?: number;
           status?: Database["public"]["Enums"]["credit_note_status"];
           taxable_total: number;
@@ -341,6 +343,7 @@ export type Database = {
           reason?: string;
           restock?: boolean;
           retailer_id?: string;
+          round_off?: number;
           sgst_total?: number;
           status?: Database["public"]["Enums"]["credit_note_status"];
           taxable_total?: number;
@@ -1572,9 +1575,10 @@ export type Database = {
           amount: number;
           created_at: string;
           id: string;
-          invoice_id: string;
+          invoice_id: string | null;
           is_auto: boolean;
           payment_id: string;
+          refund_id: string | null;
           tenant_id: string;
         };
         ComputedFields: never;
@@ -1583,9 +1587,10 @@ export type Database = {
           amount: number;
           created_at?: string;
           id?: string;
-          invoice_id: string;
+          invoice_id?: string | null;
           is_auto?: boolean;
           payment_id: string;
+          refund_id?: string | null;
           tenant_id: string;
         };
         Update: {
@@ -1593,9 +1598,10 @@ export type Database = {
           amount?: number;
           created_at?: string;
           id?: string;
-          invoice_id?: string;
+          invoice_id?: string | null;
           is_auto?: boolean;
           payment_id?: string;
+          refund_id?: string | null;
           tenant_id?: string;
         };
         Relationships: [
@@ -1618,6 +1624,13 @@ export type Database = {
             columns: ["tenant_id", "payment_id"];
             isOneToOne: false;
             referencedRelation: "payments";
+            referencedColumns: ["tenant_id", "id"];
+          },
+          {
+            foreignKeyName: "payment_allocations_refund_id_fkey";
+            columns: ["tenant_id", "refund_id"];
+            isOneToOne: false;
+            referencedRelation: "retailer_refunds";
             referencedColumns: ["tenant_id", "id"];
           },
           {
@@ -2661,6 +2674,76 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "tenants";
             referencedColumns: ["id"];
+          },
+        ];
+      };
+      retailer_refunds: {
+        Row: {
+          amount: number;
+          cancel_reason: string | null;
+          cancelled_at: string | null;
+          cancelled_by: string | null;
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          method: Database["public"]["Enums"]["payment_method"];
+          notes: string | null;
+          reference_no: string | null;
+          refund_date: string;
+          refund_no: string;
+          retailer_id: string;
+          status: string;
+          tenant_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          amount: number;
+          cancel_reason?: string | null;
+          cancelled_at?: string | null;
+          cancelled_by?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          method: Database["public"]["Enums"]["payment_method"];
+          notes?: string | null;
+          reference_no?: string | null;
+          refund_date: string;
+          refund_no: string;
+          retailer_id: string;
+          status?: string;
+          tenant_id: string;
+        };
+        Update: {
+          amount?: number;
+          cancel_reason?: string | null;
+          cancelled_at?: string | null;
+          cancelled_by?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          method?: Database["public"]["Enums"]["payment_method"];
+          notes?: string | null;
+          reference_no?: string | null;
+          refund_date?: string;
+          refund_no?: string;
+          retailer_id?: string;
+          status?: string;
+          tenant_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "retailer_refunds_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "retailer_refunds_tenant_id_retailer_id_fkey";
+            columns: ["tenant_id", "retailer_id"];
+            isOneToOne: false;
+            referencedRelation: "retailers";
+            referencedColumns: ["tenant_id", "id"];
           },
         ];
       };
@@ -4719,6 +4802,7 @@ export type Database = {
           opening: number;
           overdue: number;
           owner_name: string;
+          refunded: number;
           retailer_id: string;
           retailer_status: string;
           route_code: string;
@@ -4798,6 +4882,7 @@ export type Database = {
       can_see_retailer: { Args: { p_retailer_id: string }; Returns: boolean };
       cancel_invoice: { Args: { p_invoice_id: string; p_reason: string }; Returns: undefined };
       cancel_purchase: { Args: { p_purchase_id: string; p_reason: string }; Returns: undefined };
+      cancel_refund: { Args: { p_reason: string; p_refund_id: string }; Returns: undefined };
       cancel_reimbursement: { Args: { p_id: string; p_reason: string }; Returns: undefined };
       cancel_supplier_payment: {
         Args: { p_payment_id: string; p_reason: string };
@@ -5039,6 +5124,7 @@ export type Database = {
         Returns: boolean;
       };
       password_reset_allowed: { Args: { p_user: string }; Returns: boolean };
+      payment_refund_guard: { Args: { p_payment_id: string }; Returns: undefined };
       pgp_armor_headers: { Args: { "": string }; Returns: Record<string, unknown>[] };
       plan_route: {
         Args: { p_date: string; p_notes?: string; p_route_id: string; p_salesman_id: string };
@@ -5110,6 +5196,17 @@ export type Database = {
         };
         Returns: string;
       };
+      record_refund: {
+        Args: {
+          p_amount: number;
+          p_method: Database["public"]["Enums"]["payment_method"];
+          p_notes?: string;
+          p_reference?: string;
+          p_refund_date?: string;
+          p_retailer_id: string;
+        };
+        Returns: string;
+      };
       record_supplier_payment: {
         Args: {
           p_allocations?: Json;
@@ -5135,6 +5232,7 @@ export type Database = {
         Returns: string;
       };
       reject_payment: { Args: { p_id: string; p_reason: string }; Returns: undefined };
+      release_excess_credit: { Args: { p_invoice_id: string }; Returns: number };
       remove_member: { Args: { p_user: string }; Returns: string };
       reopen_incentive: { Args: { p_payout_id: string }; Returns: undefined };
       reorder_suggestions: {
@@ -5518,6 +5616,7 @@ export type Database = {
         Returns: undefined;
       };
       set_user_brands: { Args: { p_brands: string[]; p_user: string }; Returns: undefined };
+      shop_credit: { Args: { p_on?: string; p_retailer_id: string }; Returns: number };
       start_stock_count: {
         Args: { p_brand_id?: string; p_notes?: string; p_warehouse_id: string };
         Returns: string;

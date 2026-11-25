@@ -32,7 +32,7 @@ export async function loadOrder(id: string) {
       .select("id, code, shop_name, owner_name, mobile, gstin, billing_address, billing_city, billing_pincode, billing_state_code, credit_days, credit_limit, status")
       .eq("id", order.retailer_id)
       .maybeSingle(),
-    supabase.from("retailer_balances").select("outstanding, overdue").eq("retailer_id", order.retailer_id).maybeSingle(),
+    supabase.from("retailer_balances").select("outstanding, overdue, unallocated").eq("retailer_id", order.retailer_id).maybeSingle(),
     supabase.from("invoices").select("id, invoice_no").eq("order_id", id).maybeSingle(),
   ]);
   const productIds = (lines ?? []).map((l) => l.product_id as string);
@@ -46,7 +46,7 @@ export async function loadOrder(id: string) {
   const sMap = new Map((stock ?? []).map((s) => [s.product_id as string, Number(s.available)]));
 
   const retailer: PickerRetailer | null = r
-    ? ({ ...r, credit_days: Number(r.credit_days), credit_limit: Number(r.credit_limit), outstanding: Number(bal?.outstanding ?? 0), overdue: Number(bal?.overdue ?? 0) } as PickerRetailer)
+    ? ({ ...r, credit_days: Number(r.credit_days), credit_limit: Number(r.credit_limit), outstanding: Number(bal?.outstanding ?? 0), overdue: Number(bal?.overdue ?? 0), credit: Number(bal?.unallocated ?? 0) } as PickerRetailer)
     : null;
 
   const builderLines: BuilderLine[] = (lines ?? []).map((l) => {

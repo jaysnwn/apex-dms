@@ -154,7 +154,7 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
       return have > 0 ? [{ ...l, qty: have }] : [];
     }));
   const discTooHigh = lines.some((l) => effDisc(l) > maxDisc + 0.001);
-  const overLimit = !!retailer && retailer.credit_limit > 0 && retailer.outstanding + grand > retailer.credit_limit;
+  const overLimit = !!retailer && retailer.credit_limit > 0 && retailer.outstanding - (retailer.credit ?? 0) + grand > retailer.credit_limit;
   const missing = retailer ? missingTaxDetails(retailer, grand) : [];
   const inCart = useMemo(() => new Map(lines.map((l) => [l.product.id, l.qty])), [lines]);
 
