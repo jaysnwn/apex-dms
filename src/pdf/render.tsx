@@ -63,11 +63,14 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
   if (kind === "invoice") {
     const { data: inv } = await supabase.from("invoices").select("*").eq("id", id).maybeSingle();
     if (!inv) return null;
-    const [{ data: lines }, { data: bal }] = await Promise.all([
+    const [{ data: lines }, { data: bal }, { data: ord }] = await Promise.all([
       supabase.from("invoice_lines").select(INV_LINE_COLS).eq("invoice_id", id).order("line_no"),
       supabase.from("invoice_balances").select("balance").eq("invoice_id", id).maybeSingle(),
+      inv.order_id ? supabase.from("orders").select("notes").eq("id", inv.order_id).maybeSingle() : Promise.resolve({ data: null }),
     ]);
-    const data = { company: co, invoice: inv, lines: lines ?? [], balance: bal?.balance, brand: await brandInfo(supabase, inv.brand_id) } as InvoicePdfData;
+    // Invoices carried over from Odoo keep their old number in the order note ("Odoo ref: INV/26-27/0045 (S00039)").
+    const previousRef = /^Odoo ref: (\S+)/.exec(ord?.notes ?? "")?.[1] ?? null;
+    const data = { company: co, invoice: inv, lines: lines ?? [], balance: bal?.balance, brand: await brandInfo(supabase, inv.brand_id), previousRef } as InvoicePdfData;
     const buffer = await renderToBuffer(<InvoicePdf data={data} />);
     const snap = inv.retailer_snapshot as { shop_name: string; mobile: string };
     return {

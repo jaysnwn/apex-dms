@@ -24,6 +24,8 @@ export type InvoicePdfData = {
     status: string;
     cancel_reason: string | null;
   };
+  /** Number the same invoice had in the previous system (Odoo), shown beside the DMS number. */
+  previousRef?: string | null;
   lines: {
     line_no: number;
     product_name: string;
@@ -148,6 +150,7 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
             ) : (
               <>
                 <Meta k="Invoice no." v={inv.invoice_no} bold />
+                {data.previousRef && <Meta k="Odoo ref" v={data.previousRef} />}
                 <Meta k="Invoice date" v={d(inv.invoice_date)} />
                 <Meta k="Payment terms" v={Number(inv.credit_days) === 0 ? "Immediate" : `${inv.credit_days} days credit`} />
                 <Meta k="Due date" v={d(inv.due_date)} bold />
