@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
 import type { Metadata } from "next";
 import { Plus, Route as RouteIcon, Upload } from "lucide-react";
 import { requireRole } from "@/lib/auth";
@@ -89,8 +90,10 @@ export default async function RetailersPage({
       </form>
 
       {list.length === 0 ? (
-        <Card className="p-10 text-center text-sm text-slate-500">
-          No retailers found. {canCreate && <Link href="/retailers/new" className="font-medium text-ink-900 underline">Add one</Link>}
+        <Card>
+          <EmptyState art="store" title="No retailers found" action={canCreate ? { href: "/retailers/new", label: "Add retailer" } : undefined}>
+            Search by shop, owner, mobile, retailer ID or GSTIN.
+          </EmptyState>
         </Card>
       ) : (
         <Card className="overflow-x-auto">

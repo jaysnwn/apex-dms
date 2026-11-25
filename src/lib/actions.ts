@@ -12,6 +12,7 @@ export function dbError(error: PostgrestError | null | undefined): string | unde
     if (error.message.includes("stock_movements_client_uuid")) return "This entry was already saved.";
     if (error.message.includes("retailers_mobile")) return "A retailer with this mobile number already exists.";
     if (error.message.includes("retailers_gstin")) return "A retailer with this GSTIN already exists.";
+    if (error.message.includes("retailers_code")) return "The next shop code is already taken, so this shop could not be saved. The shop-code counter needs resetting; please tell your administrator.";
     if (error.message.includes("name_key")) return "That name is already in use.";
     return "This record already exists.";
   }

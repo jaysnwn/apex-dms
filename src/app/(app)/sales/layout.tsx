@@ -1,6 +1,6 @@
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { Tabs } from "@/components/tabs";
+import { SalesHeader } from "./sales-header";
 
 export default async function SalesLayout({ children }: { children: React.ReactNode }) {
   const { profile } = await requireRole("super_admin", "manager", "billing", "salesman", "warehouse");
@@ -11,14 +11,13 @@ export default async function SalesLayout({ children }: { children: React.ReactN
   ]);
   return (
     <>
-      <h1 className="mb-4 text-xl font-semibold tracking-tight sm:text-2xl">Sales</h1>
-      <Tabs
+      <SalesHeader
         items={profile.role === "warehouse" ? [
           { href: "/sales/pending", label: "Pending for dispatch", count: p.count ?? 0 },
           { href: "/sales/invoices", label: "Invoices" },
         ] : [
-          { href: "/sales/new", label: profile.role === "salesman" ? "New order" : "Billing" },
-          { href: "/sales/quotations", label: profile.role === "salesman" ? "Quotations" : "Drafts & quotations", count: q.count ?? 0 },
+          { href: "/sales/new", label: profile.role === "salesman" ? "New order" : "New sale" },
+          { href: "/sales/quotations", label: "Quotations", count: q.count ?? 0 },
           { href: "/sales/pending", label: "Pending for dispatch", count: p.count ?? 0 },
           { href: "/sales/invoices", label: profile.role === "salesman" ? "My invoices" : "Invoices" },
         ]}

@@ -22,7 +22,7 @@ export function PaymentStatusActions({ id, status, canCancel }: { id: string; st
       <div className="flex flex-wrap gap-2">
         {status === "cheque_pending" && (
           <>
-            <Button className="bg-emerald-600 hover:bg-emerald-700" disabled={pending} onClick={() => run("received", "Cheque cleared — note (optional)")}>Mark cheque cleared</Button>
+            <Button className="bg-primary hover:bg-primary-hover" disabled={pending} onClick={() => run("received", "Cheque cleared — note (optional)")}>Mark cheque cleared</Button>
             <Button variant="danger" disabled={pending} onClick={() => run("bounced", "Why did the cheque bounce?")}>Cheque bounced</Button>
           </>
         )}

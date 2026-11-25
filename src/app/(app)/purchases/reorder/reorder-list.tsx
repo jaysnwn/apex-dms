@@ -55,18 +55,18 @@ export function ReorderList({ brandId, brandName, rows }: { brandId: string; bra
                   <td className="px-4 py-2"><input type="checkbox" className="size-4" checked={picked.has(r.product_id)} onChange={() => setPicked((s) => { const n = new Set(s); if (n.has(r.product_id)) n.delete(r.product_id); else n.add(r.product_id); return n; })} aria-label={`Select ${r.name}`} /></td>
                   <td className="px-2 py-2">
                     <div className="font-medium">{r.name}</div>
-                    <div className="text-xs text-slate-500"><span className="font-mono">{r.sku}</span>{r.category ? ` · ${r.category}` : ""} · <span className={cn("rounded px-1.5 py-0.5 text-[11px] font-semibold", u.cls)}>{u.label}</span></div>
+                    <div className="text-xs text-slate-500"><span className="font-mono">{r.sku}</span>{r.category ? ` · ${r.category}` : ""} · <span className={cn("rounded px-1.5 py-0.5 text-xs font-semibold", u.cls)}>{u.label}</span></div>
                   </td>
                   <td className={cn("tabular px-3 py-2 text-right font-semibold", r.available <= 0 ? "text-red-700" : "text-amber-700")}>{fmtQty(r.available)}</td>
                   <td className="tabular px-3 py-2 text-right text-slate-600">{r.on_order ? fmtQty(r.on_order) : "—"}</td>
                   <td className="tabular px-3 py-2 text-right text-slate-600">{r.avg_daily ? fmtQty(r.avg_daily) : "—"}</td>
                   <td className="tabular px-3 py-2 text-right text-slate-600">{r.days_left ?? "—"}</td>
                   <td className="tabular px-3 py-2 text-right text-slate-600">{fmtQty(r.min)}</td>
-                  <td className="px-3 py-2 text-slate-600">{r.supplier_name ?? <span className="text-red-700">No supplier</span>}<div className="text-[11px] text-slate-400">arrives in {r.lead_days} days</div></td>
+                  <td className="px-3 py-2 text-slate-600">{r.supplier_name ?? <span className="text-red-700">No supplier</span>}<div className="text-xs text-slate-400">arrives in {r.lead_days} days</div></td>
                   <td className="px-4 py-2 text-right">
                     <input type="number" min={0} step="any" value={qty[r.product_id]} onChange={(e) => setQty((q) => ({ ...q, [r.product_id]: e.target.value }))}
                       className="tabular h-9 w-24 rounded-lg border border-slate-300 px-2 text-right font-semibold" aria-label={`Order quantity for ${r.name}`} />
-                    <div className="text-[11px] text-slate-400">{r.unit.toLowerCase()}</div>
+                    <div className="text-xs text-slate-400">{r.unit.toLowerCase()}</div>
                   </td>
                 </tr>
               );
@@ -78,7 +78,7 @@ export function ReorderList({ brandId, brandName, rows }: { brandId: string; bra
         <span className="text-sm text-slate-600">{chosen.length} product{chosen.length === 1 ? "" : "s"} · approx. <b className="tabular">{inr(value, { decimals: false })}</b> before GST · {suppliers.size} purchase order{suppliers.size === 1 ? "" : "s"}</span>
         <span className="flex items-center gap-2">
           {error && <Alert>{error}</Alert>}
-          <Button className="bg-fuchsia-600 hover:bg-fuchsia-700" disabled={pending || !chosen.length} onClick={() => start(async () => {
+          <Button className="bg-primary hover:bg-primary-hover" disabled={pending || !chosen.length} onClick={() => start(async () => {
             setError(null);
             const r = await createReorderPurchases({ brandId, items: chosen.map((c) => ({ product_id: c.product_id, qty: Number(qty[c.product_id]), supplier_id: c.supplier_id, unit_cost: c.unit_cost, cost_mode: c.cost_mode })) });
             if (r.error) return setError(r.error);

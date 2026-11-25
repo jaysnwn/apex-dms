@@ -1,5 +1,6 @@
 "use client";
 
+import { askConfirm } from "@/components/confirm";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ImagePlus, Star, Trash2 } from "lucide-react";
@@ -60,7 +61,7 @@ export function PhotoManager({ productId, photos, canEdit }: { productId: string
 
   return (
     <div>
-      <div className="aspect-square overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="aspect-square overflow-hidden rounded-xl border border-slate-200 bg-surface">
         {current?.url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={current.url} alt="" className="h-full w-full object-contain p-4" />
@@ -75,7 +76,7 @@ export function PhotoManager({ productId, photos, canEdit }: { productId: string
             key={p.id}
             type="button"
             onClick={() => setSelected(p.id)}
-            className={cn("relative size-16 overflow-hidden rounded-lg border bg-white", p.id === current?.id ? "border-accent-500 ring-2 ring-accent-500/30" : "border-slate-200")}
+            className={cn("relative size-16 overflow-hidden rounded-lg border bg-surface", p.id === current?.id ? "border-primary ring-2 ring-primary/30" : "border-slate-200")}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             {p.url && <img src={p.url} alt="" className="h-full w-full object-contain p-1" />}
@@ -111,7 +112,7 @@ export function PhotoManager({ productId, photos, canEdit }: { productId: string
                 size="sm"
                 variant="ghost"
                 onClick={async () => {
-                  if (!confirm("Remove this photo?")) return;
+                  if (!(await askConfirm("Remove this photo?", { confirmLabel: "Remove", danger: true }))) return;
                   await removeProductImage(productId, current.id);
                   setSelected(undefined);
                   router.refresh();

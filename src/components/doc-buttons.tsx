@@ -6,19 +6,20 @@ import { Button } from "./ui";
 import { shareOnWhatsApp } from "@/lib/share-actions";
 import type { PdfKind } from "@/pdf/kinds";
 
-// "PDF" and "WhatsApp" buttons for any document.
-export function DocButtons({ kind, id, query = "", size = "md", label = "PDF" }: { kind: PdfKind; id: string; query?: string; size?: "sm" | "md"; label?: string }) {
+// "PDF" and "WhatsApp" buttons for any document. share={false} for documents
+// with no one to send them to (a town, route or territory statement).
+export function DocButtons({ kind, id, query = "", size = "md", label = "PDF", share = true }: { kind: PdfKind; id: string; query?: string; size?: "sm" | "md"; label?: string; share?: boolean }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const href = `/api/pdf/${kind}/${id}${query ? `?${query}` : ""}`;
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <a href={href} target="_blank" rel="noopener" className={`inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white font-medium hover:bg-slate-50 ${size === "sm" ? "h-8 px-3 text-sm" : "h-10 px-4 text-sm"}`}>
+      <a href={href} target="_blank" rel="noopener" className={`inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-surface font-medium hover:bg-slate-50 ${size === "sm" ? "h-8 px-3 text-sm" : "h-10 px-4 text-sm"}`}>
         <FileDown className="size-4" /> {label}
       </a>
-      <Button
+      {share && <Button
         size={size}
-        className="bg-[#25D366] text-white hover:bg-[#1ebe5b]"
+        className="bg-[#25D366] text-on-fill hover:bg-[#1ebe5b]"
         disabled={pending}
         onClick={() =>
           start(async () => {
@@ -31,7 +32,7 @@ export function DocButtons({ kind, id, query = "", size = "md", label = "PDF" }:
         }
       >
         <MessageCircle className="size-4" /> {pending ? "Preparing…" : "WhatsApp"}
-      </Button>
+      </Button>}
       {error && <span className="text-sm text-red-700">{error}</span>}
     </div>
   );

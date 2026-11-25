@@ -131,7 +131,7 @@ export default async function RoutesMonitor({ searchParams }: { searchParams: Pr
                     <span className="tabular text-sky-700">{inr(p.sold, { decimals: false })} sold</span>
                   </div>
                   <div className="w-full lg:w-36">
-                    <div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className={cn("h-full", pc >= 100 ? "bg-emerald-500" : "bg-accent-500")} style={{ width: `${Math.min(100, pc)}%` }} /></div>
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className={cn("h-full", pc >= 100 ? "bg-emerald-500" : "bg-primary")} style={{ width: `${Math.min(100, pc)}%` }} /></div>
                     <div className="tabular mt-0.5 text-right text-xs text-slate-500">{p.done}/{p.planned} · {pc}%</div>
                   </div>
                 </summary>
@@ -162,11 +162,11 @@ export default async function RoutesMonitor({ searchParams }: { searchParams: Pr
         <Card className="mt-6 p-4">
           <div className="mb-3 flex flex-wrap items-center gap-3 text-sm">
             <span className="font-semibold">Map</span>
-            <span className="flex items-center gap-1 text-xs"><span className="size-3 rounded-full bg-emerald-600" /> visited</span>
-            <span className="flex items-center gap-1 text-xs"><span className="size-3 rounded-full bg-blue-600" /> at shop</span>
+            <span className="flex items-center gap-1 text-xs"><span className="size-3 rounded-full bg-primary" /> visited</span>
+            <span className="flex items-center gap-1 text-xs"><span className="size-3 rounded-full bg-primary" /> at shop</span>
             <span className="flex items-center gap-1 text-xs"><span className="size-3 rounded-full bg-amber-600" /> to visit</span>
             <span className="flex items-center gap-1 text-xs"><span className="size-3 rounded-full bg-red-600" /> missed</span>
-            <span className="flex items-center gap-1 text-xs"><span className="size-3 rounded-full bg-violet-600" /> salesman live</span>
+            <span className="flex items-center gap-1 text-xs"><span className="size-3 rounded-full bg-primary" /> salesman live</span>
             <span className="flex items-center gap-1 text-xs"><span className="size-3 rounded-full bg-slate-400" /> last known position</span>
           </div>
           <RouteMapView stops={stops} people={people} height={460} />

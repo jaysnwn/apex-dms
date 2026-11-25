@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Banknote, Building2, CreditCard, Smartphone } from "lucide-react";
+import { Banknote, Smartphone } from "lucide-react";
 import { Alert, Badge, Button, Card, Input, Label, Textarea, cn } from "@/components/ui";
 import { RetailerSelect } from "../sales/retailer-select";
 import type { PickerRetailer } from "../sales/actions";
@@ -11,11 +11,10 @@ import { DUE_STATUS } from "@/lib/status";
 import { todayIST } from "@/lib/gst";
 import { openInvoices, recordPayment, type OpenInvoice } from "./actions";
 
+// Shops pay only in cash or by UPI.
 const METHODS = [
   { key: "cash", label: "Cash", icon: Banknote },
   { key: "upi", label: "UPI", icon: Smartphone },
-  { key: "bank_transfer", label: "Bank transfer", icon: Building2 },
-  { key: "cheque", label: "Cheque", icon: CreditCard },
 ] as const;
 
 export function PaymentForm({
@@ -37,8 +36,6 @@ export function PaymentForm({
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<(typeof METHODS)[number]["key"]>("cash");
   const [reference, setReference] = useState("");
-  const [chequeDate, setChequeDate] = useState("");
-  const [bank, setBank] = useState("");
   const [payDate, setPayDate] = useState(todayIST());
   const [notes, setNotes] = useState("");
   const [mode, setMode] = useState<"fifo" | "manual">(focusInvoice ? "manual" : "fifo");
@@ -86,7 +83,7 @@ export function PaymentForm({
     setError(null);
     if (!retailer) return setError("Choose a retailer.");
     if (!(amt > 0)) return setError("Enter the amount received.");
-    if (method !== "cash" && !reference.trim()) return setError(`Enter the ${method === "cheque" ? "cheque" : method === "upi" ? "UPI" : "transaction"} reference number.`);
+    if (method !== "cash" && !reference.trim()) return setError("Enter the UPI reference number.");
     if (mode === "manual" && manualSum > amt + 0.001) return setError("Allocations add up to more than the amount received.");
     start(async () => {
       const res = await recordPayment({
@@ -95,8 +92,6 @@ export function PaymentForm({
         method,
         date: payDate,
         reference,
-        chequeDate,
-        bank,
         notes,
         allocations: mode === "manual" ? Object.entries(manual).map(([invoice_id, v]) => ({ invoice_id, amount: Number(v) || 0 })).filter((a) => a.amount > 0) : null,
         visitId: visitId ?? null,
@@ -122,10 +117,10 @@ export function PaymentForm({
 
         <Card className="p-5">
           <h2 className="mb-3 font-semibold">Payment</h2>
-          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="mb-4 grid grid-cols-2 gap-2">
             {METHODS.map((m) => (
               <button key={m.key} type="button" onClick={() => setMethod(m.key)}
-                className={cn("flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium", method === m.key ? "border-emerald-600 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-600/20" : "border-slate-300 bg-white hover:border-slate-400")}>
+                className={cn("flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium", method === m.key ? "border-emerald-600 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-600/20" : "border-slate-300 bg-surface hover:border-slate-400")}>
                 <m.icon className="size-4" /> {m.label}
               </button>
             ))}
@@ -146,22 +141,15 @@ export function PaymentForm({
             </div>
             {method !== "cash" && (
               <div>
-                <Label htmlFor="ref">{method === "cheque" ? "Cheque number" : method === "upi" ? "UPI reference" : "UTR / reference"}</Label>
+                <Label htmlFor="ref">UPI reference</Label>
                 <Input id="ref" value={reference} onChange={(e) => setReference(e.target.value)} />
               </div>
-            )}
-            {method === "cheque" && (
-              <>
-                <div><Label htmlFor="cdate">Cheque date</Label><Input id="cdate" type="date" value={chequeDate} onChange={(e) => setChequeDate(e.target.value)} /></div>
-                <div><Label htmlFor="bank">Bank</Label><Input id="bank" value={bank} onChange={(e) => setBank(e.target.value)} /></div>
-              </>
             )}
             <div className="sm:col-span-2">
               <Label htmlFor="pnotes" hint="optional">Notes</Label>
               <Textarea id="pnotes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
             </div>
           </div>
-          {method === "cheque" && <p className="mt-3 text-sm text-amber-800">Cheques are applied to invoices now but counted as paid only after you mark them cleared.</p>}
         </Card>
       </div>
 
@@ -170,8 +158,8 @@ export function PaymentForm({
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-semibold">Apply to invoices</h2>
             <div className="flex rounded-lg border p-0.5 text-xs">
-              <button type="button" onClick={() => setMode("fifo")} className={cn("rounded-md px-2 py-1", mode === "fifo" && "bg-ink-900 text-white")}>Oldest first</button>
-              <button type="button" onClick={() => setMode("manual")} className={cn("rounded-md px-2 py-1", mode === "manual" && "bg-ink-900 text-white")}>Choose</button>
+              <button type="button" onClick={() => setMode("fifo")} className={cn("rounded-md px-2 py-1", mode === "fifo" && "bg-primary text-on-fill")}>Oldest first</button>
+              <button type="button" onClick={() => setMode("manual")} className={cn("rounded-md px-2 py-1", mode === "manual" && "bg-primary text-on-fill")}>Choose</button>
             </div>
           </div>
           {!retailer ? (
@@ -211,7 +199,7 @@ export function PaymentForm({
           {amt > 0 && unallocated > 0 && <p className="mt-3 rounded-lg bg-sky-50 p-2 text-sm text-sky-800">{inr(unallocated)} will be kept as advance.</p>}
         </Card>
         {error && <Alert>{error}</Alert>}
-        <Button className="h-12 w-full bg-emerald-600 text-base hover:bg-emerald-700" disabled={pending} onClick={submit}>
+        <Button className="h-12 w-full bg-primary text-base hover:bg-primary-hover" disabled={pending} onClick={submit}>
           {pending ? "Saving…" : `Save payment${amt > 0 ? ` of ${inr(amt)}` : ""}`}
         </Button>
       </div>

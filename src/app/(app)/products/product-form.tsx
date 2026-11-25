@@ -9,6 +9,7 @@ import { saveProduct } from "./actions";
 
 type Option = { id: string; name: string };
 type BrandOption = Option & { brand_id: string };
+type WarehouseOption = Option & { brand_id: string | null };
 type Mode = "inclusive" | "exclusive";
 export type ProductRow = {
   id: string;
@@ -46,14 +47,14 @@ export function ProductForm({
   defaultBrandId: string;
   categories: BrandOption[];
   units: { code: string; name: string }[];
-  warehouses: BrandOption[];
+  warehouses: WarehouseOption[];
 }) {
   const isNew = !product;
   const [brand, setBrand] = useState(product?.brand_id ?? defaultBrandId);
   const [gst, setGst] = useState(Number(product?.gst_rate ?? 18));
   const [photo, setPhoto] = useState<string | null>(null);
   const cats = categories.filter((c) => c.brand_id === brand);
-  const whs = warehouses.filter((w) => w.brand_id === brand);
+  const whs = warehouses.filter((w) => w.brand_id === null || w.brand_id === brand);
   const brandName = brands.find((b) => b.id === brand)?.name ?? "";
 
   return (
@@ -115,7 +116,7 @@ export function ProductForm({
         </div>
       </Section>
 
-      <Section title="Pricing and GST" note="Choose for each price whether it already includes GST — the other amount is worked out for you.">
+      <Section title="Pricing" note="Both prices include GST. Where a GST rate applies, the split is shown underneath.">
         <div>
           <Label htmlFor="gst_rate">GST rate</Label>
           <Select id="gst_rate" name="gst_rate" value={String(gst)} onChange={(e) => setGst(Number(e.target.value))}>
@@ -123,10 +124,8 @@ export function ProductForm({
           </Select>
         </div>
         <div className="hidden sm:block" />
-        <PriceField name="purchase_cost" label="Purchase price" value={product?.purchase_cost} mode={product?.purchase_cost_mode ?? "exclusive"} gst={gst} />
-        <PriceField name="distributor_price" label="Distributor price" value={product?.distributor_price} mode={product?.distributor_price_mode ?? "exclusive"} gst={gst} optional />
-        <PriceField name="retailer_price" label="Retailer price" value={product?.retailer_price} mode={product?.retailer_price_mode ?? "exclusive"} gst={gst} />
-        <PriceField name="mrp" label="MRP" value={product?.mrp} mode={product?.mrp_mode ?? "inclusive"} gst={gst} />
+        <PriceField name="purchase_cost" label="Purchase price" value={product?.purchase_cost} gst={gst} />
+        <PriceField name="retailer_price" label="Sale price" value={product?.retailer_price} gst={gst} hint="what the retailer pays" />
       </Section>
 
       <Section title="Inventory">
@@ -166,7 +165,7 @@ export function ProductForm({
 
 function Section({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
   return (
-    <fieldset className="mb-6 rounded-xl border border-slate-200 bg-white p-5">
+    <fieldset className="mb-6 rounded-xl border border-slate-200 bg-surface p-5">
       <legend className="px-1 text-sm font-semibold text-slate-900">{title}</legend>
       {note && <p className="-mt-1 mb-4 text-xs text-slate-500">{note}</p>}
       <div className="grid gap-4 sm:grid-cols-2">{children}</div>
@@ -174,26 +173,19 @@ function Section({ title, note, children }: { title: string; note?: string; chil
   );
 }
 
-// Price with its GST mode, and the converted amount underneath.
-function PriceField({ name, label, value, mode: initialMode, gst, optional }: { name: string; label: string; value?: number; mode: Mode; gst: number; optional?: boolean }) {
+// A price, always entered GST-inclusive. The split is shown when a GST rate applies.
+function PriceField({ name, label, value, gst, hint }: { name: string; label: string; value?: number; gst: number; hint?: string }) {
   const [amount, setAmount] = useState(String(value ?? 0));
-  const [mode, setMode] = useState<Mode>(initialMode);
   const n = Number(amount) || 0;
-  const excl = mode === "inclusive" ? n / (1 + gst / 100) : n;
-  const incl = mode === "inclusive" ? n : n * (1 + gst / 100);
+  const excl = n / (1 + gst / 100);
   return (
     <div>
-      <Label htmlFor={name} hint={optional ? "optional" : undefined}>{label} (₹)</Label>
-      <div className="flex gap-2">
-        <Input id={name} name={name} type="number" min={0} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required={!optional} className="tabular min-w-0 flex-1" />
-        <Select name={`${name}_mode`} value={mode} onChange={(e) => setMode(e.target.value as Mode)} aria-label={`${label} GST`} className="w-32 shrink-0">
-          <option value="exclusive">+ GST</option>
-          <option value="inclusive">incl. GST</option>
-        </Select>
-      </div>
-      {n > 0 && (
+      <Label htmlFor={name} hint={hint}>{label} (₹)</Label>
+      <Input id={name} name={name} type="number" min={0} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required className="tabular" />
+      <input type="hidden" name={`${name}_mode`} value="inclusive" />
+      {n > 0 && gst > 0 && (
         <p className="tabular mt-1 text-xs text-slate-500">
-          {inr(excl)} excl. GST · GST {inr(incl - excl)} · <b className="text-slate-700">{inr(incl)} incl. GST</b>
+          {inr(excl)} excl. GST · GST {inr(n - excl)} · <b className="text-slate-700">{inr(n)} incl. GST</b>
         </p>
       )}
     </div>

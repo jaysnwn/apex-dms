@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
 import type { Metadata } from "next";
 import { AlertTriangle, CalendarClock, IndianRupee } from "lucide-react";
 import { requireRole } from "@/lib/auth";
@@ -59,7 +60,7 @@ export default async function PayablesPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {rows.length === 0 && <tr><td colSpan={9} className="px-4 py-10 text-center text-slate-500">Nothing payable. All supplier bills are paid.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={9}><EmptyState art="check" title="Nothing payable">All supplier bills are paid.</EmptyState></td></tr>}
             {rows.map((r) => (
               <tr key={r.id} className="hover:bg-slate-50">
                 <td className="px-4 py-2.5"><Link href={`/purchases/suppliers/${r.id}`} className="font-semibold hover:underline">{r.name}</Link></td>

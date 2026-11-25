@@ -42,7 +42,7 @@ export type InvoicePdfData = {
     line_total: number;
   }[];
   balance?: number;
-  brand?: { name: string; color: string; logo: { data: Buffer; format: "png" | "jpg" } | null };
+  brand?: { name: string; color: string; logo: { data: Buffer; format: "png" | "jpg" } | null; gst?: boolean };
   title?: string;   // "TAX INVOICE" or "CREDIT NOTE"
   quotation?: { validUntil: string; salesman?: string | null }; // set for a quotation (estimate, not an invoice)
 };
@@ -51,7 +51,10 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
   const { company, invoice: inv, lines } = data;
   const q = data.quotation;
   const r = inv.retailer_snapshot;
-  const cols: Col[] = [
+  // GST document (CONQRETE): GSTINs, HSN, tax columns and HSN summary.
+  // Non-GST brand (BLUEI): a plain invoice — no GSTIN, no tax columns.
+  const gstDoc = (data.brand?.gst ?? true) || lines.some((l) => Number(l.gst_rate) > 0) || Number(inv.cgst_total) + Number(inv.sgst_total) + Number(inv.igst_total) > 0;
+  const cols: Col[] = gstDoc ? [
     { label: "#", w: 0.35 },
     { label: "Product", w: 3.2 },
     { label: "HSN", w: 0.9 },
@@ -62,6 +65,13 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
     { label: "GST", w: 0.6, right: true },
     ...(inv.is_igst ? [{ label: "IGST", w: 1, right: true }] : [{ label: "CGST", w: 0.9, right: true }, { label: "SGST", w: 0.9, right: true }]),
     { label: "Amount", w: 1.15, right: true },
+  ] : [
+    { label: "#", w: 0.35 },
+    { label: "Product", w: 4.4 },
+    { label: "Qty", w: 0.9, right: true },
+    { label: "Rate", w: 1.1, right: true },
+    { label: "Disc.", w: 0.7, right: true },
+    { label: "Amount", w: 1.3, right: true },
   ];
 
   // HSN-wise tax summary (required on GST invoices)
@@ -76,10 +86,11 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
   const totals: [string, string, boolean?][] = [
     ["Subtotal", money(inv.subtotal)],
     ...(Number(inv.discount_total) > 0 ? ([["Discount", "− " + money(inv.discount_total)]] as [string, string][]) : []),
-    ["Taxable value", money(inv.taxable_total)],
-    ...(inv.is_igst
-      ? ([["IGST", money(inv.igst_total)]] as [string, string][])
-      : ([["CGST", money(inv.cgst_total)], ["SGST", money(inv.sgst_total)]] as [string, string][])),
+    ...(gstDoc
+      ? ([["Taxable value", money(inv.taxable_total)]] as [string, string][]).concat(inv.is_igst
+        ? ([["IGST", money(inv.igst_total)]] as [string, string][])
+        : ([["CGST", money(inv.cgst_total)], ["SGST", money(inv.sgst_total)]] as [string, string][]))
+      : []),
     ...(Number(inv.round_off) !== 0 ? ([["Round off", money(inv.round_off)]] as [string, string][]) : []),
     [q ? "Quotation total" : "Invoice total", money(inv.grand_total), true],
   ];
@@ -87,7 +98,7 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
   return (
     <Document title={`${inv.invoice_no}`} author={company.legal_name}>
       <Page size="A4" style={s.page}>
-        <CompanyHeader company={company} title={q ? "QUOTATION" : data.title ?? "TAX INVOICE"} subtitle={q ? "Estimate — not a tax invoice" : "Original for recipient"} />
+        <CompanyHeader company={company} showGstin={gstDoc} title={q ? "QUOTATION" : data.title ?? (gstDoc ? "TAX INVOICE" : "INVOICE")} subtitle={q ? (gstDoc ? "Estimate — not a tax invoice" : "Estimate — not an invoice") : "Original for recipient"} />
 
         {data.brand && (
           <View style={[s.row, { alignItems: "center", justifyContent: "space-between", marginTop: -6, marginBottom: 10, paddingVertical: 5, paddingHorizontal: 8, borderLeftWidth: 4, borderLeftColor: data.brand.color, backgroundColor: "#f8fafc" }]}>
@@ -116,7 +127,7 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
             {r.billing_address && <Text>{r.billing_address}</Text>}
             <Text>{[r.billing_city, r.billing_pincode].filter(Boolean).join(" - ")}</Text>
             <Text>Mobile: {r.mobile}</Text>
-            <Text style={s.bold}>GSTIN: {r.gstin ?? "Unregistered"}</Text>
+            {gstDoc && <Text style={s.bold}>GSTIN: {r.gstin ?? "Unregistered"}</Text>}
             <Text style={s.muted}>Retailer ID: {r.code}</Text>
           </View>
           <View style={[s.box, { flex: 1 }]}>
@@ -142,8 +153,8 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
                 <Meta k="Due date" v={d(inv.due_date)} bold />
               </>
             )}
-            <Meta k="Place of supply" v={`${inv.place_of_supply} ${GST_STATES[inv.place_of_supply] ?? ""}`} />
-            <Meta k="Tax type" v={inv.is_igst ? "IGST (inter-state)" : "CGST + SGST"} />
+            {gstDoc && <Meta k="Place of supply" v={`${inv.place_of_supply} ${GST_STATES[inv.place_of_supply] ?? ""}`} />}
+            {gstDoc && <Meta k="Tax type" v={inv.is_igst ? "IGST (inter-state)" : "CGST + SGST"} />}
           </View>
         </View>
 
@@ -153,7 +164,7 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
             key={l.line_no}
             cols={cols}
             shade={i % 2 === 1}
-            cells={[
+            cells={gstDoc ? [
               l.line_no,
               `${l.product_name}\n${l.sku}`,
               l.hsn_code ?? "",
@@ -163,6 +174,13 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
               money(l.taxable_value),
               `${Number(l.gst_rate)}%`,
               ...(inv.is_igst ? [money(l.igst)] : [money(l.cgst), money(l.sgst)]),
+              money(l.line_total),
+            ] : [
+              l.line_no,
+              `${l.product_name}\n${l.sku}`,
+              `${num(l.qty)} ${l.unit_code}`,
+              money(l.unit_price),
+              Number(l.discount_pct) ? `${Number(l.discount_pct)}%` : "",
               money(l.line_total),
             ]}
           />
@@ -178,14 +196,14 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
                 This is a quotation. The tax invoice is issued when the order is confirmed; prices and stock are confirmed at that time.
               </Text>
             )}
-            <Text style={[s.small, s.muted, { marginBottom: 2 }]}>HSN SUMMARY</Text>
-            {[...hsn.entries()].map(([key, h]) => (
+            {gstDoc && <Text style={[s.small, s.muted, { marginBottom: 2 }]}>HSN SUMMARY</Text>}
+            {gstDoc && [...hsn.entries()].map(([key, h]) => (
               <Text key={key} style={s.small}>
                 HSN {key.split("|")[0]} @ {h.rate}%: taxable {money(h.taxable)} ·{" "}
                 {inv.is_igst ? `IGST ${money(h.igst)}` : `CGST ${money(h.cgst)} · SGST ${money(h.sgst)}`}
               </Text>
             ))}
-            {lines.some((l) => l.price_mode === "inclusive") && (
+            {gstDoc && lines.some((l) => l.price_mode === "inclusive") && (
               <Text style={[s.small, s.muted, { marginTop: 4 }]}>* Rate includes GST; taxable value shown after removing GST.</Text>
             )}
             {company.bank_details && (

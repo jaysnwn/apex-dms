@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui";
 import { RetailerForm, type RetailerRow } from "../../retailer-form";
 import { retailerFormOptions } from "../../data";
+import { DeleteRetailer } from "./delete-retailer";
 
 export const metadata: Metadata = { title: "Edit retailer" };
 
@@ -20,6 +21,7 @@ export default async function EditRetailerPage({ params }: { params: Promise<{ i
       <PageHeader title={`Edit ${data.shop_name}`} description={data.code} />
       <div className="max-w-3xl">
         <RetailerForm retailer={data as RetailerRow} {...options} isSalesman={false} />
+        {(profile.role === "super_admin" || profile.role === "manager") && <DeleteRetailer id={id} name={data.shop_name} />}
       </div>
     </>
   );

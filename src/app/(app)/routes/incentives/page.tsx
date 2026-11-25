@@ -46,9 +46,9 @@ export default async function IncentivesPage({ searchParams }: { searchParams: P
       <RouteTabs />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Link href={`/routes/incentives?month=${shiftMonth(month, -1).slice(0, 7)}`} className="grid size-9 place-items-center rounded-lg border border-slate-300 bg-white hover:bg-slate-50" aria-label="Previous month"><ChevronLeft className="size-4" /></Link>
+          <Link href={`/routes/incentives?month=${shiftMonth(month, -1).slice(0, 7)}`} className="grid size-9 place-items-center rounded-lg border border-slate-300 bg-surface hover:bg-slate-50" aria-label="Previous month"><ChevronLeft className="size-4" /></Link>
           <span className="min-w-40 text-center text-lg font-semibold">{monthLabel(month)}</span>
-          {month < thisMonth ? <Link href={`/routes/incentives?month=${shiftMonth(month, 1).slice(0, 7)}`} className="grid size-9 place-items-center rounded-lg border border-slate-300 bg-white hover:bg-slate-50" aria-label="Next month"><ChevronRight className="size-4" /></Link> : <span className="size-9" />}
+          {month < thisMonth ? <Link href={`/routes/incentives?month=${shiftMonth(month, 1).slice(0, 7)}`} className="grid size-9 place-items-center rounded-lg border border-slate-300 bg-surface hover:bg-slate-50" aria-label="Next month"><ChevronRight className="size-4" /></Link> : <span className="size-9" />}
           {any && <Badge tone={isFinal ? "green" : "amber"}>{isFinal ? "Final — ready to approve" : `Provisional · final on ${date(any.final_on)}`}</Badge>}
         </div>
         <div className="flex flex-wrap gap-2">
@@ -134,7 +134,7 @@ function Cell({ ok, v, t }: { ok: boolean; v: string; t: string }) {
       <span className={cn("tabular inline-flex items-center gap-1 font-semibold", ok ? "text-emerald-700" : "text-slate-700")}>
         {ok ? <CheckCircle2 className="size-3.5" /> : <CircleDashed className="size-3.5 text-slate-300" />} {v}
       </span>
-      <span className="tabular block text-[11px] text-slate-400">of {t}</span>
+      <span className="tabular block text-xs text-slate-400">of {t}</span>
     </td>
   );
 }

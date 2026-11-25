@@ -1,7 +1,7 @@
 -- Prepares an empty plain Postgres 17 database to receive a production dump
 -- for the upgrade rehearsal: the Supabase roles the dump's owners, grants and
--- policies name, and the extensions. Unlike the backup check, app_definer is
--- NOT created here: production does not have it yet, migration 0019 does.
+-- policies name (app_definer included: production has had it since 0022),
+-- and the extensions.
 do $$
 declare r text;
 begin
@@ -13,7 +13,11 @@ begin
       execute format('create role %I nologin', r);
     end if;
   end loop;
+  if not exists (select 1 from pg_roles where rolname = 'app_definer') then
+    create role app_definer nologin inherit nobypassrls;
+  end if;
 end $$;
+grant app_definer to postgres with inherit true, set true;
 drop schema if exists public cascade;
 create schema if not exists extensions;
 create extension if not exists pg_trgm with schema extensions;

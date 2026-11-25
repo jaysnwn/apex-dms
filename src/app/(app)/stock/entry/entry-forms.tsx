@@ -35,7 +35,7 @@ const newId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? c
 export function EntryForms({
   brandId, brandName, warehouses, initialType, allowed, canSetCost, today,
 }: {
-  brandId: string; brandName: string; warehouses: Warehouse[]; initialType: EntryType; allowed: EntryType[]; canSetCost: boolean; today: string;
+  brandId: string | null; brandName: string; warehouses: Warehouse[]; initialType: EntryType; allowed: EntryType[]; canSetCost: boolean; today: string;
 }) {
   const [type, setType] = useState<EntryType>(initialType);
   const [formKey, setFormKey] = useState(newId());   // new id after each save → protects against double submit
@@ -53,7 +53,7 @@ export function EntryForms({
         {ENTRY_TYPES.filter((t) => allowed.includes(t.key)).map((t) => (
           <button key={t.key} type="button" onClick={() => switchTo(t.key)}
             className={cn("flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left text-sm font-semibold transition",
-              t.key === type ? TONE[t.tone] : "border-transparent bg-white text-slate-700 ring-1 ring-slate-200 hover:ring-slate-300")}>
+              t.key === type ? TONE[t.tone] : "border-transparent bg-surface text-slate-700 ring-1 ring-slate-200 hover:ring-slate-300")}>
             <t.icon className="size-4 shrink-0" /> {t.label}
           </button>
         ))}
@@ -65,7 +65,7 @@ export function EntryForms({
           <AdjustmentForm key={formKey} brandId={brandId} warehouses={warehouses} onDone={() => setFormKey(newId())} />
         ) : type === "transfer" ? (
           warehouses.length < 2 ? (
-            <Alert tone="amber">{brandName} has only one warehouse. Add a second {brandName} warehouse to transfer stock. Stock can never move to another brand&apos;s warehouse.</Alert>
+            <Alert tone="amber">There is only one warehouse. Add a second warehouse to transfer stock between them.</Alert>
           ) : (
             <ActionForm key={formKey} action={transferStock} submitLabel="Record transfer">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -135,7 +135,7 @@ export function EntryForms({
 }
 
 // Current system stock → physical stock → difference → reason → confirm.
-function AdjustmentForm({ brandId, warehouses, onDone }: { brandId: string; warehouses: Warehouse[]; onDone: () => void }) {
+function AdjustmentForm({ brandId, warehouses, onDone }: { brandId: string | null; warehouses: Warehouse[]; onDone: () => void }) {
   const router = useRouter();
   const [product, setProduct] = useState<PickedProduct | null>(null);
   const [wh, setWh] = useState(warehouses[0]?.id ?? "");
@@ -184,7 +184,7 @@ function AdjustmentForm({ brandId, warehouses, onDone }: { brandId: string; ware
           <div className="text-xs text-slate-500">Current system stock</div>
           <div className="tabular mt-1 text-2xl font-bold">{product ? (system === null ? "…" : fmtQty(system)) : "—"}</div>
         </div>
-        <div className="rounded-xl bg-white p-3 ring-2 ring-violet-300">
+        <div className="rounded-xl bg-surface p-3 ring-2 ring-violet-300">
           <label htmlFor="adj_phys" className="text-xs text-slate-500">Actual physical stock</label>
           <input id="adj_phys" type="number" min={0} step="any" value={physical} onChange={(e) => { setPhysical(e.target.value); setConfirming(false); }}
             className="tabular mt-1 w-full bg-transparent text-2xl font-bold outline-none" placeholder="0" disabled={!product} />
@@ -194,7 +194,7 @@ function AdjustmentForm({ brandId, warehouses, onDone }: { brandId: string; ware
           <div className={cn("tabular mt-1 text-2xl font-bold", diff !== null && diff < 0 && "text-red-700", diff !== null && diff > 0 && "text-emerald-700")}>
             {diff === null ? "—" : `${diff > 0 ? "+" : ""}${fmtQty(diff)}`}
           </div>
-          {diff !== null && diff !== 0 && <div className="text-[11px] text-slate-500">{diff < 0 ? "shortage" : "extra stock"}</div>}
+          {diff !== null && diff !== 0 && <div className="text-xs text-slate-500">{diff < 0 ? "shortage" : "extra stock"}</div>}
         </div>
       </div>
 

@@ -40,10 +40,10 @@ export default async function MyCollectionsPage() {
     <div className="space-y-4">
       <Link href="/m" className="flex items-center gap-1 px-1 text-sm font-medium text-slate-600"><ArrowLeft className="size-4" /> Home</Link>
 
-      <section className="rounded-3xl bg-gradient-to-br from-amber-500 to-orange-600 p-5 text-white shadow-md">
-        <div className="flex items-center gap-2 text-sm font-medium text-amber-50"><HandCoins className="size-4" /> Money with you</div>
+      <section className="rounded-3xl hero-blue p-5 text-white shadow-md">
+        <div className="flex items-center gap-2 text-sm font-medium text-white/90"><HandCoins className="size-4" /> Money with you</div>
         <div className="tabular mt-1 text-4xl font-bold">{inr(total, { decimals: false })}</div>
-        <div className="text-sm text-amber-50">{open.length ? `${open.length} payment${open.length === 1 ? "" : "s"} to hand over to office` : "Nothing to hand over — all verified."}</div>
+        <div className="text-sm text-white/90">{open.length ? `${open.length} payment${open.length === 1 ? "" : "s"} to hand over to office` : "Nothing to hand over — all verified."}</div>
         {open.length > 0 && (
           <div className="mt-3 grid grid-cols-2 gap-2">
             {(["cash", "upi", "cheque", "bank_transfer"] as const).filter((m) => by(m) > 0).map((m) => {
@@ -60,7 +60,7 @@ export default async function MyCollectionsPage() {
         )}
       </section>
 
-      <p className="rounded-2xl bg-white p-3 text-sm text-slate-600 ring-1 ring-slate-200/70">
+      <p className="rounded-2xl bg-surface p-3 text-sm text-slate-600 ring-1 ring-slate-200/70">
         Give the cash and cheques to the office. They check UPI and bank payments in the bank. Once the office verifies a payment it counts for your <b>incentive</b>.
       </p>
 
@@ -73,7 +73,7 @@ export default async function MyCollectionsPage() {
 
 function List({ title, rows }: { title: string; rows: MyCollection[] }) {
   return (
-    <section className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70">
+    <section className="overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-slate-200/70">
       <h2 className="px-4 pt-3 pb-1 text-sm font-semibold">{title}</h2>
       <ul className="divide-y divide-slate-100">
         {rows.map((p) => {

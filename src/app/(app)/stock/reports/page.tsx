@@ -7,6 +7,7 @@ import { getBrandContext } from "@/lib/brand";
 import { Card } from "@/components/ui";
 import { BrandBadge } from "@/components/brand-badge";
 import { brandTone } from "@/lib/brand-style";
+import { warehouseOr } from "@/lib/warehouse-scope";
 
 export const metadata: Metadata = { title: "Stock reports" };
 
@@ -15,15 +16,15 @@ export default async function StockReportsPage() {
   const { profile } = await requireRole("super_admin", "manager", "billing", "warehouse");
   const ctx = await getBrandContext();
   const supabase = await createClient();
-  const brands = ctx.current ? [ctx.current] : ctx.brands;
-  const { data: whs } = await supabase.from("warehouses").select("id, name, brand_id").eq("is_active", true).in("brand_id", brands.map((b) => b.id)).order("name");
+  const brands = ctx.brands;
+  const { data: whs } = await supabase.from("warehouses").select("id, name, brand_id").eq("is_active", true).or(warehouseOr(brands.map((b) => b.id))).order("name");
   const seesCost = profile.role !== "warehouse";
 
   return (
     <div className="space-y-6">
       <p className="text-sm text-slate-600">Each brand gets its own reports with its own name and logo (logo is set in Products → Brands &amp; categories). Reports are never combined across brands.</p>
       {brands.map((b) => {
-        const mine = (whs ?? []).filter((w) => w.brand_id === b.id);
+        const mine = (whs ?? []).filter((w) => w.brand_id === null || w.brand_id === b.id);
         const t = brandTone(b.code);
         return (
           <Card key={b.id} className="overflow-hidden">
@@ -37,13 +38,13 @@ export default async function StockReportsPage() {
                 <p className="mb-3 flex-1 text-sm text-slate-500">Print-ready list by category with quantities, totals and page numbers — for warehouse staff and management.</p>
                 <input type="hidden" name="brand" value={b.id} />
                 {mine.length > 1 && (
-                  <select name="warehouse" className="mb-2 h-10 rounded-lg border border-slate-300 bg-white px-2 text-sm" aria-label="Warehouse">
+                  <select name="warehouse" className="mb-2 h-10 rounded-lg border border-slate-300 bg-surface px-2 text-sm" aria-label="Warehouse">
                     <option value="">All {b.name} warehouses</option>
                     {mine.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
                   </select>
                 )}
                 {seesCost && <label className="mb-3 flex items-center gap-2 text-sm"><input type="checkbox" name="value" value="1" className="size-4" /> Include inventory valuation</label>}
-                <button className="h-10 rounded-lg bg-ink-900 text-sm font-semibold text-white hover:bg-ink-800">Open PDF</button>
+                <button className="h-10 rounded-lg bg-primary text-sm font-semibold text-on-fill hover:bg-primary-hover">Open PDF</button>
               </form>
 
               <form action="/api/stock/xlsx" className="flex flex-col rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
@@ -51,12 +52,12 @@ export default async function StockReportsPage() {
                 <p className="mb-3 flex-1 text-sm text-slate-500">Six columns: Sr. No., Product Name, Qty, Physical Qty, Difference, Notes. Staff fill Physical Qty; Difference works itself out (red = short, green = extra).</p>
                 <input type="hidden" name="brand" value={b.id} />
                 {mine.length > 1 && (
-                  <select name="warehouse" className="mb-3 h-10 rounded-lg border border-slate-300 bg-white px-2 text-sm" aria-label="Warehouse">
+                  <select name="warehouse" className="mb-3 h-10 rounded-lg border border-slate-300 bg-surface px-2 text-sm" aria-label="Warehouse">
                     <option value="">All {b.name} warehouses</option>
                     {mine.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
                   </select>
                 )}
-                <button className="h-10 rounded-lg bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700">Download Excel</button>
+                <button className="h-10 rounded-lg bg-primary text-sm font-semibold text-on-fill hover:bg-primary-hover">Download Excel</button>
               </form>
 
               <div className="flex flex-col rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">

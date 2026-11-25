@@ -4,13 +4,17 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { createClient } from "@/lib/supabase/server";
 import { registerFonts, type Company } from "./base";
 import { InvoicePdf, type InvoicePdfData } from "./invoice";
-import { DeliveryNotePdf, PickingPdf, PurchasePdf, ReceiptPdf, StatementPdf, type PurchasePdfData } from "./documents";
+import { DeliveryNotePdf, PickingPdf, PurchasePdf, ReceiptPdf, type PurchasePdfData } from "./documents";
+import { AccountStatementPdf } from "./account-statement";
+import { SCOPE_LABEL, readPeriod, statementFilename, type StatementScope } from "@/lib/account-statement";
+import { statementEntries, statementShops, statementSubject } from "@/lib/account-statement-data";
+import { getSession } from "@/lib/auth";
+import { todayIST } from "@/lib/gst";
 
 import type { PdfKind } from "./kinds";
 import { getCompanyLogoFile } from "@/lib/branding";
 import { brandTone } from "@/lib/brand-style";
 import { allRows } from "@/lib/all-rows";
-import { required } from "@/lib/required";
 export type { PdfKind };
 
 export type RenderedPdf = { buffer: Buffer; filename: string; phone?: string; shareText: string };
@@ -32,14 +36,19 @@ async function company(): Promise<Company> {
 // Brand shown on sales documents (name, colour, logo). The seller stays APEX TRADING CO.
 async function brandInfo(supabase: Awaited<ReturnType<typeof createClient>>, brandId: string | null | undefined): Promise<InvoicePdfData["brand"]> {
   if (!brandId) return undefined;
-  const { data: b } = await supabase.from("brands").select("name, code, logo_path").eq("id", brandId).maybeSingle();
+  const [{ data: b }, { count: taxed }] = await Promise.all([
+    supabase.from("brands").select("name, code, logo_path").eq("id", brandId).maybeSingle(),
+    // A brand whose products carry GST (CONQRETE) issues GST documents; a brand
+    // whose products are all GST-free (BLUEI) issues plain invoices without a GSTIN.
+    supabase.from("products").select("id", { count: "exact", head: true }).eq("brand_id", brandId).gt("gst_rate", 0),
+  ]);
   if (!b) return undefined;
   let logo: { data: Buffer; format: "png" | "jpg" } | null = null;
   if (b.logo_path && /\.(png|jpe?g)$/i.test(b.logo_path)) {
     const { data: blob } = await supabase.storage.from("product-images").download(b.logo_path);
     if (blob) logo = { data: Buffer.from(await blob.arrayBuffer()), format: /\.png$/i.test(b.logo_path) ? "png" : "jpg" };
   }
-  return { name: b.name, color: brandTone(b.code).hex, logo };
+  return { name: b.name, color: brandTone(b.code).hex, logo, gst: (taxed ?? 0) > 0 };
 }
 
 const INV_LINE_COLS =
@@ -118,7 +127,7 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
     if (!p) return null;
     const [{ data: r }, { data: allocs }, { data: who }] = await Promise.all([
       supabase.from("retailers").select("shop_name, code, mobile, billing_city").eq("id", p.retailer_id).single(),
-      supabase.from("payment_allocations").select("amount, invoices(invoice_no, invoice_date)").eq("payment_id", id),
+      supabase.from("payment_allocations").select("amount, invoices(invoice_no, invoice_date)").eq("payment_id", id).not("invoice_id", "is", null),
       p.collected_by ? supabase.from("tenant_people").select("full_name").eq("id", p.collected_by).maybeSingle() : Promise.resolve({ data: null }),
     ]);
     const allocations = (allocs ?? []).map((a) => {
@@ -129,56 +138,42 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
     return {
       buffer,
       filename: `${safe(p.receipt_no)}.pdf`,
-      phone: r?.mobile,
+      phone: r?.mobile ?? undefined,
       shareText: `Received with thanks ₹${Number(p.amount).toLocaleString("en-IN")} from ${r?.shop_name} (receipt ${p.receipt_no}). — ${co.legal_name}`,
     };
   }
 
-  if (kind === "statement") {
-    const { data: r } = await supabase
-      .from("retailers")
-      .select("id, shop_name, code, mobile, gstin, billing_address, billing_city, credit_days, credit_limit")
-      .eq("id", id)
-      .maybeSingle();
-    if (!r) return null;
-    const today = new Date(Date.now() + 5.5 * 3600e3).toISOString().slice(0, 10);
-    const to = params.get("to") || today;
-    const from = params.get("from") || new Date(Date.parse(to) - 90 * 864e5).toISOString().slice(0, 10);
-    const [{ data: before }, { data: entries }, { data: open }, { data: bal }] = await Promise.all([
-      supabase.from("retailer_ledger").select("debit, credit").eq("retailer_id", id).lt("entry_date", from),
-      supabase.from("retailer_ledger").select("entry_date, doc_no, narration, debit, credit, created_at").eq("retailer_id", id)
-        .gte("entry_date", from).lte("entry_date", to).order("entry_date").order("created_at"),
-      supabase.from("invoice_balances").select("invoice_no, invoice_date, due_date, balance, days_past_due").eq("retailer_id", id).gt("balance", 0).order("due_date"),
-      supabase.from("retailer_balances").select("*").eq("retailer_id", id).maybeSingle(),
+  if (kind === "statement" || kind === "town-statement" || kind === "route-statement" || kind === "territory-statement") {
+    const scope: StatementScope = kind === "statement" ? "retailer" : kind === "town-statement" ? "town" : kind === "route-statement" ? "route" : "territory";
+    // Town, route and territory statements are for office staff (the database refuses anyone else too).
+    if (scope !== "retailer") {
+      const session = await getSession();
+      if (!session?.profile || !["super_admin", "manager", "billing"].includes(session.profile.role)) return null;
+    }
+    const today = todayIST();
+    // An address without dates (the field apps) shows the last 90 days, as it always has.
+    const { from, to } = readPeriod(params, today, new Date(Date.parse(params.get("to") || today) - 90 * 864e5).toISOString().slice(0, 10));
+    const subject = await statementSubject(supabase, scope, id);
+    if (!subject) return null;
+    const [shops, entries] = await Promise.all([
+      statementShops(supabase, scope, id, from, to),
+      statementEntries(supabase, scope, id, from, to),
     ]);
-    const opening = (before ?? []).reduce((t, e) => t + Number(e.debit) - Number(e.credit), 0);
+    if (scope === "retailer" && shops.length === 0) return null;
     const buffer = await renderToBuffer(
-      <StatementPdf
-        data={{
-          company: co,
-          retailer: r,
-          from,
-          to,
-          opening,
-          entries: (entries ?? []).map((e) => ({ ...e, debit: Number(e.debit), credit: Number(e.credit), entry_date: e.entry_date ?? "", doc_no: e.doc_no ?? "", narration: e.narration ?? "", created_at: e.created_at ?? "" })),
-          openInvoices: (open ?? []).map((o) => ({ ...o, balance: Number(o.balance), days_past_due: Number(o.days_past_due), invoice_no: required(o.invoice_no, "Invoice number"), invoice_date: required(o.invoice_date, "Invoice date"), due_date: required(o.due_date, "Invoice due date") })),
-          summary: {
-            outstanding: Number(bal?.outstanding ?? 0),
-            not_yet_due: Number(bal?.not_yet_due ?? 0),
-            overdue: Number(bal?.overdue ?? 0) + Number(bal?.due_today ?? 0),
-            b0: Number(bal?.overdue_0_15 ?? 0),
-            b16: Number(bal?.overdue_16_30 ?? 0),
-            b31: Number(bal?.overdue_31_45 ?? 0),
-            b45: Number(bal?.overdue_45_plus ?? 0),
-          },
-        }}
+      <AccountStatementPdf
+        data={{ company: co, scope, subject, from, to, generatedAt: new Date().toISOString(), shops, entries, showIdle: params.get("idle") === "1" }}
       />
     );
+    const shop = scope === "retailer" ? shops[0] : null;
+    const closing = shop ? Number(shop.closing) : 0;
     return {
       buffer,
-      filename: `Statement_${safe(r.code)}_${to}.pdf`,
-      phone: r.mobile,
-      shareText: `Dear ${r.shop_name}, your account statement up to ${to}: outstanding ₹${Number(bal?.outstanding ?? 0).toLocaleString("en-IN")}. — ${co.legal_name}`,
+      filename: statementFilename(co.legal_name, scope, subject.name, from, to),
+      phone: shop?.mobile ?? undefined,
+      shareText: shop
+        ? `Dear ${shop.shop_name}, your account statement up to ${to}: ${closing < 0 ? `in credit ₹${Math.abs(closing).toLocaleString("en-IN")}` : `outstanding ₹${closing.toLocaleString("en-IN")}`}. — ${co.legal_name}`
+        : `${SCOPE_LABEL[scope]} statement — ${subject.name}, up to ${to}. — ${co.legal_name}`,
     };
   }
 

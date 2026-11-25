@@ -57,6 +57,7 @@ export async function recordPayment(input: {
   clientUuid?: string;
 }): Promise<{ id?: string; error?: string }> {
   await requireRole("super_admin", "manager", "billing", "salesman");
+  if (input.method !== "cash" && input.method !== "upi") return { error: "Shops pay by cash or UPI only." };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("record_payment", {
     p_retailer_id: input.retailerId,
@@ -146,5 +147,36 @@ export async function rejectCollection(id: string, reason: string): Promise<{ ok
   if (error) return { error: error.message };
   revalidatePath("/payments");
   revalidatePath("/retailers");
+  return { ok: true };
+}
+
+// ---------- Giving shop credit back (cash or UPI) ----------
+export async function recordRefund(input: { retailerId: string; amount: number; method: "cash" | "upi"; date?: string; reference?: string; notes?: string }) {
+  await requireRole("super_admin", "manager", "billing");
+  if (!(input.amount > 0)) return { error: "Enter the amount given back." };
+  if (input.method === "upi" && !input.reference?.trim()) return { error: "Enter the UPI reference number." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("record_refund", {
+    p_retailer_id: input.retailerId,
+    p_amount: input.amount,
+    p_method: input.method,
+    p_refund_date: input.date || undefined,
+    p_reference: input.reference?.trim() || undefined,
+    p_notes: input.notes?.trim() || undefined,
+  });
+  if (error) return { error: error.message };
+  revalidatePath(`/retailers/${input.retailerId}`);
+  revalidatePath("/payments/outstanding");
+  return { ok: true, id: data as string };
+}
+
+export async function cancelRefund(id: string, retailerId: string, reason: string) {
+  await requireRole("super_admin", "manager");
+  if (!reason.trim()) return { error: "Enter the reason." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("cancel_refund", { p_refund_id: id, p_reason: reason.trim() });
+  if (error) return { error: error.message };
+  revalidatePath(`/retailers/${retailerId}`);
+  revalidatePath("/payments/outstanding");
   return { ok: true };
 }

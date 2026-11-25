@@ -15,7 +15,7 @@ export type PurchaseBuilderLine = { product: PurchaseProduct; qty: number; cost:
 type Props = {
   companyState: string;
   suppliers: PickerSupplier[];
-  warehouses: { id: string; name: string; brand_id: string }[];
+  warehouses: { id: string; name: string; brand_id: string | null }[];
   brands: { id: string; name: string }[];
   defaultBrandId?: string;
   presetSupplierId?: string;
@@ -40,8 +40,11 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, d
   const [supplierId, setSupplierId] = useState(initial?.supplierId ?? presetSupplierId ?? (suppliers.length === 1 ? suppliers[0].id : ""));
   const presetBrand = suppliers.find((s) => s.id === presetSupplierId)?.brand_id ?? defaultBrandId;
   const [warehouseId, setWarehouseId] = useState(initial?.warehouseId ?? (warehouses.find((w) => w.brand_id === presetBrand) ?? warehouses[0])?.id ?? "");
-  // A purchase belongs to the brand of the warehouse the goods arrive at.
-  const brandId = warehouses.find((w) => w.id === warehouseId)?.brand_id;
+  const [lines, setLines] = useState<PurchaseBuilderLine[]>(initial?.lines ?? []);
+  // A purchase bill is for one brand: a brand warehouse decides it; with the
+  // shared warehouse the first product (or the supplier's brand) decides it.
+  const supplierBrand = suppliers.find((s) => s.id === supplierId)?.brand_id ?? undefined;
+  const brandId = warehouses.find((w) => w.id === warehouseId)?.brand_id ?? lines[0]?.product.brand_id ?? supplierBrand;
   const brandName = brands.find((b) => b.id === brandId)?.name ?? "";
   const [orderDate, setOrderDate] = useState(initial?.orderDate ?? todayIST());
   const [expectedDate, setExpectedDate] = useState(initial?.expectedDate ?? "");
@@ -49,7 +52,6 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, d
   const [creditDays, setCreditDays] = useState<number>(initial?.creditDays ?? supplier?.credit_days ?? 30);
   const [otherCharges, setOtherCharges] = useState(initial?.otherCharges ? String(initial.otherCharges) : "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
-  const [lines, setLines] = useState<PurchaseBuilderLine[]>(initial?.lines ?? []);
   const [receiveNow, setReceiveNow] = useState(false);
   const [billNo, setBillNo] = useState("");
   const [billDate, setBillDate] = useState(todayIST());
@@ -79,7 +81,7 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, d
   }
   function chooseWarehouse(id: string) {
     const next = warehouses.find((w) => w.id === id);
-    if (lines.length && next && next.brand_id !== brandId) {
+    if (lines.length && next?.brand_id && next.brand_id !== brandId) {
       setError(`This purchase already has ${brandName} products. A ${brands.find((b) => b.id === next.brand_id)?.name} warehouse needs a separate purchase.`);
       return;
     }
@@ -88,6 +90,12 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, d
   }
 
   function add(p: PurchaseProduct, qty = 1) {
+    const first = lines[0]?.product;
+    if (first && first.brand_id !== p.brand_id) {
+      setError(`This bill already has ${brandName || "other-brand"} products. ${p.name} is a ${p.brand_name || "different brand"} product — put it on a separate purchase.`);
+      return;
+    }
+    setError(null);
     setLines((prev) => {
       const i = prev.findIndex((l) => l.product.id === p.id);
       if (i >= 0) return prev.map((l, j) => (j === i ? { ...l, qty: l.qty + qty } : l));
@@ -134,7 +142,7 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, d
               <div className="flex flex-wrap gap-2">
                 {suppliers.slice(0, 6).map((s) => (
                   <button key={s.id} type="button" onClick={() => chooseSupplier(s.id)}
-                    className={cn("rounded-lg border px-3 py-2 text-sm font-semibold", supplierId === s.id ? "border-fuchsia-600 bg-fuchsia-50 text-fuchsia-800 ring-2 ring-fuchsia-600/20" : "border-slate-300 bg-white hover:border-slate-400")}>
+                    className={cn("rounded-lg border px-3 py-2 text-sm font-semibold", supplierId === s.id ? "border-fuchsia-600 bg-fuchsia-50 text-fuchsia-800 ring-2 ring-fuchsia-600/20" : "border-slate-300 bg-surface hover:border-slate-400")}>
                     {s.name}
                   </button>
                 ))}
@@ -198,29 +206,29 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, d
                       </div>
                       <div className="mt-2 flex flex-wrap items-end gap-3">
                         <div>
-                          <div className="mb-1 text-[11px] font-medium text-slate-500">Qty ({l.product.unit_code})</div>
+                          <div className="mb-1 text-xs font-medium text-slate-500">Qty ({l.product.unit_code})</div>
                           <Input type="number" min={0} step="any" inputMode="decimal" value={l.qty || ""} onChange={(e) => update(i, { qty: Number(e.target.value) })} className="tabular h-9 w-24" />
                         </div>
                         <div>
-                          <div className="mb-1 text-[11px] font-medium text-slate-500">Cost per unit</div>
+                          <div className="mb-1 text-xs font-medium text-slate-500">Cost per unit</div>
                           <Input type="number" min={0} step="0.01" value={Number.isNaN(l.cost) ? "" : l.cost} onChange={(e) => update(i, { cost: e.target.value === "" ? NaN : Number(e.target.value) })} className={cn("tabular h-9 w-28", changed && "border-amber-400 bg-amber-50")} />
                         </div>
                         <div>
-                          <div className="mb-1 text-[11px] font-medium text-slate-500">Cost is</div>
+                          <div className="mb-1 text-xs font-medium text-slate-500">Cost is</div>
                           <div className="flex h-9 rounded-lg border border-slate-300 p-0.5 text-xs">
                             {(["exclusive", "inclusive"] as const).map((m) => (
-                              <button key={m} type="button" onClick={() => update(i, { mode: m })} className={cn("rounded-md px-2", l.mode === m ? "bg-ink-900 text-white" : "text-slate-600")}>
+                              <button key={m} type="button" onClick={() => update(i, { mode: m })} className={cn("rounded-md px-2", l.mode === m ? "bg-primary text-on-fill" : "text-slate-600")}>
                                 {m === "exclusive" ? "+ GST" : "incl. GST"}
                               </button>
                             ))}
                           </div>
                         </div>
                         <div>
-                          <div className="mb-1 text-[11px] font-medium text-slate-500">Disc. %</div>
+                          <div className="mb-1 text-xs font-medium text-slate-500">Disc. %</div>
                           <Input type="number" min={0} max={100} step="0.01" value={l.discount || ""} onChange={(e) => update(i, { discount: Number(e.target.value) })} className="tabular h-9 w-20" />
                         </div>
                       </div>
-                      {changed && <div className="mt-1 text-[11px] text-amber-700">Last cost {inr(l.product.purchase_cost)} {l.product.purchase_cost_mode === "inclusive" ? "incl." : "+"} GST</div>}
+                      {changed && <div className="mt-1 text-xs text-amber-700">Last cost {inr(l.product.purchase_cost)} {l.product.purchase_cost_mode === "inclusive" ? "incl." : "+"} GST</div>}
                     </div>
                     <div className="tabular text-right text-sm sm:min-w-32">
                       <div className="text-slate-500">Taxable {inr(c.taxable)}</div>
@@ -242,7 +250,7 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, d
           <div className="flex flex-wrap gap-2">
             {CREDIT.map((d) => (
               <button key={d} type="button" onClick={() => setCreditDays(d)}
-                className={cn("rounded-lg border px-3 py-1.5 text-sm font-medium", creditDays === d ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300 bg-white hover:border-slate-400")}>
+                className={cn("rounded-lg border px-3 py-1.5 text-sm font-medium", creditDays === d ? "border-primary bg-primary text-on-fill" : "border-slate-300 bg-surface hover:border-slate-400")}>
                 {d === 0 ? "Cash" : `${d} days`}
               </button>
             ))}
@@ -260,10 +268,10 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, d
         </Card>
 
         <Card className="overflow-hidden">
-          <div className="bg-gradient-to-br from-fuchsia-700 to-fuchsia-900 px-5 py-4 text-white">
-            <div className="text-sm text-fuchsia-100">Purchase total</div>
+          <div className="hero-blue px-5 py-4 text-white">
+            <div className="text-sm text-white/85">Purchase total</div>
             <div className="tabular text-3xl font-semibold tracking-tight">{inr(grand)}</div>
-            <div className="text-xs text-fuchsia-200">{lines.length} product{lines.length === 1 ? "" : "s"} · {fmtQty(lines.reduce((s, l) => s + (l.qty || 0), 0))} units · {igst ? "IGST" : "CGST + SGST"}</div>
+            <div className="text-xs text-white/85">{lines.length} product{lines.length === 1 ? "" : "s"} · {fmtQty(lines.reduce((s, l) => s + (l.qty || 0), 0))} units · {igst ? "IGST" : "CGST + SGST"}</div>
           </div>
           <dl className="tabular space-y-1.5 p-5 text-sm">
             <Row k="Subtotal" v={inr(t.subtotal)} />
@@ -298,11 +306,11 @@ export function PurchaseBuilder({ companyState, suppliers, warehouses, brands, d
             )}
             {error && <Alert>{error}</Alert>}
             {receiveNow ? (
-              <Button className="h-11 w-full bg-emerald-600 hover:bg-emerald-700" disabled={pending} onClick={() => submit(true)}>
+              <Button className="h-11 w-full bg-primary hover:bg-primary-hover" disabled={pending} onClick={() => submit(true)}>
                 <PackageCheck className="size-4" /> {pending ? "Saving…" : "Save and add stock"}
               </Button>
             ) : (
-              <Button className="h-11 w-full bg-fuchsia-700 hover:bg-fuchsia-800" disabled={pending} onClick={() => submit(false)}>
+              <Button className="h-11 w-full bg-primary hover:bg-primary-hover" disabled={pending} onClick={() => submit(false)}>
                 <ClipboardList className="size-4" /> {pending ? "Saving…" : initial ? "Save purchase order" : "Create purchase order"}
               </Button>
             )}
@@ -356,9 +364,9 @@ function ProductSearch({ brandId, brandName, onAdd }: { brandId?: string; brandN
   return (
     <div className="relative">
       <div className="mb-2 flex flex-wrap gap-2">
-        <button type="button" onClick={() => { setBrand(undefined); setOpen(false); }} className={cn("rounded-full border px-3 py-1 text-xs font-medium", !brand ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300")}>Search</button>
+        <button type="button" onClick={() => { setBrand(undefined); setOpen(false); }} className={cn("rounded-full border px-3 py-1 text-xs font-medium", !brand ? "border-primary bg-primary text-on-fill" : "border-slate-300")}>Search</button>
         {brandId && (
-          <button type="button" onClick={() => setBrand(brandId)} className={cn("rounded-full border px-3 py-1 text-xs font-medium", brand ? "border-fuchsia-600 bg-fuchsia-600 text-white" : "border-slate-300")}>
+          <button type="button" onClick={() => setBrand(brandId)} className={cn("rounded-full border px-3 py-1 text-xs font-medium", brand ? "border-fuchsia-600 bg-primary text-on-fill" : "border-slate-300")}>
             All {brandName} products
           </button>
         )}
@@ -371,7 +379,7 @@ function ProductSearch({ brandId, brandName, onAdd }: { brandId?: string; brandN
         <BarcodeScanButton onDetected={(code) => setQ(code)} />
       </div>
       {open && results.length > 0 && (
-        <ul className="absolute z-20 mt-1 max-h-96 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+        <ul className="absolute z-20 mt-1 max-h-96 w-full overflow-auto rounded-lg border border-slate-200 bg-surface py-1 shadow-lg">
           {brand && (
             <li className="flex items-center justify-between border-b border-slate-100 px-3 py-2 text-xs text-slate-500">
               {results.length} products

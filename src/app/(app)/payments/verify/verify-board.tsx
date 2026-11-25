@@ -76,8 +76,8 @@ export function VerifyBoard({ payments }: { payments: PendingPayment[] }) {
                   const I = ICON[m];
                   return <span key={m} className={cn("flex items-center gap-1 rounded-lg px-2.5 py-1 text-sm font-semibold", TONE[m])}><I className="size-4" /> {PAYMENT_METHOD[m]} <span className="tabular">{inr(by(m), { decimals: false })}</span></span>;
                 })}
-                <span className="tabular rounded-lg bg-ink-900 px-2.5 py-1 text-sm font-bold text-white">{inr(total, { decimals: false })}</span>
-                <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" disabled={pending} onClick={() => verify(g.rows.map((r) => r.id))}>
+                <span className="tabular rounded-lg bg-primary px-2.5 py-1 text-sm font-bold text-on-fill">{inr(total, { decimals: false })}</span>
+                <Button size="sm" className="bg-primary hover:bg-primary-hover" disabled={pending} onClick={() => verify(g.rows.map((r) => r.id))}>
                   <CheckCheck className="size-4" /> Verify all
                 </Button>
               </div>
@@ -96,12 +96,12 @@ export function VerifyBoard({ payments }: { payments: PendingPayment[] }) {
                       <td className="px-3 py-2.5">
                         <span className={cn("inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold", TONE[p.method])}><I className="size-3.5" /> {PAYMENT_METHOD[p.method]}</span>
                         {p.reference_no && <div className="mt-0.5 font-mono text-xs text-slate-600">{p.reference_no}{p.bank_name ? ` · ${p.bank_name}` : ""}</div>}
-                        <div className="text-[11px] text-slate-400">{HINT[p.method]}</div>
+                        <div className="text-xs text-slate-400">{HINT[p.method]}</div>
                         {p.status === "cheque_pending" && <Badge tone="amber">Cheque not cleared yet</Badge>}
                       </td>
                       <td className="tabular px-3 py-2.5 text-right text-base font-semibold">{inr(p.amount)}</td>
                       <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" disabled={pending} onClick={() => verify([p.id])}>Verify</Button>{" "}
+                        <Button size="sm" className="bg-primary hover:bg-primary-hover" disabled={pending} onClick={() => verify([p.id])}>Verify</Button>{" "}
                         <Button size="sm" variant="secondary" disabled={pending} onClick={() => setRejecting(p)}><XCircle className="size-3.5" /> Reject</Button>
                       </td>
                     </tr>
@@ -114,11 +114,11 @@ export function VerifyBoard({ payments }: { payments: PendingPayment[] }) {
       })}
 
       {picked.size > 0 && (
-        <div className="sticky bottom-4 z-20 flex items-center justify-between gap-3 rounded-2xl bg-ink-900 px-5 py-3 text-white shadow-xl">
+        <div className="sticky bottom-4 z-20 flex items-center justify-between gap-3 rounded-2xl bg-primary px-5 py-3 text-on-fill shadow-xl">
           <span>{picked.size} selected · <b className="tabular">{inr(pickedTotal)}</b></span>
           <span className="flex gap-2">
             <Button variant="secondary" size="sm" onClick={() => setPicked(new Set())}>Clear</Button>
-            <Button size="sm" className="bg-emerald-500 hover:bg-emerald-600" disabled={pending} onClick={() => verify([...picked])}><CheckCheck className="size-4" /> Verify selected</Button>
+            <Button size="sm" className="bg-emerald-500 hover:bg-primary-hover" disabled={pending} onClick={() => verify([...picked])}><CheckCheck className="size-4" /> Verify selected</Button>
           </span>
         </div>
       )}

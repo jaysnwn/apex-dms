@@ -6,6 +6,7 @@ import { Badge, Card, Input, Label, Select } from "@/components/ui";
 import { addLocation, saveWarehouse } from "../actions";
 import { brandScope, getBrandContext } from "@/lib/brand";
 import { BrandBadge } from "@/components/brand-badge";
+import { warehouseOr } from "@/lib/warehouse-scope";
 
 export const metadata: Metadata = { title: "Warehouses" };
 
@@ -17,7 +18,7 @@ export default async function WarehousesPage() {
   const scope = await brandScope();
   const brandOf = new Map(ctx.brands.map((b) => [b.id, b]));
   const [{ data: warehouses }, { data: locations }] = await Promise.all([
-    supabase.from("warehouses").select("id, name, address, is_active, brand_id").in("brand_id", scope).order("name"),
+    supabase.from("warehouses").select("id, name, address, is_active, brand_id").or(warehouseOr(scope)).order("name"),
     supabase.from("warehouse_locations").select("id, warehouse_id, code, description").order("code"),
   ]);
 
@@ -30,7 +31,7 @@ export default async function WarehousesPage() {
             <Card key={w.id} className="p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="flex items-center gap-2 font-semibold">{w.name} <BrandBadge name={brandOf.get(w.brand_id)?.name ?? ""} code={brandOf.get(w.brand_id)?.code} /></h2>
+                  <h2 className="flex items-center gap-2 font-semibold">{w.name} {w.brand_id ? <BrandBadge name={brandOf.get(w.brand_id)?.name ?? ""} code={brandOf.get(w.brand_id)?.code} /> : <BrandBadge name="All brands" />}</h2>
                   {w.address && <p className="text-sm text-slate-500">{w.address}</p>}
                 </div>
                 {w.is_active ? <Badge tone="green">Active</Badge> : <Badge>Inactive</Badge>}
@@ -82,13 +83,14 @@ export default async function WarehousesPage() {
       {canEdit && (
         <Card className="h-fit p-5">
           <h2 className="mb-1 font-semibold">Add a warehouse</h2>
-          <p className="mb-3 text-xs text-slate-500">A warehouse belongs to one brand. Stock of another brand can never be put in it.</p>
+          <p className="mb-3 text-xs text-slate-500">A shared warehouse holds stock of every brand; stock reports can still be taken brand by brand. A brand-only warehouse accepts just that brand.</p>
           <ActionForm action={saveWarehouse} submitLabel="Add warehouse">
             <div className="space-y-3">
               <div>
-                <Label htmlFor="wh-brand">Brand</Label>
-                <Select id="wh-brand" name="brand_id" defaultValue={ctx.current?.id ?? ctx.brands[0]?.id}>
-                  {ctx.brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                <Label htmlFor="wh-brand">Holds stock of</Label>
+                <Select id="wh-brand" name="brand_id" defaultValue="shared">
+                  <option value="shared">Shared — all brands</option>
+                  {ctx.brands.map((b) => <option key={b.id} value={b.id}>{b.name} only</option>)}
                 </Select>
               </div>
               <div>

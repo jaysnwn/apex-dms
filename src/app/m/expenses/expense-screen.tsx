@@ -97,11 +97,11 @@ export function ExpenseScreen(p: Props) {
     <div className="space-y-4">
       <div className="flex items-center justify-between px-1">
         <h1 className="text-xl font-bold">My expenses</h1>
-        <button onClick={() => setForm({})} className="flex h-10 items-center gap-1.5 rounded-xl bg-rose-600 px-3.5 text-sm font-semibold text-white shadow-sm active:scale-95"><Plus className="size-4" /> Add expense</button>
+        <button onClick={() => setForm({})} className="flex h-10 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-sm font-semibold text-on-fill shadow-sm active:scale-95"><Plus className="size-4" /> Add expense</button>
       </div>
 
-      <section className="rounded-3xl bg-gradient-to-br from-rose-600 to-rose-800 p-5 text-white shadow-md">
-        <div className="text-sm text-rose-100">This month</div>
+      <section className="rounded-3xl hero-blue p-5 text-white shadow-md">
+        <div className="text-sm text-white/85">This month</div>
         <div className="tabular text-3xl font-bold">{inr(p.month.incurred, { decimals: false })}</div>
         <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
           <Tile k="Waiting approval" v={p.month.pending} />
@@ -116,11 +116,11 @@ export function ExpenseScreen(p: Props) {
       {attention.length > 0 && (
         <section>
           <h2 className="mb-2 px-1 text-sm font-semibold text-amber-800">Needs your action</h2>
-          <ul className="overflow-hidden rounded-2xl bg-white shadow-sm ring-2 ring-amber-300">{attention.map(item)}</ul>
+          <ul className="overflow-hidden rounded-2xl bg-surface shadow-sm ring-2 ring-amber-300">{attention.map(item)}</ul>
         </section>
       )}
 
-      <ul className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70">
+      <ul className="overflow-hidden rounded-2xl bg-surface shadow-sm ring-1 ring-slate-200/70">
         {rest.length === 0 && <li className="p-6 text-center text-sm text-slate-500">No expenses this month yet. Tap “Add expense” to log one.</li>}
         {rest.map(item)}
       </ul>
@@ -133,8 +133,8 @@ export function ExpenseScreen(p: Props) {
 
 function Tile({ k, v, strong }: { k: string; v: number; strong?: boolean }) {
   return (
-    <div className={cn("rounded-xl px-2.5 py-2", strong ? "bg-white text-rose-800" : "bg-white/15")}>
-      <div className={cn("text-[10px] leading-tight", strong ? "text-rose-700" : "text-rose-100")}>{k}</div>
+    <div className={cn("rounded-xl px-2.5 py-2", strong ? "bg-surface text-rose-800" : "bg-white/15")}>
+      <div className={cn("text-xs leading-tight", strong ? "text-rose-700" : "text-on-fill/85")}>{k}</div>
       <div className="tabular font-semibold">{inr(v, { decimals: false })}</div>
     </div>
   );
@@ -191,19 +191,19 @@ function ExpenseSheet({ userId, categories, routes, brands, defaultRoute, edit, 
     <Sheet title={done ? "Saved" : edit ? (edit.status === "returned" ? "Correct and resend" : "Edit draft") : "Add expense"} onClose={onClose}
       footer={done ? (
         <div className="grid grid-cols-2 gap-2">
-          {!edit ? <button onClick={again} className="h-12 rounded-2xl bg-white font-semibold ring-1 ring-slate-300">Add another</button> : <span />}
-          <button onClick={onClose} className="h-12 rounded-2xl bg-ink-900 font-semibold text-white">Done</button>
+          {!edit ? <button onClick={again} className="h-12 rounded-2xl bg-surface font-semibold ring-1 ring-slate-300">Add another</button> : <span />}
+          <button onClick={onClose} className="h-12 rounded-2xl bg-primary font-semibold text-on-fill">Done</button>
         </div>
       ) : (
         <>
           {error && <p className="mb-2 rounded-xl bg-red-50 p-2.5 text-sm text-red-800" role="alert">{error}</p>}
-          <button disabled={busy} onClick={() => save(true)} className="h-14 w-full rounded-2xl bg-rose-600 text-lg font-bold text-white disabled:opacity-60">{busy ? "Saving…" : edit?.status === "returned" ? "Resend for approval" : "Submit for approval"}</button>
+          <button disabled={busy} onClick={() => save(true)} className="h-14 w-full rounded-2xl bg-primary text-lg font-bold text-on-fill disabled:opacity-60">{busy ? "Saving…" : edit?.status === "returned" ? "Resend for approval" : "Submit for approval"}</button>
           {(!edit || edit.status === "draft") && <button disabled={busy} onClick={() => save(false)} className="mt-2 h-10 w-full rounded-xl text-sm font-medium text-slate-600">Save as draft</button>}
         </>
       )}>
       {done ? (
         <div className="py-6 text-center">
-          <span className="mx-auto grid size-16 place-items-center rounded-full bg-emerald-500 text-white"><Check className="size-9" strokeWidth={3} /></span>
+          <span className="mx-auto grid size-16 place-items-center rounded-full bg-emerald-500 text-on-fill"><Check className="size-9" strokeWidth={3} /></span>
           <p className="mt-3 text-lg font-semibold">{inr(Number(amount), { decimals: false })} {done.status === "approved" ? "approved" : done.status === "submitted" ? "sent for approval" : "saved as draft"}</p>
           <p className="text-sm text-slate-500">{done.no ?? ""}{done.status === "submitted" ? " · your manager will review it" : ""}</p>
         </div>
@@ -213,7 +213,7 @@ function ExpenseSheet({ userId, categories, routes, brands, defaultRoute, edit, 
             {categories.map((c) => {
               const ic = iconOf(c.code);
               return (
-                <button key={c.id} onClick={() => setCategory(c.id)} className={cn("flex flex-col items-center gap-1 rounded-2xl px-1 py-2 text-center text-[10.5px] leading-tight font-semibold ring-1", category === c.id ? "bg-rose-50 text-rose-800 ring-2 ring-rose-500" : "bg-white text-slate-700 ring-slate-200")}>
+                <button key={c.id} onClick={() => setCategory(c.id)} className={cn("flex flex-col items-center gap-1 rounded-2xl px-1 py-2 text-center text-xs leading-tight font-semibold ring-1", category === c.id ? "bg-rose-50 text-rose-800 ring-2 ring-rose-500" : "bg-surface text-slate-700 ring-slate-200")}>
                   <span className={cn("grid size-9 place-items-center rounded-xl", ic.tone)}><ic.icon className="size-[18px]" /></span>{c.name}
                 </button>
               );
@@ -229,27 +229,27 @@ function ExpenseSheet({ userId, categories, routes, brands, defaultRoute, edit, 
             </label>
           </div>
           {routes.length > 0 && (
-            <select value={route} onChange={(e) => setRoute(e.target.value)} aria-label="Route" className={cn("h-12 w-full rounded-xl border bg-white px-3 text-base", cat?.route_required && !route ? "border-amber-400" : "border-slate-300")}>
+            <select value={route} onChange={(e) => setRoute(e.target.value)} aria-label="Route" className={cn("h-12 w-full rounded-xl border bg-surface px-3 text-base", cat?.route_required && !route ? "border-amber-400" : "border-slate-300")}>
               <option value="">{cat?.route_required ? "Choose route (required)" : "No route"}</option>
               {routes.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           )}
           <div className="grid grid-cols-2 gap-2">
             {(["employee", "company"] as const).map((x) => (
-              <button key={x} onClick={() => setPaidBy(x)} className={cn("h-11 rounded-xl text-sm font-semibold ring-1", paidBy === x ? "bg-ink-900 text-white ring-ink-900" : "bg-white text-slate-700 ring-slate-300")}>
+              <button key={x} onClick={() => setPaidBy(x)} className={cn("h-11 rounded-xl text-sm font-semibold ring-1", paidBy === x ? "bg-primary text-on-fill ring-primary" : "bg-surface text-slate-700 ring-slate-300")}>
                 {x === "employee" ? "I paid" : "Company paid"}
               </button>
             ))}
           </div>
           <div className="flex flex-wrap gap-1.5">
             {Object.entries(EXPENSE_PAYMENT_METHOD).map(([k, v]) => (
-              <button key={k} onClick={() => setMethod(k)} className={cn("rounded-full px-3 py-1.5 text-xs font-semibold ring-1", method === k ? "bg-rose-600 text-white ring-rose-600" : "bg-white text-slate-600 ring-slate-300")}>{v}</button>
+              <button key={k} onClick={() => setMethod(k)} className={cn("rounded-full px-3 py-1.5 text-xs font-semibold ring-1", method === k ? "bg-primary text-on-fill ring-rose-600" : "bg-surface text-slate-600 ring-slate-300")}>{v}</button>
             ))}
           </div>
           {brands.length > 1 && (
             <div className="flex flex-wrap gap-1.5">
-              <button onClick={() => setBrand("")} className={cn("rounded-full px-3 py-1.5 text-xs font-semibold ring-1", !brand ? "bg-ink-900 text-white ring-ink-900" : "bg-white text-slate-600 ring-slate-300")}>All brands</button>
-              {brands.map((b) => <button key={b.id} onClick={() => setBrand(b.id)} className={cn("rounded-full px-3 py-1.5 text-xs font-semibold ring-1", brand === b.id ? "bg-ink-900 text-white ring-ink-900" : "bg-white text-slate-600 ring-slate-300")}>{b.name}</button>)}
+              <button onClick={() => setBrand("")} className={cn("rounded-full px-3 py-1.5 text-xs font-semibold ring-1", !brand ? "bg-primary text-on-fill ring-primary" : "bg-surface text-slate-600 ring-slate-300")}>All brands</button>
+              {brands.map((b) => <button key={b.id} onClick={() => setBrand(b.id)} className={cn("rounded-full px-3 py-1.5 text-xs font-semibold ring-1", brand === b.id ? "bg-primary text-on-fill ring-primary" : "bg-surface text-slate-600 ring-slate-300")}>{b.name}</button>)}
             </div>
           )}
           <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder="Note (e.g. Petrol, Akole route)" aria-label="Description" className="h-12 w-full rounded-xl border border-slate-300 px-3 text-base" />
@@ -288,15 +288,15 @@ function DetailSheet({ id, catCode, onClose, onEdit }: { id: string; catCode: Ma
       footer={editable ? (
         confirmDelete ? (
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => setConfirmDelete(false)} className="h-12 rounded-2xl bg-white font-semibold ring-1 ring-slate-300">Back</button>
-            <button disabled={busy} onClick={() => run(() => deleteExpense(e!.id))} className="h-12 rounded-2xl bg-red-600 font-semibold text-white">{e!.status === "draft" ? "Delete draft" : "Withdraw"}</button>
+            <button onClick={() => setConfirmDelete(false)} className="h-12 rounded-2xl bg-surface font-semibold ring-1 ring-slate-300">Back</button>
+            <button disabled={busy} onClick={() => run(() => deleteExpense(e!.id))} className="h-12 rounded-2xl bg-red-600 font-semibold text-on-fill">{e!.status === "draft" ? "Delete draft" : "Withdraw"}</button>
           </div>
         ) : (
           <>
             {error && <p className="mb-2 rounded-xl bg-red-50 p-2.5 text-sm text-red-800" role="alert">{error}</p>}
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => onEdit(e!)} className="h-12 rounded-2xl bg-white font-semibold ring-1 ring-slate-300">{e!.status === "returned" ? "Correct" : "Edit"}</button>
-              <button disabled={busy} onClick={() => run(() => submitExpense(e!.id))} className="h-12 rounded-2xl bg-rose-600 font-semibold text-white">{e!.status === "returned" ? "Resend as is" : "Submit"}</button>
+              <button onClick={() => onEdit(e!)} className="h-12 rounded-2xl bg-surface font-semibold ring-1 ring-slate-300">{e!.status === "returned" ? "Correct" : "Edit"}</button>
+              <button disabled={busy} onClick={() => run(() => submitExpense(e!.id))} className="h-12 rounded-2xl bg-primary font-semibold text-on-fill">{e!.status === "returned" ? "Resend as is" : "Submit"}</button>
             </div>
             <button onClick={() => setConfirmDelete(true)} className="mt-2 h-10 w-full text-sm font-medium text-red-700">{e!.status === "draft" ? "Delete draft" : "Withdraw this expense"}</button>
           </>
@@ -319,9 +319,9 @@ function DetailSheet({ id, catCode, onClose, onEdit }: { id: string; catCode: Ma
           {e.status === "cancelled" && <p className="rounded-xl bg-slate-100 p-3 text-sm">Cancelled: {e.cancel_reason}</p>}
           {e.status === "approved" && e.paid_by === "employee" && (
             <div className="grid grid-cols-3 gap-2 text-center text-sm">
-              <div className="rounded-xl bg-slate-50 p-2"><div className="text-[11px] text-slate-500">Approved</div><div className="tabular font-semibold">{inr(e.approved_amount, { decimals: false })}</div></div>
-              <div className="rounded-xl bg-emerald-50 p-2"><div className="text-[11px] text-slate-500">Paid to you</div><div className="tabular font-semibold">{inr(e.reimbursed_amount, { decimals: false })}</div></div>
-              <div className="rounded-xl bg-amber-50 p-2"><div className="text-[11px] text-slate-500">Still due</div><div className="tabular font-semibold">{inr(e.outstanding, { decimals: false })}</div></div>
+              <div className="rounded-xl bg-slate-50 p-2"><div className="text-xs text-slate-500">Approved</div><div className="tabular font-semibold">{inr(e.approved_amount, { decimals: false })}</div></div>
+              <div className="rounded-xl bg-emerald-50 p-2"><div className="text-xs text-slate-500">Paid to you</div><div className="tabular font-semibold">{inr(e.reimbursed_amount, { decimals: false })}</div></div>
+              <div className="rounded-xl bg-amber-50 p-2"><div className="text-xs text-slate-500">Still due</div><div className="tabular font-semibold">{inr(e.outstanding, { decimals: false })}</div></div>
             </div>
           )}
           <dl className="grid grid-cols-2 gap-3 text-sm">

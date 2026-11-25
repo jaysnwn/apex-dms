@@ -81,7 +81,7 @@ export function SupplierPaymentForm({ suppliers, initialSupplier, focusBill }: {
           <div className="flex flex-wrap gap-2">
             {suppliers.slice(0, 6).map((s) => (
               <button key={s.id} type="button" onClick={() => setSupplierId(s.id)}
-                className={cn("rounded-lg border px-3 py-2 text-sm font-semibold", supplierId === s.id ? "border-fuchsia-600 bg-fuchsia-50 text-fuchsia-800 ring-2 ring-fuchsia-600/20" : "border-slate-300 bg-white hover:border-slate-400")}>
+                className={cn("rounded-lg border px-3 py-2 text-sm font-semibold", supplierId === s.id ? "border-fuchsia-600 bg-fuchsia-50 text-fuchsia-800 ring-2 ring-fuchsia-600/20" : "border-slate-300 bg-surface hover:border-slate-400")}>
                 {s.name}
               </button>
             ))}
@@ -96,7 +96,7 @@ export function SupplierPaymentForm({ suppliers, initialSupplier, focusBill }: {
         <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {METHODS.map((m) => (
             <button key={m.key} type="button" onClick={() => setMethod(m.key)}
-              className={cn("flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium", method === m.key ? "border-emerald-600 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-600/20" : "border-slate-300 bg-white hover:border-slate-400")}>
+              className={cn("flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium", method === m.key ? "border-emerald-600 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-600/20" : "border-slate-300 bg-surface hover:border-slate-400")}>
               <m.icon className="size-4" /> {m.label}
             </button>
           ))}
@@ -122,8 +122,8 @@ export function SupplierPaymentForm({ suppliers, initialSupplier, focusBill }: {
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-semibold">Apply to bills</h2>
             <div className="flex rounded-lg border p-0.5 text-xs">
-              <button type="button" onClick={() => setMode("fifo")} className={cn("rounded-md px-2 py-1", mode === "fifo" && "bg-ink-900 text-white")}>Oldest first</button>
-              <button type="button" onClick={() => setMode("manual")} className={cn("rounded-md px-2 py-1", mode === "manual" && "bg-ink-900 text-white")}>Choose</button>
+              <button type="button" onClick={() => setMode("fifo")} className={cn("rounded-md px-2 py-1", mode === "fifo" && "bg-primary text-on-fill")}>Oldest first</button>
+              <button type="button" onClick={() => setMode("manual")} className={cn("rounded-md px-2 py-1", mode === "manual" && "bg-primary text-on-fill")}>Choose</button>
             </div>
           </div>
           {!supplierId ? <p className="text-sm text-slate-500">Choose a supplier to see unpaid bills.</p>
@@ -158,7 +158,7 @@ export function SupplierPaymentForm({ suppliers, initialSupplier, focusBill }: {
           {amt > 0 && advance > 0 && <p className="mt-3 rounded-lg bg-sky-50 p-2 text-sm text-sky-800">{inr(advance)} will be kept as advance to this supplier.</p>}
         </Card>
         {error && <Alert>{error}</Alert>}
-        <Button className="h-12 w-full bg-emerald-600 text-base hover:bg-emerald-700" disabled={pending} onClick={submit}>
+        <Button className="h-12 w-full bg-primary text-base hover:bg-primary-hover" disabled={pending} onClick={submit}>
           {pending ? "Saving…" : `Save payment${amt > 0 ? ` of ${inr(amt)}` : ""}`}
         </Button>
       </div>

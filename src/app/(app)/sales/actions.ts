@@ -8,14 +8,24 @@ import { dbError } from "@/lib/actions";
 import { normaliseMobile } from "@/lib/format";
 import { signProductImages } from "@/lib/images";
 import { searchSource, searchWords } from "@/lib/search-words";
+import { brandKey } from "@/lib/brand-key";
 
-export type SaveResult = { ok?: boolean; error?: string; hint?: string; orderId?: string; invoiceId?: string; invoiceNo?: string; paid?: number };
+export type SavedDoc = { orderId: string; orderNo?: string; invoiceId?: string; invoiceNo?: string; brandId: string; brandName: string; total: number };
+export type SaveResult = { ok?: boolean; error?: string; hint?: string; orderId?: string; invoiceId?: string; invoiceNo?: string; paid?: number; docs?: SavedDoc[] };
 
 export type OrderLineInput = { product_id: string; qty: number; discount_pct?: number; unit_price?: number | null };
 
 // Save (create or edit) a quotation; optionally confirm it straight into an invoice.
+//
+// One cart may hold products of several brands. An order / invoice is always for
+// ONE brand (its own number series, its own GST treatment), so the cart is split:
+// one quotation — and, when confirmed, one invoice — per brand. Money paid at the
+// counter is applied to those invoices in turn.
 export async function saveOrder(input: {
   orderId?: string | null;
+  // Auto-save: the quotation already saved for each brand in this cart. When given,
+  // each brand's quotation is updated in place and orderId is not used.
+  orderIds?: Record<string, string>;
   retailerId: string;
   creditDays: number;
   notes: string;
@@ -24,41 +34,130 @@ export async function saveOrder(input: {
   confirm?: boolean;
   overrideCredit?: boolean;
   overrideStock?: boolean;
-  payment?: { amount: number; method: "cash" | "upi" | "bank_transfer" | "cheque"; reference?: string } | null;
+  payment?: { amount: number; method: "cash" | "upi"; reference?: string } | null;
 }): Promise<SaveResult> {
   const { profile } = await requireRole("super_admin", "manager", "billing", "salesman");
   if (!input.retailerId) return { error: "Choose a retailer." };
   if (input.lines.length === 0) return { error: "Add at least one product." };
 
   const supabase = await createClient();
-  const { data: orderId, error } = await supabase.rpc("save_quotation", {
-    p_order_id: input.orderId ?? null,
-    p_retailer_id: input.retailerId,
-    p_credit_days: input.creditDays,
-    p_notes: input.notes,
-    p_lines: input.lines,
-    p_client_uuid: input.orderId ? null : input.clientUuid ?? null,
-  });
-  if (error) return { error: dbError(error) };
+  const { data: prods } = await supabase.from("catalog").select("id, brand_id, brand_name").in("id", input.lines.map((l) => l.product_id));
+  const brandOf = new Map((prods ?? []).map((p) => [p.id as string, { id: p.brand_id as string, name: p.brand_name as string }]));
+  const groups = new Map<string, { name: string; lines: OrderLineInput[] }>();
+  for (const l of input.lines) {
+    const b = brandOf.get(l.product_id);
+    if (!b) return { error: "A product in the cart is no longer available. Refresh and try again." };
+    const g = groups.get(b.id) ?? { name: b.name, lines: [] };
+    g.lines.push(l);
+    groups.set(b.id, g);
+  }
+
+  // Editing a draft: it keeps its brand; any other brand in the cart becomes a new quotation.
+  let editBrand: string | null = null;
+  const byBrand = input.orderIds;
+  if (!byBrand && input.orderId) {
+    const { data: o } = await supabase.from("orders").select("brand_id").eq("id", input.orderId).maybeSingle();
+    editBrand = (o?.brand_id as string | null) ?? null;
+    if (editBrand && !groups.has(editBrand)) {
+      return { error: "This draft's products were all removed. Cancel the draft instead, or add one of its brand's products back." };
+    }
+  }
+
+  const keys = [...groups.keys()].sort((a, b) => (a === editBrand ? -1 : b === editBrand ? 1 : a.localeCompare(b)));
+  const docs: SavedDoc[] = [];
+  for (const [i, brandId] of keys.entries()) {
+    const g = groups.get(brandId)!;
+    const existing = byBrand
+      ? byBrand[brandId] ?? null
+      : input.orderId && (brandId === editBrand || (!editBrand && i === 0)) ? input.orderId : null;
+    const { data: orderId, error } = await supabase.rpc("save_quotation", {
+      p_order_id: existing,
+      p_retailer_id: input.retailerId,
+      p_credit_days: input.creditDays,
+      p_notes: input.notes,
+      p_lines: g.lines,
+      // With auto-save every brand gets its own derived key, so a brand added later never
+      // reuses the key of a brand that was saved (and perhaps cancelled) before it.
+      p_client_uuid: existing ? null : input.clientUuid ? brandKey(input.clientUuid, brandId, byBrand ? false : i === 0) : null,
+    });
+    if (error) {
+      const done = docs.map((d) => d.brandName).join(", ");
+      return { error: done ? `${done} saved; ${g.name} failed: ${dbError(error)}` : dbError(error), orderId: docs[0]?.orderId, docs };
+    }
+    const { data: o } = await supabase.from("orders").select("order_no, grand_total").eq("id", orderId as string).single();
+    docs.push({ orderId: orderId as string, orderNo: o?.order_no ?? undefined, brandId, brandName: g.name, total: Number(o?.grand_total ?? 0) });
+  }
 
   revalidatePath("/sales/quotations");
-  if (!input.confirm) return { ok: true, orderId: orderId as string };
-  if (profile.role === "salesman") return { ok: true, orderId: orderId as string };
+  const first = docs[0];
+  if (!input.confirm || profile.role === "salesman") return { ok: true, orderId: first.orderId, docs };
 
-  const res = await confirmOrder(orderId as string, input.overrideCredit ?? false, input.overrideStock ?? false);
-  if (!res.invoiceId || !input.payment || !(input.payment.amount > 0)) return { ...res, orderId: orderId as string };
+  for (const d of docs) {
+    const res = await confirmOrder(d.orderId, input.overrideCredit ?? false, input.overrideStock ?? false);
+    if (!res.invoiceId) {
+      const made = docs.filter((x) => x.invoiceId);
+      return {
+        error: made.length ? `${made.map((x) => `${x.brandName} invoice ${x.invoiceNo}`).join(", ")} created; ${d.brandName} not invoiced: ${res.error}` : res.error,
+        hint: res.hint, orderId: first.orderId, invoiceId: made[0]?.invoiceId, invoiceNo: made.map((x) => x.invoiceNo).join(" + ") || undefined, docs,
+      };
+    }
+    d.invoiceId = res.invoiceId;
+    d.invoiceNo = res.invoiceNo;
+  }
+  const invoiced = { ok: true, orderId: first.orderId, invoiceId: first.invoiceId, invoiceNo: docs.map((d) => d.invoiceNo).join(" + "), docs };
+  if (!input.payment || !(input.payment.amount > 0)) return invoiced;
 
-  // Money received at the counter goes against this invoice (not the oldest bill).
-  const { data: inv } = await supabase.from("invoices").select("grand_total").eq("id", res.invoiceId).single();
-  const amount = Math.min(Math.round(input.payment.amount * 100) / 100, Number(inv?.grand_total ?? 0));
+  const pay = await payAtCounter(input.retailerId, docs.map((d) => d.invoiceId!), input.payment, input.clientUuid);
+  if (pay.error) return { ...invoiced, error: pay.error };
+  return pay.paid ? { ...invoiced, paid: pay.paid } : invoiced;
+}
+
+// Money received at the counter goes against these invoices (not the oldest bill).
+async function payAtCounter(
+  retailerId: string,
+  invoiceIds: string[],
+  payment: { amount: number; method: "cash" | "upi"; reference?: string },
+  clientUuid?: string,
+): Promise<{ paid?: number; error?: string }> {
+  if (payment.method !== "cash" && payment.method !== "upi") return { error: "Invoice created, but the payment was not saved: shops pay by cash or UPI only." };
+  const supabase = await createClient();
+  const { data: invs } = await supabase.from("invoices").select("id, grand_total").in("id", invoiceIds);
+  const totalOf = new Map((invs ?? []).map((v) => [v.id as string, Number(v.grand_total)]));
+  let left = Math.round(payment.amount * 100) / 100;
+  const allocations: { invoice_id: string; amount: number }[] = [];
+  for (const id of invoiceIds) {
+    if (left <= 0) break;
+    const take = Math.min(left, totalOf.get(id) ?? 0);
+    if (take > 0) { allocations.push({ invoice_id: id, amount: take }); left = Math.round((left - take) * 100) / 100; }
+  }
+  const amount = allocations.reduce((t, a) => t + a.amount, 0);
+  if (!(amount > 0)) return {};
   const { error: payErr } = await supabase.rpc("record_payment", {
-    p_retailer_id: input.retailerId, p_amount: amount, p_method: input.payment.method, p_payment_date: null,
-    p_reference: input.payment.reference || null, p_cheque_date: null, p_bank: null, p_notes: "Paid at billing",
-    p_allocations: [{ invoice_id: res.invoiceId, amount }], p_visit_id: null, p_client_uuid: input.clientUuid ?? null,
+    p_retailer_id: retailerId, p_amount: Math.round(amount * 100) / 100, p_method: payment.method, p_payment_date: null,
+    p_reference: payment.reference || null, p_cheque_date: null, p_bank: null, p_notes: "Paid at billing",
+    p_allocations: allocations, p_visit_id: null, p_client_uuid: clientUuid ?? null,
   });
   revalidatePath("/payments");
-  if (payErr) return { ...res, orderId: orderId as string, error: `Invoice created, but the payment was not saved: ${dbError(payErr)}` };
-  return { ...res, orderId: orderId as string, paid: amount };
+  if (payErr) return { error: `Invoice created, but the payment was not saved: ${dbError(payErr)}` };
+  return { paid: Math.round(amount * 100) / 100 };
+}
+
+// Step 3 of billing: the invoice draft is confirmed. The quotation becomes an
+// invoice (confirm_order runs the stock, credit and GST-details checks), then any
+// money taken at the counter is recorded against it.
+export async function confirmInvoiceDraft(input: {
+  orderId: string;
+  overrideCredit?: boolean;
+  overrideStock?: boolean;
+  payment?: { amount: number; method: "cash" | "upi"; reference?: string } | null;
+  clientUuid?: string;
+}): Promise<SaveResult> {
+  const res = await confirmOrder(input.orderId, input.overrideCredit ?? false, input.overrideStock ?? false);
+  if (!res.invoiceId || !input.payment || !(input.payment.amount > 0)) return res;
+  const supabase = await createClient();
+  const { data: o } = await supabase.from("orders").select("retailer_id").eq("id", input.orderId).single();
+  const pay = await payAtCounter(o!.retailer_id as string, [res.invoiceId], input.payment, input.clientUuid);
+  return pay.error ? { ...res, error: pay.error } : { ...res, paid: pay.paid };
 }
 
 export async function confirmOrder(orderId: string, overrideCredit = false, overrideStock = false): Promise<SaveResult> {
@@ -100,9 +199,16 @@ export async function createCreditNote(
   reason: string,
   restock: boolean,
   lines: { invoice_line_id: string; qty: number }[]
-): Promise<SaveResult & { creditNoteId?: string }> {
+): Promise<SaveResult & { creditNoteId?: string; returned?: ReturnSummary }> {
   await requireRole("super_admin", "manager", "billing");
   const supabase = await createClient();
+  const { data: inv } = await supabase.from("invoices").select("retailer_id").eq("id", invoiceId).maybeSingle();
+  const [before, invBefore] = inv
+    ? await Promise.all([
+        supabase.from("retailer_balances").select("outstanding, unallocated").eq("retailer_id", inv.retailer_id).maybeSingle(),
+        supabase.from("invoice_balances").select("balance").eq("invoice_id", invoiceId).maybeSingle(),
+      ])
+    : [null, null];
   const { data, error } = await supabase.rpc("create_credit_note", {
     p_invoice_id: invoiceId,
     p_reason: reason,
@@ -110,9 +216,40 @@ export async function createCreditNote(
     p_lines: lines.filter((l) => l.qty > 0),
   });
   if (error) return { error: error.message };
+  const [{ data: cn }, after] = await Promise.all([
+    supabase.from("credit_notes").select("credit_note_no, grand_total, restock").eq("id", data as string).maybeSingle(),
+    inv ? supabase.from("retailer_balances").select("outstanding, unallocated").eq("retailer_id", inv.retailer_id).maybeSingle() : Promise.resolve({ data: null }),
+  ]);
   revalidatePath(`/sales/invoices/${invoiceId}`);
-  return { ok: true, creditNoteId: data as string };
+  if (inv) revalidatePath(`/retailers/${inv.retailer_id}`);
+  revalidatePath("/payments/outstanding");
+  const credit = Number(after?.data?.unallocated ?? 0);
+  return {
+    ok: true,
+    creditNoteId: data as string,
+    returned: {
+      number: cn?.credit_note_no ?? "",
+      amount: Number(cn?.grand_total ?? 0),
+      restocked: !!cn?.restock,
+      outstanding: Number(after?.data?.outstanding ?? 0),
+      outstandingBefore: Number(before?.data?.outstanding ?? 0),
+      credit,
+      creditBefore: Number(before?.data?.unallocated ?? 0),
+      invoiceUnpaidBefore: Math.max(0, Number(invBefore?.data?.balance ?? 0)),
+    },
+  };
 }
+
+export type ReturnSummary = {
+  number: string;
+  amount: number;
+  restocked: boolean;
+  outstanding: number;
+  outstandingBefore: number;
+  credit: number;
+  creditBefore: number;
+  invoiceUnpaidBefore: number;
+};
 
 // ---------- Lookups for the order builder ----------
 
@@ -175,23 +312,34 @@ export async function searchProducts(q: string, brandId?: string, withImages = f
 
 // The whole active catalogue of one brand (with photos and stock) for the billing screen:
 // searching and category tabs then work instantly in the browser.
-export async function loadBillingCatalogue(brandId: string): Promise<{ products: PickerProduct[]; categories: { id: string; name: string }[] }> {
+export async function loadBillingCatalogue(brandId?: string | null): Promise<{ products: PickerProduct[]; categories: { id: string; name: string }[] }> {
   await requireRole("super_admin", "manager", "billing", "salesman");
   const supabase = await createClient();
   const [{ data: rows }, { data: cats }] = await Promise.all([
-    supabase.from("catalog").select(PRODUCT_COLS).eq("is_active", true).eq("brand_id", brandId).order("name").limit(2000),
-    supabase.from("categories").select("id, name").eq("brand_id", brandId).eq("is_active", true).order("sort_order").order("name"),
+    brandId
+      ? supabase.from("catalog").select(PRODUCT_COLS).eq("is_active", true).eq("brand_id", brandId).order("name").limit(2000)
+      : supabase.from("catalog").select(PRODUCT_COLS).eq("is_active", true).order("name").limit(3000),
+    brandId
+      ? supabase.from("categories").select("id, name").eq("brand_id", brandId).eq("is_active", true).order("sort_order").order("name")
+      : supabase.from("categories").select("id, name, brands(name)").eq("is_active", true).order("sort_order").order("name"),
   ]);
-  return { products: await toPicker(supabase, (rows ?? []) as Record<string, unknown>[], true), categories: cats ?? [] };
+  // All brands at once: say which brand a category belongs to.
+  const categories = (cats ?? []).map((c) => {
+    const b = (c as { brands?: { name: string } | null }).brands?.name;
+    return { id: c.id as string, name: brandId || !b ? (c.name as string) : `${c.name} · ${b}` };
+  });
+  return { products: await toPicker(supabase, (rows ?? []) as Record<string, unknown>[], true), categories };
 }
 
 // What this shop usually buys from the brand, and its last invoice (to repeat it).
-export async function retailerUsuals(retailerId: string, brandId: string): Promise<{ usual: { product_id: string; qty: number; times: number }[]; last: { invoice_no: string; invoice_date: string; lines: { product_id: string; qty: number }[] } | null }> {
+export async function retailerUsuals(retailerId: string, brandId?: string | null): Promise<{ usual: { product_id: string; qty: number; times: number }[]; last: { invoice_no: string; invoice_date: string; lines: { product_id: string; qty: number }[] } | null }> {
   await requireRole("super_admin", "manager", "billing", "salesman");
   const supabase = await createClient();
   const since = new Date(Date.now() - 120 * 864e5).toISOString().slice(0, 10);
-  const { data } = await supabase.from("sales_register").select("invoice_id, invoice_no, invoice_date, product_id, qty")
-    .eq("retailer_id", retailerId).eq("brand_id", brandId).gte("invoice_date", since).order("invoice_date", { ascending: false }).limit(500);
+  let query = supabase.from("sales_register").select("invoice_id, invoice_no, invoice_date, product_id, qty")
+    .eq("retailer_id", retailerId).gte("invoice_date", since).order("invoice_date", { ascending: false }).limit(500);
+  if (brandId) query = query.eq("brand_id", brandId);
+  const { data } = await query;
   const rows = data ?? [];
   const agg = new Map<string, { qty: number; invoices: Set<string> }>();
   for (const r of rows) {
@@ -222,6 +370,8 @@ export type PickerRetailer = {
   status: string;
   outstanding: number;
   overdue: number;
+  credit?: number; // shop credit, spent on the next invoice
+
   gstin?: string | null;
   billing_address?: string | null;
   billing_pincode?: string | null;
@@ -241,7 +391,7 @@ export async function searchRetailers(q: string): Promise<PickerRetailer[]> {
   const rows = data ?? [];
   const ids = rows.map((r) => r.id);
   const { data: bal } = ids.length
-    ? await supabase.from("retailer_balances").select("retailer_id, outstanding, overdue").in("retailer_id", ids)
+    ? await supabase.from("retailer_balances").select("retailer_id, outstanding, overdue, unallocated").in("retailer_id", ids)
     : { data: [] };
   const bMap = new Map((bal ?? []).map((b) => [b.retailer_id as string, b]));
   return rows.map((r) => ({
@@ -249,6 +399,7 @@ export async function searchRetailers(q: string): Promise<PickerRetailer[]> {
     credit_days: Number(r.credit_days),
     credit_limit: Number(r.credit_limit),
     outstanding: Number(bMap.get(r.id)?.outstanding ?? 0),
+    credit: Number(bMap.get(r.id)?.unallocated ?? 0),
     overdue: Number(bMap.get(r.id)?.overdue ?? 0),
   })) as PickerRetailer[];
 }
@@ -341,9 +492,9 @@ export async function updateRetailerBilling(id: string, input: z.input<typeof bi
     billing_pincode: v.billing_pincode, billing_state_code: v.billing_state_code, ...(v.owner_name ? { owner_name: v.owner_name } : {}),
   }).eq("id", id).select(RETAILER_COLS).single();
   if (error) return { error: dbError(error) };
-  const { data: b } = await supabase.from("retailer_balances").select("outstanding, overdue").eq("retailer_id", id).maybeSingle();
+  const { data: b } = await supabase.from("retailer_balances").select("outstanding, overdue, unallocated").eq("retailer_id", id).maybeSingle();
   revalidatePath("/retailers");
-  return { retailer: { ...data, credit_days: Number(data.credit_days), credit_limit: Number(data.credit_limit), outstanding: Number(b?.outstanding ?? 0), overdue: Number(b?.overdue ?? 0) } as PickerRetailer };
+  return { retailer: { ...data, credit_days: Number(data.credit_days), credit_limit: Number(data.credit_limit), outstanding: Number(b?.outstanding ?? 0), overdue: Number(b?.overdue ?? 0), credit: Number(b?.unallocated ?? 0) } as PickerRetailer };
 }
 
 // Change the payment terms of an issued invoice (Manager / Super Admin).

@@ -41,7 +41,7 @@ export default async function MyOrderPage({ params }: { params: Promise<{ id: st
   return (
     <div className="space-y-4">
       <Link href="/m/orders" className="flex items-center gap-1 px-1 text-sm font-medium text-slate-600"><ArrowLeft className="size-4" /> My orders</Link>
-      <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70">
+      <section className="rounded-3xl bg-surface p-5 shadow-sm ring-1 ring-slate-200/70">
         <div className="font-mono text-xs text-slate-500">{o.order_no}</div>
         <Link href={`/m/outlets/${r.id}`} className="text-xl font-bold hover:underline">{r.shop_name}</Link>
         <div className="text-sm text-slate-500">{dateTime(o.created_at)} · {o.credit_days === 0 ? "Cash" : `${o.credit_days} days credit`}</div>
@@ -59,7 +59,7 @@ export default async function MyOrderPage({ params }: { params: Promise<{ id: st
           </ol>
         )}
       </section>
-      <section className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70">
+      <section className="rounded-2xl bg-surface shadow-sm ring-1 ring-slate-200/70">
         <ul className="divide-y divide-slate-100">
           {(lines ?? []).map((l, i) => {
             const p = prod(l.product_id);

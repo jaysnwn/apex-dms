@@ -153,7 +153,7 @@ function isToday(ts: string, today: string) {
 // Outlets assigned to this salesman (RLS already limits a salesman to his own)
 // ---------------------------------------------------------------------------
 export type Outlet = {
-  id: string; code: string; shop_name: string; owner_name: string | null; mobile: string; city: string | null; address: string | null;
+  id: string; code: string; shop_name: string; owner_name: string | null; mobile: string | null; city: string | null; address: string | null;
   route_id: string | null; route_name: string | null; credit_days: number; credit_limit: number; status: string; classification: string | null;
   latitude: number | null; longitude: number | null; outstanding: number; overdue: number; onRouteToday: boolean;
 };

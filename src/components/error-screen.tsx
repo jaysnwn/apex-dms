@@ -21,7 +21,7 @@ export function ErrorScreen({ error, reset, home = "/dashboard", compact = false
 
   return (
     <div role="alert" className={compact ? "p-4" : "mx-auto max-w-lg py-16"}>
-      <div className="rounded-2xl border border-red-200 bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-red-200 bg-surface p-6 shadow-sm">
         <div className="mb-3 flex items-center gap-2 text-red-700">
           <AlertTriangle className="size-5" />
           <h2 className="font-semibold">{offline ? "No internet connection" : "This page could not be loaded"}</h2>
@@ -35,7 +35,7 @@ export function ErrorScreen({ error, reset, home = "/dashboard", compact = false
         <div className="mt-5 flex flex-wrap gap-2">
           <button
             onClick={reset}
-            className="inline-flex h-11 items-center gap-2 rounded-lg bg-ink-900 px-4 text-sm font-semibold text-white active:opacity-90"
+            className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-on-fill active:opacity-90"
           >
             <RotateCw className="size-4" /> Try again
           </button>

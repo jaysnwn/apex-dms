@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
-import { createUser, resetPassword, updateUser, type ActionState } from "./actions";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
+import { createUser, removeUser, resetPassword, updateUser, type ActionState } from "./actions";
 import { ROLE_LABELS, ROLES, type AppRole } from "@/lib/roles";
 import { Alert, Button, Input, Label, Select } from "@/components/ui";
 
@@ -14,7 +14,7 @@ function BrandBoxes({ brands, selected, idPrefix }: { brands: BrandOpt[]; select
       <div className="mb-1.5 text-sm font-medium text-slate-700">Brand access <span className="font-normal text-slate-500">(Super Admin always has every brand)</span></div>
       <div className="flex flex-wrap gap-3">
         {brands.map((b) => (
-          <label key={b.id} htmlFor={`${idPrefix}-${b.id}`} className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium has-[:checked]:border-ink-900 has-[:checked]:bg-slate-50">
+          <label key={b.id} htmlFor={`${idPrefix}-${b.id}`} className="flex items-center gap-2 rounded-lg border border-slate-300 bg-surface px-3 py-2 text-sm font-medium has-[:checked]:border-primary has-[:checked]:bg-slate-50">
             <input id={`${idPrefix}-${b.id}`} type="checkbox" name="brand_ids" value={b.id} defaultChecked={selected.includes(b.id)} className="size-4" />
             {b.name}
           </label>
@@ -118,7 +118,7 @@ export function EditUserForm({ user, isSelf, brands, brandIds }: { user: UserRow
         </div>
         <div className="sm:col-span-4"><BrandBoxes brands={brands} selected={brandIds} idPrefix={`brand-${user.id}`} /></div>
         <label className="flex items-start gap-2 text-sm sm:col-span-4">
-          <input type="checkbox" name="can_reimburse" value="true" defaultChecked={!!user.can_reimburse} className="mt-0.5 size-4 accent-ink-900" />
+          <input type="checkbox" name="can_reimburse" value="true" defaultChecked={!!user.can_reimburse} className="mt-0.5 size-4 accent-primary" />
           <span><span className="font-medium">Can reimburse expenses</span><span className="block text-xs text-slate-500">Lets a Manager or Billing user pay employees for approved expenses. The Super Admin can always do this; salesmen and warehouse staff never can.</span></span>
         </label>
         <div className="flex flex-wrap items-center gap-3 sm:col-span-4">
@@ -128,6 +128,7 @@ export function EditUserForm({ user, isSelf, brands, brandIds }: { user: UserRow
               Reset password
             </Button>
           )}
+          {!isSelf && <RemoveUser user={user} />}
           {state.error && <Alert>{state.error}</Alert>}
           {state.ok && <Alert tone="green">{state.ok}</Alert>}
         </div>
@@ -150,6 +151,37 @@ export function EditUserForm({ user, isSelf, brands, brandIds }: { user: UserRow
           {pwState.ok && <Alert tone="green">{pwState.ok}</Alert>}
         </form>
       )}
+    </div>
+  );
+}
+
+// Remove from this organization, after typing the person's name.
+function RemoveUser({ user }: { user: UserRow }) {
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState("");
+  const [res, setRes] = useState<ActionState>({});
+  const [pending, start] = useTransition();
+  const name = user.full_name || user.email || "";
+  if (!open) {
+    return <Button type="button" size="sm" variant="secondary" className="text-red-700" onClick={() => setOpen(true)}>Remove user</Button>;
+  }
+  return (
+    <div className="w-full rounded-lg border border-red-200 bg-red-50 p-3 text-sm sm:col-span-4">
+      <p className="mb-2 text-red-900">
+        <b>Remove {name}?</b> They lose all access to this organization at once.
+        Anything they already created (invoices, payments, visits) stays, with their name on it.
+        To confirm, type <b>{name}</b>:
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <Input value={typed} onChange={(e) => setTyped(e.target.value)} className="h-9 w-64" aria-label="Type the name to confirm" autoFocus />
+        <Button type="button" size="sm" className="bg-red-600 hover:bg-red-700" disabled={pending || typed.trim().toLowerCase() !== name.trim().toLowerCase()}
+          onClick={() => start(async () => setRes(await removeUser(user.id, typed)))}>
+          {pending ? "Removing…" : "Remove"}
+        </Button>
+        <Button type="button" size="sm" variant="secondary" onClick={() => { setOpen(false); setTyped(""); setRes({}); }}>Cancel</Button>
+      </div>
+      {res.error && <div className="mt-2"><Alert>{res.error}</Alert></div>}
+      {res.ok && <div className="mt-2"><Alert tone="green">{res.ok}</Alert></div>}
     </div>
   );
 }

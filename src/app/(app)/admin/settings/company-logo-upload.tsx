@@ -31,7 +31,7 @@ export function CompanyLogoUpload({ url }: { url: string | null }) {
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-      <span className="grid h-20 w-full max-w-72 place-items-center overflow-hidden rounded-xl border border-dashed border-slate-300 bg-white p-3">
+      <span className="grid h-20 w-full max-w-72 place-items-center overflow-hidden rounded-xl border border-dashed border-slate-300 bg-surface p-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {url ? <img src={url} alt="Company logo" className="max-h-14 max-w-full object-contain" /> : <span className="text-sm text-slate-400">No logo yet</span>}
       </span>

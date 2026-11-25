@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
 import type { Metadata } from "next";
 import { AlertTriangle, IndianRupee, PackageCheck } from "lucide-react";
 import { requireRole } from "@/lib/auth";
@@ -71,7 +72,7 @@ export default async function BillsPage({ searchParams }: { searchParams: Promis
             <tr><th className="px-4 py-2.5">Supplier bill</th><th className="px-3 py-2.5">Supplier</th><th className="px-3 py-2.5">Due</th><th className="px-3 py-2.5">Status</th><th className="px-3 py-2.5 text-right">Bill total</th><th className="px-4 py-2.5 text-right">Balance</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {(rows ?? []).length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-slate-500">No bills in this period.</td></tr>}
+            {(rows ?? []).length === 0 && <tr><td colSpan={6}><EmptyState art="receipt" title="No bills in this period" /></td></tr>}
             {(rows ?? []).map((r) => {
               const b = bMap.get(r.id);
               const balance = Number(b?.balance ?? 0);

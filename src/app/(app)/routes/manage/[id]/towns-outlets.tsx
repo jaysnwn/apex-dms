@@ -68,7 +68,7 @@ export function TownsAndOutlets({ routeId, route, towns: townsIn, outlets: outle
             <SortableList items={towns} keyOf={(t) => t.id} onReorder={reorderTowns} disabled={archived || pending}
               render={(t, i) => (
                 <div className="flex items-center gap-2 py-2.5">
-                  <span className="grid size-6 shrink-0 place-items-center rounded-full bg-ink-900 text-xs font-semibold text-white">{i + 1}</span>
+                  <span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold text-on-fill">{i + 1}</span>
                   <span className="min-w-0 flex-1 truncate font-medium">{t.name}</span>
                   <span className="text-xs text-slate-500">{countIn(t.id)}</span>
                   {!archived && <button onClick={() => setRemoveTown(t)} className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-700" aria-label={`Remove ${t.name}`}><X className="size-4" /></button>}
@@ -264,7 +264,7 @@ function AddOutletsDialog({ routeId, towns, locations, initialTown, onClose, onD
             return (
               <li key={r.id}>
                 <label className={cn("flex cursor-pointer items-center gap-3 px-3 py-2 text-sm hover:bg-slate-50", picked.has(r.id) && "bg-accent-50")}>
-                  <input type="checkbox" className="size-4 accent-ink-900" checked={picked.has(r.id)} onChange={() => toggle(r)} />
+                  <input type="checkbox" className="size-4 accent-primary" checked={picked.has(r.id)} onChange={() => toggle(r)} />
                   <Store className="size-4 text-slate-400" />
                   <span className="min-w-0 flex-1"><span className="font-medium">{r.shop_name}</span><span className="block truncate text-xs text-slate-500">{[r.owner_name, r.mobile, r.city].filter(Boolean).join(" · ")}</span></span>
                   {here ? <Badge tone="green">On this route</Badge> : r.route_name ? <Badge tone="amber">On {r.route_name}</Badge> : <Badge>No route</Badge>}
@@ -308,7 +308,7 @@ function EditOutletDialog({ routeId, route, outlet, towns, onClose, onDone }: { 
             <div className="flex flex-wrap gap-1.5">
               {route.visit_days.map((d) => {
                 const on = days.includes(d);
-                return <button key={d} type="button" onClick={() => setDays(on ? days.filter((x) => x !== d) : [...days, d].sort())} className={cn("h-9 w-12 rounded-lg border text-sm", on ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300")}>{WEEKDAYS[d - 1]}</button>;
+                return <button key={d} type="button" onClick={() => setDays(on ? days.filter((x) => x !== d) : [...days, d].sort())} className={cn("h-9 w-12 rounded-lg border text-sm", on ? "border-primary bg-primary text-on-fill" : "border-slate-300")}>{WEEKDAYS[d - 1]}</button>;
               })}
             </div>
           </div>

@@ -26,7 +26,7 @@ export default async function PurchaseOrdersPage() {
     <>
       <div className="mb-4 flex items-center justify-between gap-3">
         <p className="text-sm text-slate-500">Purchase orders sent to suppliers and not yet received. Receive them when the goods and bill arrive.</p>
-        <LinkButton href="/purchases/new" className="bg-fuchsia-700 text-white hover:bg-fuchsia-800"><Plus className="size-4" /> New purchase</LinkButton>
+        <LinkButton href="/purchases/new" className="bg-primary text-on-fill hover:bg-primary-hover"><Plus className="size-4" /> New purchase</LinkButton>
       </div>
       <Card className="overflow-x-auto">
         <table className="w-full text-sm">

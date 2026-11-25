@@ -10,6 +10,7 @@ import { getBrandContext } from "@/lib/brand";
 import { fetchAll } from "@/lib/reports";
 import { checkRows, num, yes, type ImportContext } from "@/lib/product-import";
 import { allRows } from "@/lib/all-rows";
+import { warehouseOr } from "@/lib/warehouse-scope";
 
 export type ImportResult = {
   created: number;
@@ -36,7 +37,7 @@ export async function prepareProductImport(brandId: string): Promise<{ ctx?: Imp
   const [skus, units, wh, all] = await Promise.all([
     fetchAll<{ sku: string }>(() => supabase.from("products").select("sku").eq("brand_id", brandId)),
     supabase.from("units").select("code"),
-    supabase.from("warehouses").select("name").eq("brand_id", brandId).eq("is_active", true),
+    supabase.from("warehouses").select("name").or(warehouseOr([brandId])).eq("is_active", true),
     supabase.from("brands").select("name"),
   ]);
   return {
@@ -63,7 +64,7 @@ export async function importProducts(brandId: string, rows: Record<string, strin
   const supabase = await createClient();
   const [catsRes, whRes, locRes, prodRes] = await Promise.all([
     supabase.from("categories").select("id, name").eq("brand_id", brandId),
-    supabase.from("warehouses").select("id, name").eq("brand_id", brandId).eq("is_active", true).order("created_at"),
+    supabase.from("warehouses").select("id, name").or(warehouseOr([brandId])).eq("is_active", true).order("created_at"),
     supabase.from("warehouse_locations").select("id, warehouse_id, code"),
     fetchAll<{ id: string; sku: string }>(() => supabase.from("products").select("id, sku").eq("brand_id", brandId)),
   ]);

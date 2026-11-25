@@ -27,8 +27,8 @@ const productSchema = z
     retailer_price_mode: mode,
     distributor_price: money.optional(),
     distributor_price_mode: mode.optional(),
-    mrp: money,
-    mrp_mode: mode,
+    mrp: money.optional(),
+    mrp_mode: mode.optional(),
     gst_rate: z.coerce.number().min(0).max(40),
     min_stock_qty: z.coerce.number().min(0, "Cannot be negative"),
     default_warehouse_id: z.string().guid().optional(),
@@ -36,9 +36,6 @@ const productSchema = z
     description: z.string().max(2000).optional(),
     is_active: z.enum(["true", "false"]).optional(),
     opening_qty: z.coerce.number().min(0, "Opening stock cannot be negative").optional(),
-  })
-  .refine((v) => v.mrp === 0 || v.retailer_price <= v.mrp || v.retailer_price_mode !== v.mrp_mode, {
-    message: "Retailer price is higher than MRP.",
   });
 
 export async function saveProduct(_prev: FormResult, formData: FormData): Promise<FormResult> {
@@ -85,7 +82,9 @@ export async function saveProduct(_prev: FormResult, formData: FormData): Promis
     default_warehouse_id: fields.default_warehouse_id ?? null,
     default_location_id,
     distributor_price: fields.distributor_price ?? 0,
-    distributor_price_mode: fields.distributor_price_mode ?? "exclusive",
+    distributor_price_mode: fields.distributor_price_mode ?? "inclusive",
+    mrp: fields.mrp ?? 0,
+    mrp_mode: fields.mrp_mode ?? "inclusive",
     is_active: is_active !== "false",
   };
 

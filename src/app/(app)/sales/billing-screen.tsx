@@ -1,26 +1,27 @@
 "use client";
 
+import { toast as notify } from "sonner";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import {
-  AlertTriangle, Check, CheckCircle2, ChevronDown, Download, FileText, ImageOff, Keyboard, LayoutGrid, MessageCircle, Minus,
-  Plus, Printer, Repeat, Search, ShoppingCart, Sparkles, Star, X,
-} from "lucide-react";
-import { Alert, Button, Input, Textarea, cn } from "@/components/ui";
-import { Dialog } from "@/components/dialog";
-import { BarcodeScanButton } from "@/components/barcode-scanner";
+import { AlertTriangle, Check, CloudOff, FileText, Keyboard, LayoutGrid, Loader2, XCircle } from "lucide-react";
+import * as m from "motion/react-m";
+import { AnimatePresence } from "motion/react";
+import { Alert, Badge, Button, Input, Kbd, Select, Textarea, cn } from "@/components/ui";
+import { duration, ease, spring } from "@/lib/motion";
+import { AddProductRow, LinesTable, QuickAdd } from "./bill-lines";
+import { CatalogView } from "./catalog-view";
+import { ShortStockBanner } from "./short-stock-banner";
 import { brandTone } from "@/lib/brand-style";
 import { addDays, calcLine, todayIST } from "@/lib/gst";
 import { date as fmtDate, inr, qty as fmtQty } from "@/lib/format";
-import { shareOnWhatsApp } from "@/lib/share-actions";
 import { BillingDetailsDialog, RetailerSelect, missingTaxDetails, rememberRetailer } from "./retailer-select";
-import { loadBillingCatalogue, retailerUsuals, saveOrder, type PickerProduct, type PickerRetailer } from "./actions";
+import { cancelQuotation, loadBillingCatalogue, retailerUsuals, saveOrder, type PickerProduct, type PickerRetailer, type SaveResult } from "./actions";
+import { askConfirm } from "@/components/confirm";
+import { DocSteps } from "./doc-steps";
 import { tenantKey } from "@/lib/supabase/client";
 
 export type BuilderLine = { product: PickerProduct; qty: number; discount: number; price: number | null };
 type Brand = { id: string; name: string; code: string };
-type Method = "cash" | "upi" | "bank_transfer" | "cheque";
 
 export type BillingProps = {
   role: string;
@@ -37,7 +38,6 @@ export type BillingProps = {
 const TERMS: { days: number; label: string }[] = [
   { days: 0, label: "Immediate / Cash" }, { days: 10, label: "10 days" }, { days: 15, label: "15 days" }, { days: 21, label: "21 days" }, { days: 30, label: "30 days" },
 ];
-const METHODS: { k: Method; label: string }[] = [{ k: "cash", label: "Cash" }, { k: "upi", label: "UPI" }, { k: "bank_transfer", label: "Bank" }, { k: "cheque", label: "Cheque" }];
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const norm = (s: string) => s.toLowerCase().replace(/[-_/.,()]+/g, " ");
 const newKey = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
@@ -60,7 +60,9 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
   const isMgr = role === "super_admin" || role === "manager";
   const maxDisc = isMgr ? 100 : role === "billing" ? billingMaxDiscount : maxSalesmanDiscount;
 
-  const [brandId, setBrandId] = useState(initial?.lines[0]?.product.brand_id ?? defaultBrandId ?? brands[0]?.id ?? "");
+  // Catalogue filter only ("" = all brands). The cart takes products of every
+  // brand; saving splits it into one quotation / invoice per brand.
+  const [brandId, setBrandId] = useState(brands.length === 1 ? brands[0].id : (defaultBrandId ?? ""));
   const brand = brands.find((b) => b.id === brandId);
   const [catalogue, setCatalogue] = useState<{ products: PickerProduct[]; categories: { id: string; name: string }[] } | null>(
     initialCatalogue && initialCatalogue.brandId === brandId ? initialCatalogue : null);
@@ -71,26 +73,28 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
   const [custom, setCustom] = useState(!TERMS.some((t) => t.days === startDays));
   const [lines, setLines] = useState<BuilderLine[]>(initial?.lines ?? []);
   const [overall, setOverall] = useState("");
-  const [paid, setPaid] = useState("");
-  const [method, setMethod] = useState<Method>("cash");
-  const [payRef, setPayRef] = useState("");
   const [notes, setNotes] = useState(initial?.notes ?? "");
-  const [showNotes, setShowNotes] = useState(!!initial?.notes);
   const [q, setQ] = useState("");
   const [browse, setBrowse] = useState(false);
-  const [cat, setCat] = useState<string>("all");
+  const [tab, setTab] = useState<"lines" | "note">("lines");
+  const [flashId, setFlashId] = useState<{ id: string; n: number } | null>(null);
   const [toast, setToast] = useState<{ text: string; warn?: boolean } | null>(null);
   const [usuals, setUsuals] = useState<Awaited<ReturnType<typeof retailerUsuals>> | null>(null);
   const [favs, setFavs] = useState<string[]>([]);
   const [recentProducts, setRecentProducts] = useState<string[]>([]);
-  const [reviewing, setReviewing] = useState(false);
   const [editingDetails, setEditingDetails] = useState(false);
-  const [overrideStock, setOverrideStock] = useState(false);
-  const [overrideCredit, setOverrideCredit] = useState(false);
   const [error, setError] = useState<{ message: string; hint?: string } | null>(null);
-  const [done, setDone] = useState<{ invoiceId: string; invoiceNo: string; total: number; paid: number; due: string; shop: string } | null>(null);
-  const [savedOrderId, setSavedOrderId] = useState<string | null>(initial?.orderId ?? null);
-  const [clientKey, setClientKey] = useState(newKey);
+  // Auto-save: once there is a retailer and a product, the cart is saved as a real
+  // quotation (one per brand) and every change updates the same quotation(s).
+  const initialBrand = initial?.lines[0]?.product.brand_id;
+  const [saved, setSaved] = useState<Record<string, { orderId: string; orderNo?: string }>>(
+    initial && initialBrand ? { [initialBrand]: { orderId: initial.orderId, orderNo: initial.orderNo } } : {});
+  const savedRef = useRef(saved);
+  savedRef.current = saved;
+  const [autoState, setAutoState] = useState<{ s: "idle" | "saving" | "saved" | "error" | "waiting"; msg?: string }>({ s: initial ? "saved" : "idle" });
+  const inFlight = useRef<Promise<SaveResult | null> | null>(null);
+  const retries = useRef(0);
+  const [clientKey] = useState(newKey);
   const [pending, start] = useTransition();
   const searchRef = useRef<HTMLInputElement>(null);
   const retailerRef = useRef<HTMLInputElement>(null);
@@ -99,19 +103,17 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
   // ---- brand catalogue (photos, stock, categories) ---------------------------
   const reloadCatalogue = useCallback(async (id: string) => {
     setCatalogue(null);
-    setCatalogue(await loadBillingCatalogue(id));
+    setCatalogue(await loadBillingCatalogue(id || null));
   }, []);
   useEffect(() => {
-    if (!brandId) return;
     if (preloaded.current) preloaded.current = false;   // already loaded on the server
     else reloadCatalogue(brandId);
-    setFavs(ls.get(`apex.fav.${brandId}`, []));
-    setRecentProducts(ls.get(`apex.recentProducts.${brandId}`, []));
-    setCat("all");
+    setFavs(ls.get(`apex.fav.${brandId || "all"}`, []));
+    setRecentProducts(ls.get(`apex.recentProducts.${brandId || "all"}`, []));
   }, [brandId, reloadCatalogue]);
   useEffect(() => {
     setUsuals(null);
-    if (retailer && brandId) retailerUsuals(retailer.id, brandId).then(setUsuals);
+    if (retailer) retailerUsuals(retailer.id, brandId || null).then(setUsuals);
   }, [retailer, brandId]);
   const byId = useMemo(() => new Map((catalogue?.products ?? []).map((p) => [p.id, p])), [catalogue]);
 
@@ -124,7 +126,15 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
   const discount = r2(calc.reduce((t, c) => t + c.discount, 0));
   const taxable = r2(calc.reduce((t, c) => t + c.taxable, 0));
   const tax = r2(calc.reduce((t, c) => t + c.tax, 0));
-  const grand = Math.round(taxable + tax);
+  // One invoice per brand, each rounded on its own.
+  const split = [...lines.reduce((m, l, i) => {
+    const k = l.product.brand_id;
+    const g = m.get(k) ?? { id: k, name: l.product.brand_name, code: brands.find((b) => b.id === k)?.code ?? null, items: 0, exact: 0 };
+    g.items += 1; g.exact += calc[i].taxable + calc[i].tax;
+    return m.set(k, g);
+  }, new Map<string, { id: string; name: string; code: string | null; items: number; exact: number }>()).values()]
+    .map((g) => ({ ...g, total: Math.round(g.exact) }));
+  const grand = split.length > 1 ? split.reduce((t, g) => t + g.total, 0) : Math.round(taxable + tax);
   const roundOff = r2(grand - (taxable + tax));
   const byRate = [...lines.reduce((m, l, i) => {
     const g = m.get(l.product.gst_rate) ?? { taxable: 0, tax: 0 };
@@ -132,12 +142,19 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
     return m.set(l.product.gst_rate, g);
   }, new Map<number, { taxable: number; tax: number }>()).entries()].sort(([a], [b]) => a - b);
   const totalQty = lines.reduce((t, l) => t + (l.qty || 0), 0);
-  const paidNum = Math.min(Math.max(0, Number(paid) || 0), grand);
   const today = todayIST();
   const due = addDays(today, days || 0);
   const shortLines = lines.filter((l) => l.qty > (byId.get(l.product.id)?.available ?? l.product.available));
+  const shortInfo = shortLines.map((l) => ({ id: l.product.id, name: l.product.name, need: l.qty, have: byId.get(l.product.id)?.available ?? l.product.available }));
+  // Bring every short line down to what is in stock (lines with nothing in stock are removed).
+  const useAvailable = () =>
+    setLines((p) => p.flatMap((l) => {
+      const have = byId.get(l.product.id)?.available ?? l.product.available;
+      if (l.qty <= have) return [l];
+      return have > 0 ? [{ ...l, qty: have }] : [];
+    }));
   const discTooHigh = lines.some((l) => effDisc(l) > maxDisc + 0.001);
-  const overLimit = !!retailer && retailer.credit_limit > 0 && retailer.outstanding + grand - paidNum > retailer.credit_limit;
+  const overLimit = !!retailer && retailer.credit_limit > 0 && retailer.outstanding - (retailer.credit ?? 0) + grand > retailer.credit_limit;
   const missing = retailer ? missingTaxDetails(retailer, grand) : [];
   const inCart = useMemo(() => new Map(lines.map((l) => [l.product.id, l.qty])), [lines]);
 
@@ -154,24 +171,23 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
       if (i >= 0) return prev.map((l, j) => (j === i ? { ...l, qty: l.qty + n, product: p } : l));
       return [...prev, { product: p, qty: n, discount: 0, price: null }];
     });
+    setFlashId({ id: p.id, n: Date.now() });
     flash(now > p.available ? `${p.name} × ${fmtQty(now)} — only ${fmtQty(p.available)} in stock` : `Added ${p.name} · × ${fmtQty(now)}`, now > p.available);
   };
   const setLine = (id: string, patch: Partial<BuilderLine>) => setLines((p) => p.map((l) => (l.product.id === id ? { ...l, ...patch } : l)));
   const removeLine = (id: string) => setLines((p) => p.filter((l) => l.product.id !== id));
-  const toggleFav = (id: string) => setFavs((f) => { const n = f.includes(id) ? f.filter((x) => x !== id) : [id, ...f].slice(0, 24); ls.set(`apex.fav.${brandId}`, n); return n; });
+  const toggleFav = (id: string) => setFavs((f) => { const n = f.includes(id) ? f.filter((x) => x !== id) : [id, ...f].slice(0, 24); ls.set(`apex.fav.${brandId || "all"}`, n); return n; });
 
-  function switchBrand(id: string) {
-    if (id === brandId) return;
-    if (lines.length && !confirm(`The cart has ${brand?.name} products. One invoice is for one brand — clear the cart and switch to ${brands.find((b) => b.id === id)?.name}?`)) return;
-    setLines([]); setBrandId(id); setSavedOrderId(null); setClientKey(newKey());
-  }
   function chooseRetailer(r: PickerRetailer | null) {
     setRetailer(r);
     if (r && !initial) { setDays(r.credit_days); setCustom(!TERMS.some((t) => t.days === r.credit_days)); }
   }
+  // Clearing is instant and can be undone from the toast (no "are you sure?").
   function clearCart() {
-    if (lines.length && !confirm("Remove all products from the cart?")) return;
-    setLines([]); setOverall(""); setPaid("");
+    if (!lines.length) return;
+    const before = { lines, overall };
+    setLines([]); setOverall("");
+    notify("Products cleared", { action: { label: "Undo", onClick: () => { setLines(before.lines); setOverall(before.overall); } } });
   }
   function repeatLast() {
     if (!usuals?.last) return;
@@ -188,49 +204,127 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
     if (days < 0 || days > 365) return "Credit period must be 0–365 days.";
     return null;
   }
-  function submit(confirmInvoice: boolean) {
+  // ---- saving ----------------------------------------------------------------
+  const payloadLines = lines.map((l) => ({ product_id: l.product.id, qty: l.qty, discount_pct: effDisc(l), unit_price: isMgr && l.price !== null ? l.price : null }));
+  const sig = retailer && lines.length ? JSON.stringify([retailer.id, days, notes, payloadLines]) : null;
+  const sigRef = useRef(sig);
+  sigRef.current = sig;
+  // What was last saved. Opening an existing quotation counts as saved, so it isn't
+  // re-saved (and re-priced) just by being opened.
+  const lastSig = useRef<string | null>(initial ? sig : null);
+  const ready = !!sig && validate() === null;
+
+  // Save the cart as it is now. Quotations of brands no longer in the cart are cancelled.
+  const persist = useCallback(async (): Promise<SaveResult | null> => {
+    while (inFlight.current) await inFlight.current;   // one save at a time
+    const mySig = sig;
+    if (!mySig || !retailer) return null;
+    if (sigRef.current !== mySig) return null;          // the cart changed meanwhile; the newer save handles it
+    const run = (async () => {
+      setAutoState({ s: "saving" });
+      const map = Object.fromEntries(Object.entries(savedRef.current).map(([b, v]) => [b, v.orderId]));
+      let res: SaveResult;
+      try {
+        res = await saveOrder({ orderIds: map, retailerId: retailer.id, creditDays: days, notes, lines: payloadLines, clientUuid: clientKey, confirm: false });
+      } catch {
+        // No connection: say so and try again a few times on its own.
+        const n = (retries.current += 1);
+        setAutoState({ s: "error", msg: n <= 3 ? "no connection, trying again…" : "no connection. It will save when you next change something." });
+        if (n <= 3) setTimeout(() => { if (sigRef.current === mySig) void persistRef.current(); }, 4000 * n);
+        return { error: "No connection. The quotation will be saved when the connection is back." };
+      }
+      retries.current = 0;
+      const next = { ...savedRef.current };
+      for (const d of res.docs ?? []) next[d.brandId] = { orderId: d.orderId, orderNo: d.orderNo };
+      if (!res.error) {
+        const inCart = new Set((res.docs ?? []).map((d) => d.brandId));
+        for (const [b, v] of Object.entries(next)) {
+          if (inCart.has(b)) continue;
+          await cancelQuotation(v.orderId, "All its products were removed while editing");
+          delete next[b];
+        }
+      }
+      setSaved(next);
+      savedRef.current = next;
+      if (res.error) { setAutoState({ s: "error", msg: res.error }); return res; }
+      lastSig.current = mySig;
+      setAutoState({ s: "saved" });
+      // The address now points at the saved quotation, so Back, Refresh and links return to it.
+      const first = Object.values(next)[0];
+      if (first && window.location.pathname !== `/sales/orders/${first.orderId}/edit`) {
+        window.history.replaceState(window.history.state, "", `/sales/orders/${first.orderId}/edit`);
+      }
+      return res;
+    })();
+    inFlight.current = run;
+    try { return await run; } finally { inFlight.current = null; }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the cart of this render; sig changes whenever it does
+  }, [sig, retailer, days, notes, clientKey]);
+
+  // Auto-save shortly after the last change.
+  useEffect(() => {
+    if (!sig) { setAutoState(Object.keys(savedRef.current).length ? { s: "waiting", msg: "it needs a retailer and at least one product. The last saved version is kept." } : { s: "idle" }); return; }
+    if (sig === lastSig.current) return;
+    if (!ready) { setAutoState({ s: "waiting", msg: validate() ?? undefined }); return; }
+    const t = setTimeout(() => { void persist(); }, 900);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- runs when the cart changes
+  }, [sig, ready]);
+
+  // Leaving with a change not yet saved: save it on the way out (in-app links), and ask
+  // the browser to hold on if the tab is being closed.
+  const dirty = !!sig && ready && sig !== lastSig.current;
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
+  const persistRef = useRef(persist);
+  persistRef.current = persist;
+  useEffect(() => {
+    const onUnload = (e: BeforeUnloadEvent) => { if (dirtyRef.current) { void persistRef.current(); e.preventDefault(); } };
+    window.addEventListener("beforeunload", onUnload);
+    return () => { window.removeEventListener("beforeunload", onUnload); if (dirtyRef.current) void persistRef.current(); };
+  }, []);
+
+  // "Save quotation": save now and open it.
+  function submit() {
     const v = validate();
     if (v) return setError({ message: v });
     setError(null);
     start(async () => {
-      const res = await saveOrder({
-        orderId: savedOrderId, retailerId: retailer!.id, creditDays: days, notes,
-        lines: lines.map((l) => ({ product_id: l.product.id, qty: l.qty, discount_pct: effDisc(l), unit_price: isMgr && l.price !== null ? l.price : null })),
-        clientUuid: clientKey, confirm: confirmInvoice, overrideCredit, overrideStock,
-        payment: confirmInvoice && paidNum > 0 ? { amount: paidNum, method, reference: payRef } : null,
-      });
-      if (res.orderId) setSavedOrderId(res.orderId);
-      if (res.invoiceId) {
-        ls.set(`apex.recentProducts.${brandId}`, [...new Set([...lines.map((l) => l.product.id), ...recentProducts])].slice(0, 16));
-        rememberRetailer(retailer!);
-        setReviewing(false);
-        setDone({ invoiceId: res.invoiceId, invoiceNo: res.invoiceNo ?? "", total: grand, paid: res.paid ?? 0, due, shop: retailer!.shop_name });
-        if (res.error) setError({ message: res.error });
+      const res = sig === lastSig.current && !inFlight.current ? { docs: Object.values(savedRef.current) } : await persist();
+      if (!res || "error" in res && res.error) {
+        const r = res as SaveResult | null;
+        setError({ message: r?.error ?? "Could not save the quotation.", hint: r?.hint });
+        if (r?.hint === "RETAILER_DETAILS") setEditingDetails(true);
         return;
       }
-      if (res.error) {
-        setError({ message: res.orderId && confirmInvoice ? `Saved as draft, but not invoiced: ${res.error}` : res.error, hint: res.hint });
-        if (res.hint === "RETAILER_DETAILS") setEditingDetails(true);
-        return;
-      }
-      if (!confirmInvoice && res.orderId) router.push(`/sales/orders/${res.orderId}?saved=1`);
+      ls.set(`apex.recentProducts.${brandId || "all"}`, [...new Set([...lines.map((l) => l.product.id), ...recentProducts])].slice(0, 16));
+      rememberRetailer(retailer!);
+      const docs = Object.values(savedRef.current);
+      // A cart with two brands is two quotations (one per brand).
+      if (docs.length > 1) router.push(`/sales/quotations?saved=${docs.map((d) => d.orderNo).filter(Boolean).join(",")}`);
+      else if (docs[0]) router.push(`/sales/orders/${docs[0].orderId}?saved=1`);
     });
   }
-  function newInvoice() {
-    setDone(null); setRetailer(null); setLines([]); setOverall(""); setPaid(""); setPayRef(""); setNotes(""); setShowNotes(false);
-    setSavedOrderId(null); setClientKey(newKey()); setOverrideStock(false); setOverrideCredit(false); setError(null); setQ("");
-    reloadCatalogue(brandId);
-    setTimeout(() => retailerRef.current?.focus(), 50);
+
+  async function cancelAll() {
+    const docs = Object.values(savedRef.current);
+    if (!docs.length) return;
+    const ok = await askConfirm(`Cancel quotation ${docs.map((d) => d.orderNo).filter(Boolean).join(" and ")}? It stays in the list as cancelled.`, { confirmLabel: "Cancel quotation", danger: true });
+    if (!ok) return;
+    while (inFlight.current) await inFlight.current;
+    for (const d of docs) await cancelQuotation(d.orderId, "Cancelled while making it");
+    lastSig.current = sigRef.current;   // nothing left to save
+    router.push("/sales/quotations");
   }
 
   // ---- keyboard shortcuts -----------------------------------------------------
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement).tagName);
-      if (e.key === "/" && !typing) { e.preventDefault(); searchRef.current?.focus(); }
-      else if (e.key === "F2") { e.preventDefault(); setBrowse((b) => !b); }
+      if (e.key === "/" && !typing) { e.preventDefault(); setTab("lines"); setTimeout(() => searchRef.current?.focus(), 0); }
+      else if (e.key === "F2" && !browse) { e.preventDefault(); setBrowse(true); }   // the catalogue closes itself
       else if (e.key === "F4") { e.preventDefault(); retailerRef.current?.focus(); }
-      else if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && isOffice && !done) { e.preventDefault(); const v = validate(); if (v) setError({ message: v }); else setReviewing(true); }
+      else if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !pending) { e.preventDefault(); submit(); }
       else if (e.key === "Escape" && !typing) { setQ(""); }
     };
     window.addEventListener("keydown", onKey);
@@ -243,314 +337,221 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
   const results = term
     ? products.filter((p) => matches(p, term)).sort((a, b) => Number(b.sku.toLowerCase() === term.toLowerCase() || b.barcode === term) - Number(a.sku.toLowerCase() === term.toLowerCase() || a.barcode === term)).slice(0, 48)
     : [];
-  const shown = browse ? products.filter((p) => cat === "all" || p.category_id === cat) : [];
   const pick = (ids: string[]) => ids.map((id) => byId.get(id)).filter(Boolean) as PickerProduct[];
   const usualProducts = pick(usuals?.usual.map((u) => u.product_id) ?? []);
   const favProducts = pick(favs);
   const recentProds = pick(recentProducts).filter((p) => !usualProducts.some((u) => u.id === p.id)).slice(0, 8);
-  const tone = brandTone(brand?.code);
 
-  function onSearchKey(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const exact = products.find((p) => p.sku.toLowerCase() === term.toLowerCase() || p.barcode === term);
-      const hit = exact ?? (results.length === 1 ? results[0] : null);
-      if (hit) { add(hit); setQ(""); }
-    }
-  }
 
-  // ---- done screen --------------------------------------------------------------
-  if (done) return <DonePanel done={done} onNew={newInvoice} error={error?.message} />;
+
+  const termValue = custom ? "custom" : String(days);
+  const saveLabel = isOffice ? "Save quotation" : "Send quotation to office";
 
   return (
-    <div className="pb-24 xl:pb-0">
-      {/* Step 1: brand */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <span className="text-sm font-semibold text-slate-500">Billing for</span>
-        <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
-          {brands.map((b) => {
-            const t = brandTone(b.code), on = b.id === brandId;
-            return (
-              <button key={b.id} type="button" onClick={() => switchBrand(b.id)}
-                className={cn("flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition", on ? `${t.solid} shadow` : "text-slate-600 hover:bg-white")}>
-                <span className={cn("size-2 rounded-full", on ? "bg-white" : t.dot)} /> {b.name}
-              </button>
-            );
-          })}
-        </div>
-        {initial && <span className="text-sm text-slate-500">Editing draft <b className="font-mono">{initial.orderNo}</b></span>}
-        <span className="ml-auto hidden items-center gap-1.5 text-xs text-slate-400 lg:flex"><Keyboard className="size-3.5" /> F4 retailer · / search · F2 catalogue · Ctrl+Enter invoice</span>
+    <div className="pb-28 xl:pb-6">
+      {/* Action bar: primary actions on the left, where the document stands on the right */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Button className="h-10" disabled={pending || !lines.length || !retailer} onClick={submit}>
+          <FileText className="size-4" /> {pending ? "Saving…" : saveLabel} <Kbd className="hidden border-on-fill/30 bg-on-fill/15 text-on-fill sm:inline-flex">Ctrl ↵</Kbd>
+        </Button>
+        <Button variant="secondary" className="h-10" onClick={() => setBrowse(true)}><LayoutGrid className="size-4" /> Catalogue</Button>
+        {lines.length > 0 && <Button variant="ghost" className="h-10" onClick={clearCart}>Clear</Button>}
+        {Object.keys(saved).length > 0 && <Button variant="ghost" className="h-10 text-text-2" onClick={cancelAll}><XCircle className="size-4" /> Cancel quotation</Button>}
+        <DocSteps at={0} className="ml-auto hidden md:flex" />
       </div>
+      <p className="mb-4 -mt-1 text-[13px] text-text-2">
+        {isOffice
+          ? "Saved automatically once it has a retailer and a product. Then open it and choose Create invoice."
+          : "Saved automatically once it has a shop and a product. The office turns it into an invoice."}
+      </p>
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_400px]">
-        <div className="min-w-0 space-y-4">
-          {/* Step 2: retailer + Step 3: terms */}
-          <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-            <RetailerSelect ref={retailerRef} value={retailer} onChange={chooseRetailer} canEditDetails={isOffice} companyState={companyState} />
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="mr-1 text-sm font-semibold text-slate-600">Payment terms</span>
-              {TERMS.map((t) => (
-                <button key={t.days} type="button" onClick={() => { setDays(t.days); setCustom(false); }}
-                  className={cn("rounded-lg border px-3 py-1.5 text-sm font-semibold", !custom && days === t.days ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300 bg-white hover:border-slate-400")}>
-                  {t.label}
-                </button>
-              ))}
-              <button type="button" onClick={() => setCustom(true)} className={cn("rounded-lg border px-3 py-1.5 text-sm font-semibold", custom ? "border-ink-900 bg-ink-900 text-white" : "border-slate-300 bg-white hover:border-slate-400")}>Custom</button>
-              {custom && (
-                <span className="flex items-center gap-1.5 text-sm">
-                  <Input type="number" min={0} max={365} value={days} onChange={(e) => setDays(Math.max(0, Math.min(365, Number(e.target.value) || 0)))} className="h-9 w-20" aria-label="Credit days" />
-                  days or due
-                  <Input type="date" min={today} value={due} onChange={(e) => e.target.value && setDays(Math.round((Date.parse(e.target.value) - Date.parse(today)) / 864e5))} className="h-9 w-40" aria-label="Due date" />
-                </span>
-              )}
-              <span className="ml-auto rounded-lg bg-amber-50 px-3 py-1.5 text-sm text-amber-900 ring-1 ring-amber-200">
-                Due <b>{fmtDate(due)}</b>{days === 0 ? " · pay now" : ` · ${days} days`}
-                {retailer && retailer.credit_days !== days && <span className="text-amber-700"> (shop default {retailer.credit_days})</span>}
-              </span>
-            </div>
-          </section>
-
-          {/* Step 4: products */}
-          <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <div className="relative flex-1">
-                <Search className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-slate-400" />
-                <Input ref={searchRef} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey}
-                  placeholder={`Search ${brand?.name ?? ""} products: name, SKU, 65W, Type C, category…`} className="h-12 pl-10 text-base" autoComplete="off" />
-                {q && <button onClick={() => setQ("")} className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-700" aria-label="Clear search"><X className="size-4" /></button>}
-              </div>
-              <BarcodeScanButton label="Scan" onDetected={(code) => { const p = products.find((x) => x.barcode === code || x.sku.toLowerCase() === code.toLowerCase()); if (p) add(p); else setQ(code); }} />
-              <button type="button" onClick={() => setBrowse((b) => !b)}
-                className={cn("flex h-12 items-center justify-center gap-2 rounded-lg px-4 text-sm font-bold tracking-wide transition", browse ? "bg-ink-900 text-white" : `${tone.solid} hover:opacity-90`)}>
-                <LayoutGrid className="size-4" /> {browse ? "CLOSE CATALOGUE" : "BROWSE PRODUCT CATALOGUE"}
-              </button>
-            </div>
-
-            {!catalogue ? (
-              <p className="py-10 text-center text-sm text-slate-500">Loading {brand?.name} catalogue…</p>
-            ) : term ? (
-              <ProductArea title={`${results.length} match${results.length === 1 ? "" : "es"} for “${term}”`} products={results} inCart={inCart} favs={favs} onAdd={add} onFav={toggleFav} empty="Nothing matches. Try fewer letters, the SKU, or a category name." />
-            ) : browse ? (
-              <>
-                <div className="no-scrollbar -mx-1 mt-4 flex gap-1.5 overflow-x-auto px-1 pb-1">
-                  {[{ id: "all", name: "All" }, ...catalogue.categories].map((c) => {
-                    const n = c.id === "all" ? products.length : products.filter((p) => p.category_id === c.id).length;
-                    return (
-                      <button key={c.id} type="button" onClick={() => setCat(c.id)}
-                        className={cn("shrink-0 rounded-full px-4 py-1.5 text-sm font-bold tracking-wide uppercase", cat === c.id ? "bg-ink-900 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200")}>
-                        {c.name} <span className="font-normal opacity-60">{n}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <ProductArea products={shown} inCart={inCart} favs={favs} onAdd={add} onFav={toggleFav} empty="No products in this category." />
-              </>
-            ) : (
-              <div className="mt-4 space-y-4">
-                {retailer && usuals && (usualProducts.length > 0 || usuals.last) && (
-                  <div>
-                    <div className="mb-2 flex items-center justify-between">
-                      <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-700"><Sparkles className="size-4 text-violet-500" /> {retailer.shop_name} usually buys</h3>
-                      {usuals.last && (
-                        <button onClick={repeatLast} className="flex items-center gap-1.5 rounded-lg bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-800 hover:bg-violet-100">
-                          <Repeat className="size-3.5" /> Repeat last invoice ({usuals.last.invoice_no}, {fmtDate(usuals.last.invoice_date)})
-                        </button>
-                      )}
-                    </div>
-                    <ProductStrip products={usualProducts} inCart={inCart} onAdd={add} />
-                  </div>
-                )}
-                {favProducts.length > 0 && (<div><h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-slate-700"><Star className="size-4 fill-amber-400 text-amber-400" /> Favourites</h3><ProductStrip products={favProducts} inCart={inCart} onAdd={add} /></div>)}
-                {recentProds.length > 0 && (<div><h3 className="mb-2 text-sm font-semibold text-slate-700">Recently billed</h3><ProductStrip products={recentProds} inCart={inCart} onAdd={add} /></div>)}
-                {!usualProducts.length && !favProducts.length && !recentProds.length && (
-                  <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
-                    Type to search, scan a barcode, or press <b>Browse product catalogue</b> and click products to add them.
-                  </p>
-                )}
-              </div>
-            )}
-          </section>
-        </div>
-
-        {/* Cart: always visible on the right on desktop */}
-        <aside id="cart" className="xl:sticky xl:top-4 xl:self-start">
-          <div className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 xl:max-h-[calc(100dvh-9rem)]">
-            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-              <span className="flex items-center gap-2 font-semibold"><ShoppingCart className="size-5" /> Cart
-                <span className="rounded-full bg-ink-900 px-2 py-0.5 text-xs text-white">{lines.length} items · {fmtQty(totalQty)} qty</span>
-              </span>
-              {lines.length > 0 && <button onClick={clearCart} className="text-xs font-medium text-slate-500 hover:text-red-600">Clear</button>}
-            </div>
-
-            <div className="min-h-24 flex-1 overflow-y-auto">
-              {lines.length === 0 ? (
-                <p className="p-6 text-center text-sm text-slate-400">Click a product to add it here.</p>
-              ) : (
-                <ul className="divide-y divide-slate-100">
-                  {lines.map((l, i) => {
-                    const avail = byId.get(l.product.id)?.available ?? l.product.available;
-                    const short = l.qty > avail;
-                    return (
-                      <li key={l.product.id} className={cn("px-4 py-2.5", short && "bg-red-50/60")}>
-                        <div className="flex items-start gap-2">
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-medium">{l.product.name}</div>
-                            <div className="text-[11px] text-slate-500">
-                              <span className="font-mono">{l.product.sku}</span> ·{" "}
-                              {isMgr ? (
-                                <input type="number" min={0} step="0.01" value={l.price ?? l.product.retailer_price} onChange={(e) => setLine(l.product.id, { price: e.target.value === "" ? null : Number(e.target.value) })}
-                                  className="tabular w-16 rounded border border-slate-200 px-1" aria-label={`Price of ${l.product.name}`} />
-                              ) : inr(l.product.retailer_price)}
-                              {l.product.retailer_price_mode === "inclusive" ? " incl." : " + "}{l.product.gst_rate}% GST
-                            </div>
-                          </div>
-                          <button onClick={() => removeLine(l.product.id)} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-red-600" aria-label={`Remove ${l.product.name}`}><X className="size-4" /></button>
-                        </div>
-                        <div className="mt-1.5 flex items-center gap-2">
-                          <div className="flex items-center rounded-lg ring-1 ring-slate-300">
-                            <button onClick={() => (l.qty <= 1 ? removeLine(l.product.id) : setLine(l.product.id, { qty: l.qty - 1 }))} className="grid size-8 place-items-center text-slate-600 hover:bg-slate-100" aria-label="Less"><Minus className="size-4" /></button>
-                            <input type="number" min={0} step="any" inputMode="decimal" value={l.qty || ""} onChange={(e) => setLine(l.product.id, { qty: Number(e.target.value) })}
-                              className="tabular h-8 w-14 border-x border-slate-200 text-center text-sm font-semibold outline-none" aria-label={`Quantity of ${l.product.name}`} />
-                            <button onClick={() => setLine(l.product.id, { qty: l.qty + 1 })} className="grid size-8 place-items-center text-slate-600 hover:bg-slate-100" aria-label="More"><Plus className="size-4" /></button>
-                          </div>
-                          {maxDisc > 0 && (
-                            <label className="flex items-center gap-1 text-[11px] text-slate-500">
-                              <input type="number" min={0} max={maxDisc} step="0.5" value={l.discount || ""} placeholder="0" onChange={(e) => setLine(l.product.id, { discount: Number(e.target.value) })}
-                                className={cn("tabular h-8 w-12 rounded border border-slate-200 px-1 text-center text-xs", effDisc(l) > maxDisc && "border-red-400 bg-red-50")} aria-label={`Discount on ${l.product.name}`} />%
-                            </label>
-                          )}
-                          <span className="tabular ml-auto text-sm font-semibold">{inr(calc[i].total)}</span>
-                        </div>
-                        {short && <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-red-700"><AlertTriangle className="size-3" /> Only {fmtQty(avail)} in stock</div>}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-
-            <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-3 text-sm">
-              <dl className="tabular space-y-1">
-                <Row k="Subtotal" v={inr(subtotal)} />
-                {maxDisc > 0 && (
-                  <div className="flex items-center justify-between">
-                    <dt className="text-slate-500">Overall discount</dt>
-                    <dd className="flex items-center gap-1"><input type="number" min={0} max={maxDisc} step="0.5" value={overall} placeholder="0" onChange={(e) => setOverall(e.target.value)} className="tabular h-7 w-14 rounded border border-slate-300 bg-white px-1 text-right" aria-label="Overall discount percent" />%</dd>
-                  </div>
-                )}
-                {discount > 0 && <Row k="Discount" v={`− ${inr(discount)}`} tone="green" />}
-                <Row k="Taxable value" v={inr(taxable)} />
-                {byRate.map(([rate, g]) => igst
-                  ? <Row key={rate} k={`IGST ${rate}% on ${inr(g.taxable, { decimals: false })}`} v={inr(g.tax)} />
-                  : <Row key={rate} k={`CGST ${rate / 2}% + SGST ${rate / 2}%`} v={inr(g.tax)} />)}
-                {roundOff !== 0 && <Row k="Round off" v={roundOff < 0 ? `− ${inr(-roundOff)}` : `+ ${inr(roundOff)}`} />}
-              </dl>
-              <div className="mt-2 flex items-baseline justify-between border-t border-slate-200 pt-2">
-                <span className="font-semibold">Grand total</span>
-                <span className="tabular text-2xl font-bold">{inr(grand)}</span>
-              </div>
-              {isOffice && (
-                <div className="mt-2 rounded-xl bg-white p-2.5 ring-1 ring-slate-200">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-slate-600">Amount paid now</span>
-                    <input type="number" min={0} step="1" value={paid} placeholder="0" onChange={(e) => setPaid(e.target.value)} className="tabular h-8 w-28 rounded border border-slate-300 px-2 text-right font-semibold" aria-label="Amount paid" />
-                  </div>
-                  {paidNum > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {METHODS.map((m) => <button key={m.k} type="button" onClick={() => setMethod(m.k)} className={cn("rounded-md px-2.5 py-1 text-xs font-semibold", method === m.k ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-700")}>{m.label}</button>)}
-                      {method !== "cash" && <input value={payRef} onChange={(e) => setPayRef(e.target.value)} placeholder={method === "cheque" ? "Cheque no." : "UTR / ref."} className="h-7 flex-1 rounded border border-slate-300 px-2 text-xs" />}
-                    </div>
-                  )}
-                  <div className="mt-1.5 flex items-center justify-between">
-                    <span className="text-slate-600">Balance due {days ? `by ${fmtDate(due)}` : "today"}</span>
-                    <span className="tabular font-bold text-red-700">{inr(grand - paidNum)}</span>
-                  </div>
-                  {days === 0 && paidNum === 0 && grand > 0 && <button type="button" onClick={() => setPaid(String(grand))} className="mt-1 text-xs font-semibold text-emerald-700 hover:underline">Paid in full ({inr(grand, { decimals: false })})</button>}
-                </div>
-              )}
-              {overLimit && <p className="mt-2 rounded-lg bg-red-50 px-2.5 py-1.5 text-xs text-red-800">Over credit limit: outstanding {inr(retailer!.outstanding, { decimals: false })} + this bill vs limit {inr(retailer!.credit_limit, { decimals: false })}.</p>}
-              <button type="button" onClick={() => setShowNotes((s) => !s)} className="mt-2 flex items-center gap-1 text-xs font-medium text-slate-500"><ChevronDown className={cn("size-3.5 transition", showNotes && "rotate-180")} /> Note on invoice</button>
-              {showNotes && <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-1 text-sm" />}
-              {error && <div className="mt-2"><Alert>{error.message}</Alert></div>}
-              <div className="mt-3 grid gap-2">
-                {isOffice ? (
-                  <Button className="h-12 bg-emerald-600 text-base font-bold tracking-wide hover:bg-emerald-700" disabled={pending || !lines.length || !retailer}
-                    onClick={() => { const v = validate(); if (v) setError({ message: v }); else { setError(null); setReviewing(true); } }}>
-                    <FileText className="size-5" /> GENERATE INVOICE
-                  </Button>
-                ) : (
-                  <Button className="h-12 text-base font-bold" disabled={pending} onClick={() => submit(false)}>{pending ? "Saving…" : "Send quotation to office"}</Button>
-                )}
-                {isOffice && <Button variant="secondary" disabled={pending} onClick={() => submit(false)}>{savedOrderId ? "Save draft" : "Save as draft (quotation)"}</Button>}
-              </div>
-            </div>
+      <div className="rounded-[var(--radius-sheet)] border border-line bg-surface shadow-[var(--shadow-card)]">
+        {/* Document head */}
+        <div className="px-4 pt-5 pb-4 sm:px-6 sm:pt-6">
+          <div className="mb-5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h2 className="text-[26px] font-semibold tracking-[-0.02em] text-text">
+              {Object.keys(saved).length ? <span className="font-mono text-[22px]">{Object.values(saved).map((d) => d.orderNo).filter(Boolean).join(" + ")}</span> : "New quotation"}
+            </h2>
+            <Badge tone="violet">Quotation</Badge>
+            <AutoSaveStatus state={autoState} />
+            {split.length > 1 && <span className="text-[13px] text-text-2">{split.length} quotations, one per brand</span>}
           </div>
-        </aside>
-      </div>
 
-      {/* Phone: cart summary bar */}
-      {lines.length > 0 && (
-        <a href="#cart" className="fixed inset-x-3 bottom-3 z-30 flex items-center justify-between rounded-2xl bg-ink-900 px-4 py-3 text-white shadow-xl xl:hidden">
-          <span className="flex items-center gap-2 text-sm"><ShoppingCart className="size-5" /> {lines.length} items · {fmtQty(totalQty)} qty</span>
-          <span className="tabular text-lg font-bold">{inr(grand)}</span>
-        </a>
-      )}
-
-      {toast && (
-        <div className={cn("pointer-events-none fixed bottom-20 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white shadow-lg xl:bottom-6", toast.warn ? "bg-amber-600" : "bg-emerald-600")}>
-          {toast.warn ? <AlertTriangle className="size-4" /> : <Check className="size-4" />} {toast.text}
-        </div>
-      )}
-
-      {reviewing && retailer && (
-        <Dialog title="Invoice summary" onClose={() => setReviewing(false)}>
-          <div className="space-y-3 text-sm">
-            <div className="flex items-start justify-between gap-3 rounded-xl bg-slate-50 p-3">
-              <div>
-                <div className="font-semibold">{retailer.shop_name}</div>
-                <div className="text-xs text-slate-500">{retailer.gstin ? `GSTIN ${retailer.gstin}` : "Unregistered"} · {igst ? "IGST" : "CGST + SGST"}</div>
+          <div className="grid gap-x-10 gap-y-4 lg:grid-cols-[1.25fr_1fr]">
+            <div>
+              <div className="mb-1.5 flex items-center justify-between">
+                <span className="text-[13px] font-medium text-text">Retailer</span>
+                <Kbd>F4</Kbd>
               </div>
-              <span className={cn("rounded-md px-2 py-0.5 text-xs font-bold", tone.solid)}>{brand?.name}</span>
+              <RetailerSelect ref={retailerRef} value={retailer} onChange={chooseRetailer} canEditDetails={isOffice} companyState={companyState} />
+              {missing.length > 0 && (
+                <div className="mt-2"><Alert tone="amber">A GST invoice to this shop needs its <b>{missing.join(" and ")}</b>. <button type="button" onClick={() => setEditingDetails(true)} className="font-semibold underline underline-offset-2">Add now</button></Alert></div>
+              )}
+              {overLimit && (
+                <div className="mt-2"><Alert>Over credit limit: outstanding {inr(retailer!.outstanding, { decimals: false })} + this bill is above the limit of {inr(retailer!.credit_limit, { decimals: false })}.</Alert></div>
+              )}
             </div>
-            <dl className="tabular space-y-1">
-              <Row k={`${lines.length} products · ${fmtQty(totalQty)} qty`} v="" />
-              <Row k="Taxable value" v={inr(taxable)} />
-              <Row k="GST" v={inr(tax)} />
-              {discount > 0 && <Row k="Discount given" v={inr(discount)} tone="green" />}
-              <div className="flex justify-between border-t border-slate-200 pt-1 text-base font-bold"><dt>Grand total</dt><dd>{inr(grand)}</dd></div>
-              {paidNum > 0 && <Row k={`Paid now (${METHODS.find((m) => m.k === method)?.label})`} v={inr(paidNum)} tone="green" />}
-              <Row k={`Balance due ${fmtDate(due)} (${days ? `${days} days` : "immediate"})`} v={inr(grand - paidNum)} />
+
+            <dl className="grid content-start grid-cols-[auto_1fr] items-center gap-x-6 gap-y-3 text-sm">
+              <dt className="text-[13px] font-medium text-text">Quotation date</dt>
+              <dd className="tabular text-text">{fmtDate(today)} <span className="text-text-3">· today</span></dd>
+
+              <dt className="text-[13px] font-medium text-text"><label htmlFor="terms">Payment terms</label></dt>
+              <dd className="flex flex-wrap items-center gap-2">
+                <Select id="terms" value={termValue} className="h-9 w-auto min-w-40"
+                  onChange={(e) => { if (e.target.value === "custom") setCustom(true); else { setCustom(false); setDays(Number(e.target.value)); } }}>
+                  {TERMS.map((t) => <option key={t.days} value={String(t.days)}>{t.label}</option>)}
+                  <option value="custom">Custom…</option>
+                </Select>
+                {custom && (
+                  <span className="flex items-center gap-1.5 text-text-2">
+                    <Input type="number" min={0} max={365} value={days} onChange={(e) => setDays(Math.max(0, Math.min(365, Number(e.target.value) || 0)))} className="h-9 w-20" aria-label="Credit days" /> days
+                  </span>
+                )}
+              </dd>
+
+              <dt className="text-[13px] font-medium text-text">Due date</dt>
+              <dd className="text-xs text-text-2">
+                <b className="tabular font-medium text-text">{days === 0 ? "On the invoice date" : `${days} days after the invoice date`}</b>
+                {" · "}{fmtDate(due)} if invoiced today{retailer && retailer.credit_days !== days ? ` · shop default ${retailer.credit_days} days` : ""}
+              </dd>
             </dl>
-            {missing.length > 0 && (
-              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-amber-900">
-                A GST invoice to this shop needs its <b>{missing.join(" and ")}</b>.
-                <Button size="sm" className="mt-2 block" onClick={() => setEditingDetails(true)}>Complete details now</Button>
-              </div>
-            )}
-            {shortLines.length > 0 && (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-800">
-                Not enough stock: {shortLines.map((l) => l.product.name).join(", ")}.
-                {isMgr ? (
-                  <label className="mt-2 flex items-center gap-2 font-semibold"><input type="checkbox" checked={overrideStock} onChange={(e) => setOverrideStock(e.target.checked)} className="size-4" /> Invoice anyway (back-order; goods are dispatched when stock arrives)</label>
-                ) : <p className="mt-1">Reduce the quantity, or save a draft and ask a manager.</p>}
-              </div>
-            )}
-            {overLimit && isMgr && (
-              <label className="flex items-center gap-2 rounded-lg bg-red-50 p-3 font-semibold text-red-800"><input type="checkbox" checked={overrideCredit} onChange={(e) => setOverrideCredit(e.target.checked)} className="size-4" /> Allow over credit limit (recorded)</label>
-            )}
-            {error && <Alert>{error.message}</Alert>}
-            <div className="flex justify-end gap-2 pt-1">
-              <Button variant="secondary" onClick={() => setReviewing(false)}>Back</Button>
-              <Button className="bg-emerald-600 hover:bg-emerald-700" autoFocus
-                disabled={pending || missing.length > 0 || (shortLines.length > 0 && !overrideStock) || (overLimit && !overrideCredit && isMgr)}
-                onClick={() => submit(true)}>
-                {pending ? "Generating…" : "Confirm & generate invoice"}
-              </Button>
-            </div>
-            <p className="text-xs text-slate-400">The invoice number is given now. Stock leaves the warehouse when the order is dispatched.</p>
           </div>
-        </Dialog>
+        </div>
+
+        {/* Tabs: products / payment & note */}
+        <div role="tablist" aria-label="Quotation sections" className="flex gap-1 border-b border-line px-3 sm:px-5">
+          {(["lines", "note"] as const).map((t) => (
+            <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
+              className={cn("relative flex h-11 items-center gap-2 px-3 text-sm font-medium transition-colors", tab === t ? "text-text" : "text-text-2 hover:text-text")}>
+              {t === "lines" ? "Products" : "Note"}
+              {t === "lines" && lines.length > 0 && <span className="tabular min-w-5 rounded-full bg-primary-soft px-1.5 text-center text-xs leading-5 text-primary-text">{lines.length}</span>}
+              {tab === t && <m.span layoutId="bill-tab" className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-primary" transition={spring.snappy} />}
+            </button>
+          ))}
+        </div>
+
+        {tab === "lines" ? (
+          <div>
+            {shortInfo.length > 0 && (
+              <div className="px-3 pt-4 sm:px-5">
+                <ShortStockBanner stage="quote" lines={shortInfo} isManager={isMgr} onUseAvailable={useAvailable} />
+              </div>
+            )}
+            {lines.length > 0 ? (
+              <LinesTable
+                lines={lines} calc={calc} available={(id, fb) => byId.get(id)?.available ?? fb} isManager={isMgr} maxDisc={maxDisc}
+                effDisc={effDisc} flashId={flashId} onLine={setLine} onRemove={removeLine}
+              />
+            ) : (
+              <div className="px-6 pt-8 pb-4 text-center">
+                <p className="text-[15px] font-medium text-text">No products yet</p>
+                <p className="mt-1 text-sm text-text-2">Type below to add a product, or open the catalogue to pick from photos.</p>
+              </div>
+            )}
+            <AddProductRow
+              ref={searchRef} q={q} setQ={setQ} results={results} loading={!catalogue} inCart={inCart} brandName={brand?.name}
+              onAdd={(p) => add(p)} onEnterExact={() => { const t = term.toLowerCase(); const hit = products.find((p) => p.sku.toLowerCase() === t || p.barcode === term); if (hit) { add(hit); setQ(""); return true; } return false; }}
+              onCatalog={() => setBrowse(true)}
+              onScan={(code) => { const p = products.find((x) => x.barcode === code || x.sku.toLowerCase() === code.toLowerCase()); if (p) add(p); else setQ(code); }}
+              onRepeat={usuals?.last ? repeatLast : undefined}
+              repeatLabel={usuals?.last ? `Repeat ${usuals.last.invoice_no} (${fmtDate(usuals.last.invoice_date)})` : undefined}
+            />
+            {(usualProducts.length > 0 || favProducts.length > 0) && (
+              <div className="grid gap-4 border-t border-line px-4 py-4 sm:px-5 lg:grid-cols-2">
+                <QuickAdd title={retailer ? `${retailer.shop_name} usually buys` : "Usually bought"} products={usualProducts} inCart={inCart} onAdd={(p) => add(p)} />
+                <QuickAdd title="Favourites" products={favProducts} inCart={inCart} onAdd={(p) => add(p)} />
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="max-w-2xl px-4 py-5 sm:px-6">
+            <section aria-labelledby="note-h" className="space-y-2">
+              <h3 id="note-h" className="text-sm font-semibold text-text">Note</h3>
+              <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Printed on the quotation and the invoice (optional)" />
+              <p className="text-xs text-text-2">Payment received at the counter is entered on the invoice draft, when you confirm the invoice.</p>
+            </section>
+          </div>
+        )}
+
+        {/* Totals */}
+        <div className="flex flex-col gap-4 border-t border-line px-4 py-5 sm:px-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="text-[13px] text-text-2">
+            {lines.length} product{lines.length === 1 ? "" : "s"} · {fmtQty(totalQty)} qty
+            {split.length > 1 && (
+              <div className="mt-2 space-y-0.5">
+                {split.map((g) => <div key={g.id} className="tabular flex gap-3"><span className={cn("inline-block size-2 translate-y-1.5 rounded-full", brandTone(g.code).dot)} /><span className="w-28">{g.name}</span><b className="text-text">{inr(g.total)}</b></div>)}
+              </div>
+            )}
+          </div>
+          <dl className="tabular w-full space-y-1.5 text-sm lg:w-80">
+            <Row k="Subtotal" v={inr(subtotal)} />
+            {maxDisc > 0 && (
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-text-2"><label htmlFor="overall">Discount on whole bill</label></dt>
+                <dd className="flex items-center gap-1"><input id="overall" type="number" min={0} max={maxDisc} step="0.5" value={overall} placeholder="0" onChange={(e) => setOverall(e.target.value)} className="tabular h-8 w-16 rounded-[8px] border border-field/55 bg-raised px-2 text-right focus:border-primary focus:outline-none" />%</dd>
+              </div>
+            )}
+            {discount > 0 && <Row k="Discount" v={`− ${inr(discount)}`} tone="green" />}
+            <Row k="Taxable value" v={inr(taxable)} />
+            {byRate.map(([rate, g]) => igst
+              ? <Row key={rate} k={`IGST ${rate}%`} v={inr(g.tax)} />
+              : <Row key={rate} k={`CGST ${rate / 2}% + SGST ${rate / 2}%`} v={inr(g.tax)} />)}
+            {roundOff !== 0 && <Row k="Round off" v={roundOff < 0 ? `− ${inr(-roundOff)}` : `+ ${inr(roundOff)}`} />}
+            <div className="flex items-baseline justify-between border-t border-line pt-2.5">
+              <dt className="font-semibold text-text">Total</dt>
+              <AnimatePresence mode="popLayout" initial={false}>
+                <m.dd key={grand} className="text-2xl font-semibold tracking-[-0.02em] text-text" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0, transition: { duration: duration.fast, ease: ease.out } }} exit={{ opacity: 0, y: -8, transition: { duration: duration.instant } }}>
+                  {inr(grand)}
+                </m.dd>
+              </AnimatePresence>
+            </div>
+          </dl>
+        </div>
+        {error && <div className="px-4 pb-5 sm:px-6"><div key={error.message} className="nudge"><Alert>{error.message}</Alert></div></div>}
+      </div>
+
+      <p className="mt-3 hidden items-center gap-1.5 text-xs text-text-3 lg:flex"><Keyboard className="size-3.5" /> F4 retailer · / add product · F2 catalogue · Ctrl ↵ save quotation</p>
+
+      {/* Phone: total + main action, frosted */}
+      {lines.length > 0 && (
+        <div className="glass fixed inset-x-0 bottom-16 z-30 flex items-center gap-3 border-t border-line/70 px-4 py-2.5 xl:hidden">
+          <div className="min-w-0 flex-1">
+            <div className="text-xs text-text-2">{lines.length} product{lines.length === 1 ? "" : "s"} · {fmtQty(totalQty)} qty</div>
+            <div className="tabular text-lg font-semibold text-text">{inr(grand)}</div>
+          </div>
+          <Button className="h-11" disabled={pending || !retailer} onClick={submit}>{pending ? "Saving…" : isOffice ? "Save quotation" : "Send to office"}</Button>
+        </div>
       )}
+
+      <AnimatePresence>
+        {toast && (
+          <m.div
+            key={toast.text}
+            role="status"
+            initial={{ opacity: 0, y: 12, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1, transition: spring.snappy }}
+            exit={{ opacity: 0, y: 8, transition: { duration: duration.instant } }}
+            className={cn("pointer-events-none fixed bottom-36 left-1/2 z-[55] flex -translate-x-1/2 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-[var(--shadow-raised)] xl:bottom-8", toast.warn ? "bg-amber-600 text-on-fill" : "bg-neutral-900 text-on-fill")}
+          >
+            {toast.warn ? <AlertTriangle className="size-4" /> : <Check className="size-4" />} {toast.text}
+          </m.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {browse && (
+          <CatalogView
+            onClose={() => setBrowse(false)}
+            products={catalogue?.products ?? null}
+            categories={catalogue?.categories ?? []}
+            brands={brands} brandId={brandId} onBrand={setBrandId}
+            inCart={inCart} onAdd={(p, n) => add(p, n ?? 1)} onQty={(p, n) => (n <= 0 ? removeLine(p.id) : setLine(p.id, { qty: n }))}
+            favs={favs} onFav={toggleFav} usual={usualProducts} recent={recentProds}
+            shop={retailer?.shop_name ?? null} lineCount={lines.length} totalQty={totalQty} total={grand} match={matches}
+          />
+        )}
+      </AnimatePresence>
       {editingDetails && retailer && (
         <BillingDetailsDialog retailer={retailer} onClose={() => setEditingDetails(false)} onSaved={(r) => { setRetailer(r); rememberRetailer(r); setEditingDetails(false); setError(null); }} />
       )}
@@ -558,67 +559,6 @@ export function BillingScreen({ role, companyState, maxSalesmanDiscount, billing
   );
 }
 
-// ---------------------------------------------------------------------------
-function ProductArea({ title, products, inCart, favs, onAdd, onFav, empty }: { title?: string; products: PickerProduct[]; inCart: Map<string, number>; favs: string[]; onAdd: (p: PickerProduct) => void; onFav: (id: string) => void; empty: string }) {
-  return (
-    <div className="mt-4">
-      {title && <div className="mb-2 text-xs font-medium text-slate-500">{title}</div>}
-      {products.length === 0 ? <p className="py-8 text-center text-sm text-slate-500">{empty}</p> : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
-          {products.map((p) => <ProductCard key={p.id} p={p} qty={inCart.get(p.id) ?? 0} fav={favs.includes(p.id)} onAdd={onAdd} onFav={onFav} />)}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// The whole card adds one unit; the star only marks a favourite.
-function ProductCard({ p, qty, fav, onAdd, onFav }: { p: PickerProduct; qty: number; fav: boolean; onAdd: (p: PickerProduct) => void; onFav: (id: string) => void }) {
-  const out = p.available <= 0;
-  return (
-    <div role="button" tabIndex={0} onClick={() => onAdd(p)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAdd(p); } }}
-      className={cn("group relative flex cursor-pointer flex-col overflow-hidden rounded-xl border bg-white text-left transition select-none hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98]",
-        qty > 0 ? "border-emerald-500 ring-2 ring-emerald-500/20" : "border-slate-200 hover:border-slate-300")}>
-      <div className="relative aspect-square bg-slate-50">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        {p.image_url ? <img src={p.image_url} alt="" className="size-full object-contain p-3" loading="lazy" draggable={false} /> : <div className="grid size-full place-items-center text-slate-300"><ImageOff className="size-8" /></div>}
-        {qty > 0 && <span className="tabular absolute top-2 left-2 rounded-full bg-emerald-600 px-2 py-0.5 text-xs font-bold text-white shadow">× {fmtQty(qty)}</span>}
-        <button type="button" onClick={(e) => { e.stopPropagation(); onFav(p.id); }} aria-label={fav ? "Remove favourite" : "Mark favourite"}
-          className={cn("absolute top-1.5 right-1.5 rounded-full p-1.5 transition", fav ? "text-amber-400" : "text-slate-300 opacity-0 group-hover:opacity-100 hover:text-amber-400")}>
-          <Star className={cn("size-4", fav && "fill-amber-400")} />
-        </button>
-      </div>
-      <div className="flex flex-1 flex-col p-2.5">
-        <div className="line-clamp-2 min-h-[2.5rem] text-sm leading-tight font-medium">{p.name}</div>
-        <div className="mt-0.5 truncate font-mono text-[11px] text-slate-500">{p.sku}</div>
-        <div className="mt-auto flex items-end justify-between gap-1 pt-2">
-          <div>
-            <div className="tabular text-sm font-bold">{inr(p.retailer_price)}</div>
-            <div className={cn("text-[11px] font-semibold", out ? "text-red-600" : p.available < 10 ? "text-amber-700" : "text-emerald-700")}>{out ? "Out of stock" : `${fmtQty(p.available)} in stock`}</div>
-          </div>
-          <span className="grid size-9 place-items-center rounded-full bg-ink-900 text-white shadow transition group-hover:bg-emerald-600" aria-hidden><ShoppingCart className="size-4" /></span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ProductStrip({ products, inCart, onAdd }: { products: PickerProduct[]; inCart: Map<string, number>; onAdd: (p: PickerProduct) => void }) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {products.map((p) => (
-        <button key={p.id} type="button" onClick={() => onAdd(p)} className={cn("flex items-center gap-2 rounded-xl border bg-white py-1.5 pr-3 pl-1.5 text-left text-xs hover:border-emerald-400 hover:bg-emerald-50", inCart.get(p.id) ? "border-emerald-400" : "border-slate-200")}>
-          <span className="grid size-8 place-items-center overflow-hidden rounded-lg bg-slate-100">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            {p.image_url ? <img src={p.image_url} alt="" className="size-full object-cover" /> : <Plus className="size-4 text-slate-400" />}
-          </span>
-          <span className="max-w-40"><span className="line-clamp-1 font-semibold">{p.name}</span><span className="tabular text-slate-500">{inr(p.retailer_price, { decimals: false })} · {fmtQty(p.available)} left</span></span>
-          {inCart.get(p.id) ? <span className="tabular rounded-full bg-emerald-600 px-1.5 text-white">× {fmtQty(inCart.get(p.id)!)}</span> : null}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 function Row({ k, v, tone }: { k: string; v: string; tone?: "green" }) {
   return (
@@ -629,34 +569,14 @@ function Row({ k, v, tone }: { k: string; v: string; tone?: "green" }) {
   );
 }
 
-// After the invoice: print, download, WhatsApp, next bill.
-function DonePanel({ done, onNew, error }: { done: { invoiceId: string; invoiceNo: string; total: number; paid: number; due: string; shop: string }; onNew: () => void; error?: string }) {
-  const [sharing, start] = useTransition();
-  const [shareError, setShareError] = useState<string | null>(null);
-  const pdf = `/api/pdf/invoice/${done.invoiceId}`;
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); onNew(); } };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onNew]);
-  return (
-    <div className="mx-auto max-w-xl py-6 text-center">
-      <CheckCircle2 className="mx-auto size-20 text-emerald-500" />
-      <h1 className="mt-3 text-2xl font-bold">Invoice {done.invoiceNo} created</h1>
-      <p className="mt-1 text-slate-600">{done.shop} · <b className="tabular">{inr(done.total)}</b>{done.paid > 0 ? ` · paid ${inr(done.paid)}` : ""} · {done.total - done.paid > 0 ? `balance due ${fmtDate(done.due)}` : "fully paid"}</p>
-      {error && <div className="mt-3 text-left"><Alert>{error}</Alert></div>}
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
-        <a href={pdf} target="_blank" rel="noopener" className="flex h-14 items-center justify-center gap-2 rounded-xl bg-ink-900 font-semibold text-white hover:bg-ink-800"><Printer className="size-5" /> Print</a>
-        <a href={`${pdf}?download=1`} className="flex h-14 items-center justify-center gap-2 rounded-xl bg-white font-semibold ring-1 ring-slate-300 hover:bg-slate-50"><Download className="size-5" /> PDF</a>
-        <button type="button" disabled={sharing} onClick={() => start(async () => { setShareError(null); const r = await shareOnWhatsApp("invoice", done.invoiceId, ""); if (r.url) window.open(r.url, "_blank", "noopener"); else setShareError(r.error ?? "Could not share"); })}
-          className="flex h-14 items-center justify-center gap-2 rounded-xl bg-[#25D366] font-semibold text-white hover:bg-[#1ebe5b] disabled:opacity-60"><MessageCircle className="size-5" /> {sharing ? "Preparing…" : "WhatsApp"}</button>
-      </div>
-      {shareError && <p className="mt-2 text-sm text-red-700">{shareError}</p>}
-      <div className="mt-4 flex flex-col justify-center gap-2 sm:flex-row">
-        <Button className="h-12 bg-emerald-600 px-6 text-base font-bold hover:bg-emerald-700" onClick={onNew}><Plus className="size-5" /> New invoice</Button>
-        <Link href={`/sales/invoices/${done.invoiceId}`} className="flex h-12 items-center justify-center rounded-lg px-4 text-sm font-medium text-slate-600 hover:bg-slate-100">Open invoice</Link>
-      </div>
-      <p className="mt-3 text-xs text-slate-400">Ctrl+Enter starts the next invoice.</p>
-    </div>
-  );
+// Where auto-save stands, next to the quotation's title.
+function AutoSaveStatus({ state }: { state: { s: "idle" | "saving" | "saved" | "error" | "waiting"; msg?: string } }) {
+  if (state.s === "idle") return null;
+  const look = {
+    saving: { icon: <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" aria-hidden />, text: "Saving…", cls: "text-text-2" },
+    saved: { icon: <Check className="size-3.5" aria-hidden />, text: "Saved", cls: "text-green-700" },
+    error: { icon: <CloudOff className="size-3.5" aria-hidden />, text: `Not saved: ${state.msg ?? "try again"}`, cls: "text-red-700" },
+    waiting: { icon: <CloudOff className="size-3.5" aria-hidden />, text: state.msg ? `Not saved yet: ${state.msg}` : "Not saved yet", cls: "text-amber-800" },
+  }[state.s];
+  return <span role="status" className={cn("inline-flex items-center gap-1 text-[13px] font-medium", look.cls)}>{look.icon}{look.text}</span>;
 }

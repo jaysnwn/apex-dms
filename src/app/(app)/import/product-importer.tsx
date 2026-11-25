@@ -6,7 +6,7 @@ import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, Trash2, XCircle
 import { PRODUCT_COLUMNS, guessMapping, parseCsv } from "@/lib/import-columns";
 import { checkRows, type ImportContext } from "@/lib/product-import";
 import { Alert, Badge, Button, Card, cn } from "@/components/ui";
-import { BrandSwitcher } from "@/components/brand-switcher";
+import { brandTone } from "@/lib/brand-style";
 import { importProducts, prepareProductImport, type ImportResult } from "./actions";
 
 type Brand = { id: string; name: string; code: string };
@@ -15,7 +15,27 @@ const COLS = PRODUCT_COLUMNS.filter((c) => c.key !== "brand");
 const SHOW = ["name", "sku", "category", "hsn_code", "unit_code", "gst_rate", "purchase_cost", "distributor_price", "retailer_price", "mrp", "opening_qty", "min_stock_qty"];
 
 // Step 1 template → 2 upload → 3 check columns → 4 preview & fix → 5 import valid rows.
-export function ProductImporter({ brand, brands, canSeeAll }: { brand: Brand | null; brands: Brand[]; canSeeAll: boolean }) {
+// Pick which brand's catalogue a file goes into (no global brand switcher any more).
+function BrandPick({ brands, value, onPick }: { brands: Brand[]; value: string | null; onPick: (id: string) => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1" role="radiogroup" aria-label="Brand">
+      {brands.map((b) => {
+        const on = b.id === value;
+        const t = brandTone(b.code);
+        return (
+          <button key={b.id} type="button" role="radio" aria-checked={on} onClick={() => onPick(b.id)}
+            className={cn("flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-[12px] font-semibold", on ? t.solid + " shadow-sm" : "text-slate-600 hover:bg-surface")}>
+            <span className={cn("size-2 rounded-full", on ? "bg-surface" : t.dot)} />{b.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function ProductImporter({ brand: initialBrand, brands, canSeeAll }: { brand: Brand | null; brands: Brand[]; canSeeAll: boolean }) {
+  const [brandId, setBrandId] = useState<string | null>(initialBrand?.id ?? (brands.length === 1 ? brands[0].id : null));
+  const brand = brands.find((b) => b.id === brandId) ?? null;
   const [file, setFile] = useState<{ name: string; headers: string[]; body: unknown[][] } | null>(null);
   const [mapping, setMapping] = useState<Record<string, number>>({});
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -35,7 +55,7 @@ export function ProductImporter({ brand, brands, canSeeAll }: { brand: Brand | n
       <Card className="max-w-xl p-6">
         <h2 className="font-semibold">Which brand are these products for?</h2>
         <p className="mb-4 text-sm text-slate-500">Each brand has its own catalogue. Import one brand at a time.</p>
-        <BrandSwitcher brands={brands} currentId={null} canSeeAll={false} />
+        <BrandPick brands={brands} value={null} onPick={setBrandId} />
       </Card>
     );
   }
@@ -119,17 +139,17 @@ export function ProductImporter({ brand, brands, canSeeAll }: { brand: Brand | n
       <Card className="p-5">
         <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
           <span className="text-slate-600">Importing into</span>
-          <span className="w-64"><BrandSwitcher brands={brands} currentId={brand.id} canSeeAll={false} /></span>
+          <span className="w-64"><BrandPick brands={brands} value={brand.id} onPick={(id) => { setBrandId(id); setRows(null); setFile(null); setCtx(null); setResult(null); }} /></span>
           {canSeeAll && <span className="text-xs text-slate-400">(products always belong to one brand)</span>}
         </div>
         <ol className="mb-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-5">
           {["Download the template", "Fill it in Excel", "Upload the file", "Check & fix the preview", "Import valid rows"].map((s, i) => (
-            <li key={s} className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2"><span className="grid size-6 shrink-0 place-items-center rounded-full bg-ink-900 text-xs font-bold text-white">{i + 1}</span>{s}</li>
+            <li key={s} className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2"><span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-on-fill">{i + 1}</span>{s}</li>
           ))}
         </ol>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Button variant="secondary" onClick={downloadTemplate}><Download className="size-4" /> Download {brand.name} template</Button>
-          <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-ink-900 px-4 text-sm font-medium text-white hover:bg-ink-800">
+          <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-on-fill hover:bg-primary-hover">
             <FileSpreadsheet className="size-4" /> Upload .xlsx or .csv
             <input type="file" accept=".xlsx,.csv" hidden onChange={(e) => onFile(e.target.files?.[0])} onClick={(e) => ((e.target as HTMLInputElement).value = "")} />
           </label>
@@ -149,7 +169,7 @@ export function ProductImporter({ brand, brands, canSeeAll }: { brand: Brand | n
               <label key={c.key} className="block">
                 <span className="mb-1 block text-sm font-medium text-slate-700">{c.header}{c.required && <span className="text-red-600"> *</span>}</span>
                 <select value={mapping[c.key] ?? ""} onChange={(e) => setMapping((m) => { const n = { ...m }; if (e.target.value === "") delete n[c.key]; else n[c.key] = Number(e.target.value); return n; })}
-                  className={cn("h-10 w-full rounded-lg border bg-white px-2 text-sm", mapping[c.key] === undefined ? (c.required ? "border-red-300 bg-red-50" : "border-slate-200 text-slate-400") : "border-emerald-300 bg-emerald-50/50")}>
+                  className={cn("h-10 w-full rounded-lg border bg-surface px-2 text-sm", mapping[c.key] === undefined ? (c.required ? "border-red-300 bg-red-50" : "border-slate-200 text-slate-400") : "border-emerald-300 bg-emerald-50/50")}>
                   <option value="">— Not in file —</option>
                   {file.headers.map((h, i) => <option key={i} value={i}>{h || `Column ${i + 1}`}</option>)}
                 </select>
@@ -177,7 +197,7 @@ export function ProductImporter({ brand, brands, canSeeAll }: { brand: Brand | n
           <p className="border-b border-slate-100 bg-slate-50 px-4 py-2 text-xs text-slate-500">Click any cell to correct it — the checks update as you type. Rows with errors (red) are not imported.</p>
           <div className="max-h-[60vh] overflow-auto">
             <table className="w-full text-xs">
-              <thead className="sticky top-0 z-10 bg-white text-left text-slate-500 shadow-sm">
+              <thead className="sticky top-0 z-10 bg-surface text-left text-slate-500 shadow-sm">
                 <tr>
                   <th className="px-2 py-2 font-medium">Row</th>
                   {SHOW.map((k) => <th key={k} className="px-1 py-2 font-medium whitespace-nowrap">{COLS.find((c) => c.key === k)?.header}</th>)}
@@ -195,8 +215,8 @@ export function ProductImporter({ brand, brands, canSeeAll }: { brand: Brand | n
                       {SHOW.map((k) => (
                         <td key={k} className="px-0.5 py-0.5">
                           <input value={r[k] ?? ""} onChange={(e) => edit(i, k, e.target.value)} aria-label={`${k} row ${r.__row}`}
-                            className={cn("h-7 w-full min-w-16 rounded border border-transparent bg-transparent px-1.5 hover:border-slate-300 focus:border-ink-900 focus:bg-white focus:outline-none",
-                              k === "name" && "min-w-44", (k === "name" || k === "sku") && !r[k] && "border-red-300 bg-white")} />
+                            className={cn("h-7 w-full min-w-16 rounded border border-transparent bg-transparent px-1.5 hover:border-slate-300 focus:border-primary focus:bg-surface focus:outline-none",
+                              k === "name" && "min-w-44", (k === "name" || k === "sku") && !r[k] && "border-red-300 bg-surface")} />
                         </td>
                       ))}
                       <td className="max-w-72 px-2 py-1">
@@ -204,7 +224,7 @@ export function ProductImporter({ brand, brands, canSeeAll }: { brand: Brand | n
                         {c.warnings.map((w) => <div key={w} className="flex items-start gap-1 text-amber-800"><AlertTriangle className="mt-0.5 size-3 shrink-0" />{w}</div>)}
                         {!c.errors.length && !c.warnings.length && <span className="text-emerald-700">OK</span>}
                       </td>
-                      <td className="px-1"><button onClick={() => remove(i)} className="rounded p-1 text-slate-400 hover:bg-white hover:text-red-600" aria-label={`Remove row ${r.__row}`}><Trash2 className="size-3.5" /></button></td>
+                      <td className="px-1"><button onClick={() => remove(i)} className="rounded p-1 text-slate-400 hover:bg-surface hover:text-red-600" aria-label={`Remove row ${r.__row}`}><Trash2 className="size-3.5" /></button></td>
                     </tr>
                   );
                 })}

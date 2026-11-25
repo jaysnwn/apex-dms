@@ -55,7 +55,7 @@ export type Company = {
   logo?: { data: Buffer; format: "png" | "jpg" } | null;
 };
 
-export function CompanyHeader({ company, title, subtitle }: { company: Company; title: string; subtitle?: string }) {
+export function CompanyHeader({ company, title, subtitle, showGstin = true }: { company: Company; title: string; subtitle?: string; showGstin?: boolean }) {
   return (
     <View style={[s.row, { justifyContent: "space-between", alignItems: "flex-end", marginBottom: 12, borderBottomWidth: 2, borderBottomColor: ACCENT, paddingBottom: 8 }]}>
       <View style={{ maxWidth: "62%" }}>
@@ -68,10 +68,14 @@ export function CompanyHeader({ company, title, subtitle }: { company: Company; 
         <Text style={s.muted}>
           {[company.phone && `Ph: ${company.phone}`, company.email].filter(Boolean).join("  ·  ")}
         </Text>
-        <Text style={s.muted}>
-          {company.gstin ? `GSTIN: ${company.gstin}` : "GSTIN: not set"}
-          {company.state_code ? `  ·  State: ${company.state_code} ${GST_STATES[company.state_code] ?? ""}` : ""}
-        </Text>
+        {showGstin ? (
+          <Text style={s.muted}>
+            {company.gstin ? `GSTIN: ${company.gstin}` : "GSTIN: not set"}
+            {company.state_code ? `  ·  State: ${company.state_code} ${GST_STATES[company.state_code] ?? ""}` : ""}
+          </Text>
+        ) : company.state_code ? (
+          <Text style={s.muted}>State: {company.state_code} {GST_STATES[company.state_code] ?? ""}</Text>
+        ) : null}
       </View>
       <View style={{ alignItems: "flex-end" }}>
         <Text style={{ fontSize: 13, fontWeight: 700, color: ACCENT }}>{title}</Text>

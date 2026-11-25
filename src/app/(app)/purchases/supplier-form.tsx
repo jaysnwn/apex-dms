@@ -21,7 +21,7 @@ export function SupplierForm({ supplier, brands = [] }: { supplier?: SupplierRow
         <div><Label htmlFor="gstin" hint="sets the state">GSTIN</Label><Input id="gstin" name="gstin" defaultValue={s.gstin ?? ""} maxLength={15} className="font-mono uppercase" /></div>
         <div>
           <Label htmlFor="state" hint="if no GSTIN">State</Label>
-          <select id="state" name="state_code" defaultValue={s.state_code ?? ""} className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm">
+          <select id="state" name="state_code" defaultValue={s.state_code ?? ""} className="h-10 w-full rounded-lg border border-slate-300 bg-surface px-3 text-sm">
             <option value="">—</option>
             {Object.entries(GST_STATES).map(([k, v]) => <option key={k} value={k}>{k} {v}</option>)}
           </select>
@@ -32,7 +32,7 @@ export function SupplierForm({ supplier, brands = [] }: { supplier?: SupplierRow
         <div><Label htmlFor="credit">Credit period (days)</Label><Input id="credit" name="credit_days" type="number" min={0} max={365} defaultValue={s.credit_days ?? 30} /></div>
         <div>
           <Label htmlFor="brand" hint="used for the reorder list">Supplies brand</Label>
-          <select id="brand" name="brand_id" defaultValue={s.brand_id ?? ""} className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm">
+          <select id="brand" name="brand_id" defaultValue={s.brand_id ?? ""} className="h-10 w-full rounded-lg border border-slate-300 bg-surface px-3 text-sm">
             <option value="">Any / several</option>
             {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>

@@ -56,7 +56,7 @@ function Bar({ label, done, goal }: { label: string; done: number; goal: number 
   return (
     <div className="mb-2">
       <div className="mb-1 flex justify-between text-sm"><span className="text-slate-600">{label}</span><span className="tabular font-medium">{inr(done, { decimals: false })} / {inr(goal, { decimals: false })} <span className="text-slate-400">({Math.round(pct)}%)</span></span></div>
-      <div className="h-2.5 overflow-hidden rounded-full bg-slate-100"><div className={cn("h-full rounded-full", pct >= 100 ? "bg-emerald-500" : pct >= 60 ? "bg-sky-500" : "bg-amber-500")} style={{ width: `${pct}%` }} /></div>
+      <div className="h-2.5 overflow-hidden rounded-full bg-slate-100"><div className={cn("h-full rounded-full", pct >= 100 ? "bg-emerald-500" : pct >= 60 ? "bg-primary" : "bg-amber-500")} style={{ width: `${pct}%` }} /></div>
     </div>
   );
 }

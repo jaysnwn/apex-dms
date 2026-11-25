@@ -37,14 +37,28 @@ export function time(value: string | number | Date | null | undefined) {
   return new Date(value).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" });
 }
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// Dates read 17-Nov-2026 (DD-MMM-YYYY), in India time.
 export function date(value: string | null | undefined) {
   if (!value) return "—";
-  return new Date(value).toLocaleDateString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  const parts = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "numeric", year: "numeric" }).formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  return `${get("day")}-${MONTHS[Number(get("month")) - 1]}-${get("year")}`;
+}
+
+// Short rupee figure for tiles that must never be cut off: ₹10.61 Cr, ₹10.17 L, ₹21,557.
+// Lakh/crore, the way Indian accounts read. The full figure belongs in the title or detail.
+export function inrCompact(value: number | string | null | undefined) {
+  const n = Number(value ?? 0);
+  const a = Math.abs(n);
+  const sign = n < 0 ? "−" : "";
+  const fix = (x: number) => x.toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: x < 100 ? 2 : 0 });
+  if (a >= 1e7) return `${sign}₹${fix(a / 1e7)} Cr`;
+  if (a >= 1e5) return `${sign}₹${fix(a / 1e5)} L`;
+  return `${sign}₹${Math.round(a).toLocaleString("en-IN")}`;
 }
 
 export const GST_RATES = [0, 3, 5, 12, 18, 28, 40];
