@@ -15,6 +15,7 @@ import type { PdfKind } from "./kinds";
 import { getCompanyLogoFile } from "@/lib/branding";
 import { brandTone } from "@/lib/brand-style";
 import { allRows } from "@/lib/all-rows";
+import { cachedFile } from "@/lib/file-cache";
 export type { PdfKind };
 
 export type RenderedPdf = { buffer: Buffer; filename: string; phone?: string; shareText: string };
@@ -45,8 +46,12 @@ async function brandInfo(supabase: Awaited<ReturnType<typeof createClient>>, bra
   if (!b) return undefined;
   let logo: { data: Buffer; format: "png" | "jpg" } | null = null;
   if (b.logo_path && /\.(png|jpe?g)$/i.test(b.logo_path)) {
-    const { data: blob } = await supabase.storage.from("product-images").download(b.logo_path);
-    if (blob) logo = { data: Buffer.from(await blob.arrayBuffer()), format: /\.png$/i.test(b.logo_path) ? "png" : "jpg" };
+    const path = b.logo_path as string;
+    const data = await cachedFile(`product-images/${path}`, async () => {
+      const { data: blob } = await supabase.storage.from("product-images").download(path);
+      return blob ? Buffer.from(await blob.arrayBuffer()) : null;
+    });
+    if (data) logo = { data, format: /\.png$/i.test(path) ? "png" : "jpg" };
   }
   return { name: b.name, color: brandTone(b.code).hex, logo, gst: (taxed ?? 0) > 0 };
 }
@@ -63,6 +68,7 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
   if (kind === "invoice") {
     const { data: inv } = await supabase.from("invoices").select("*").eq("id", id).maybeSingle();
     if (!inv) return null;
+    const brandP = brandInfo(supabase, inv.brand_id);
     const [{ data: lines }, { data: bal }, { data: ord }] = await Promise.all([
       supabase.from("invoice_lines").select(INV_LINE_COLS).eq("invoice_id", id).order("line_no"),
       supabase.from("invoice_balances").select("balance").eq("invoice_id", id).maybeSingle(),
@@ -70,7 +76,7 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
     ]);
     // Invoices carried over from Odoo keep their old number in the order note ("Odoo ref: INV/26-27/0045 (S00039)").
     const previousRef = /^Odoo ref: (\S+)/.exec(ord?.notes ?? "")?.[1] ?? null;
-    const data = { company: co, invoice: inv, lines: lines ?? [], balance: bal?.balance, brand: await brandInfo(supabase, inv.brand_id), previousRef } as InvoicePdfData;
+    const data = { company: co, invoice: inv, lines: lines ?? [], balance: bal?.balance, brand: await brandP, previousRef } as InvoicePdfData;
     const buffer = await renderToBuffer(<InvoicePdf data={data} />);
     const snap = inv.retailer_snapshot as { shop_name: string; mobile: string };
     return {
@@ -266,6 +272,7 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
       .eq("id", id)
       .maybeSingle();
     if (!o) return null;
+    const brandP = brandInfo(supabase, o.brand_id);
     const [{ data: lines }, { data: sm }] = await Promise.all([
       supabase.from("order_lines").select("line_no, product_id, qty, unit_price, price_mode, discount_pct, taxable_value, gst_rate, tax_amount, line_total").eq("order_id", id).order("line_no"),
       o.salesman_id ? supabase.from("tenant_people").select("full_name").eq("id", o.salesman_id).maybeSingle() : Promise.resolve({ data: null }),
@@ -286,7 +293,7 @@ export async function renderPdf(kind: PdfKind, id: string, params: URLSearchPara
     const tax = qLines.reduce((t, l) => ({ cgst: t.cgst + l.cgst, sgst: t.sgst + l.sgst, igst: t.igst + l.igst }), { cgst: 0, sgst: 0, igst: 0 });
     const data = {
       company: co,
-      brand: await brandInfo(supabase, o.brand_id),
+      brand: await brandP,
       quotation: { validUntil, salesman: (sm as { full_name: string } | null)?.full_name ?? null },
       invoice: {
         invoice_no: o.order_no,

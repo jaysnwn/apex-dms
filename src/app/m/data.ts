@@ -35,42 +35,49 @@ export async function getHome(supabase: SupabaseServer, userId: string): Promise
   const monthStart = today.slice(0, 8) + "01";
   const monthEnd = addDays(addDays(monthStart, 32).slice(0, 8) + "01", -1);
 
-  const { data: t } = await supabase
-    .from("targets")
-    .select("period_start, period_end, sales_target, collection_target")
-    .eq("salesman_id", userId)
-    .lte("period_start", today)
-    .gte("period_end", today)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const start = (t?.period_start as string) ?? monthStart;
-  const end = (t?.period_end as string) ?? monthEnd;
-
-  const [inv, quotes, pays, visits, plans, recent, exp, inc] = await Promise.all([
-    supabase.from("invoices").select("grand_total, orders!inner(salesman_id)").eq("orders.salesman_id", userId).eq("status", "issued").gte("invoice_date", start).lte("invoice_date", end),
+  // Two rounds of queries instead of five: everything that does not depend on
+  // the target period goes out together with the target itself.
+  const todayStart = `${today}T00:00:00+05:30`;
+  const [targetRes, quotes, visits, plans, recent, exp, inc, withMe, todayAllRes] = await Promise.all([
+    supabase
+      .from("targets")
+      .select("period_start, period_end, sales_target, collection_target")
+      .eq("salesman_id", userId)
+      .lte("period_start", today)
+      .gte("period_end", today)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
     supabase.from("orders").select("grand_total, created_at").eq("salesman_id", userId).eq("status", "quotation"),
-    supabase.from("payments").select("amount, payment_date").eq("collected_by", userId).in("status", ["received", "cheque_pending"]).gte("payment_date", start < monthStart ? start : monthStart),
     supabase.from("visits").select("retailer_id, status").eq("salesman_id", userId).eq("planned_date", today),
     supabase.from("route_plans").select("routes(name)").eq("salesman_id", userId).eq("plan_date", today),
     supabase.from("orders").select("id, order_no, status, grand_total, created_at, retailers(shop_name)").eq("salesman_id", userId).order("created_at", { ascending: false }).limit(5),
     supabase.from("expenses").select("id", { count: "exact", head: true }).eq("employee_id", userId).in("status", ["submitted", "returned"]),
     supabase.rpc("salesman_incentive", { p_salesman: userId, p_month: monthStart }),
+    getWithMe(supabase, userId, today),
+    // Orders created today that were already invoiced also count as today's orders.
+    supabase.from("orders").select("grand_total, created_at").eq("salesman_id", userId).neq("status", "cancelled").gte("created_at", todayStart),
   ]);
-  const withMe = await getWithMe(supabase, userId, today);
+  const t = targetRes.data;
+  const todayAll = todayAllRes.data;
+  const start = (t?.period_start as string) ?? monthStart;
+  const end = (t?.period_end as string) ?? monthEnd;
 
-  const sum = (rows: { grand_total?: number; amount?: number }[] | null, k: "grand_total" | "amount") => (rows ?? []).reduce((s, r) => s + Number(r[k] ?? 0), 0);
-  const todaysQuotes = (quotes.data ?? []).filter((q) => isToday(q.created_at as string, today));
   const v = (visits.data ?? []).filter((x) => x.status !== "rescheduled" && x.status !== "cancelled");
   const pending = v.filter((x) => x.status === "planned" || x.status === "in_progress");
+  const [inv, pays, nextRs] = await Promise.all([
+    supabase.from("invoices").select("grand_total, orders!inner(salesman_id)").eq("orders.salesman_id", userId).eq("status", "issued").gte("invoice_date", start).lte("invoice_date", end),
+    supabase.from("payments").select("amount, payment_date").eq("collected_by", userId).in("status", ["received", "cheque_pending"]).gte("payment_date", start < monthStart ? start : monthStart),
+    pending.length
+      ? supabase.from("retailers").select("id, shop_name, billing_city, route_sequence").in("id", pending.map((p) => p.retailer_id as string))
+      : Promise.resolve({ data: [] as { id: string; shop_name: string; billing_city: string | null; route_sequence: number | null }[] }),
+  ]);
+  const todaysQuotes = (quotes.data ?? []).filter((q) => isToday(q.created_at as string, today));
   let nextVisit: HomeData["nextVisit"] = null;
-  if (pending.length) {
-    const { data: rs } = await supabase.from("retailers").select("id, shop_name, billing_city, route_sequence").in("id", pending.map((p) => p.retailer_id as string));
-    const first = (rs ?? []).sort((a, b) => (a.route_sequence ?? 999) - (b.route_sequence ?? 999))[0];
-    if (first) nextVisit = { retailer_id: first.id, shop_name: first.shop_name, city: first.billing_city };
-  }
-  // Orders created today that were already invoiced also count as today's orders.
-  const { data: todayAll } = await supabase.from("orders").select("grand_total, created_at").eq("salesman_id", userId).neq("status", "cancelled").gte("created_at", `${today}T00:00:00+05:30`);
+  const first = (nextRs.data ?? []).sort((a, b) => (a.route_sequence ?? 999) - (b.route_sequence ?? 999))[0];
+  if (first) nextVisit = { retailer_id: first.id, shop_name: first.shop_name, city: first.billing_city };
+
+  const sum = (rows: { grand_total?: number; amount?: number }[] | null, k: "grand_total" | "amount") => (rows ?? []).reduce((s, r) => s + Number(r[k] ?? 0), 0);
 
   return {
     today,
