@@ -4,8 +4,9 @@ import { cn } from "@/components/ui";
 
 export type Box = { href: string; label: string; icon: LucideIcon; line: string; count?: number; primary?: boolean };
 
-// The four boxes on the Sales start page.
-export function SalesBoxes({ boxes }: { boxes: Box[] }) {
+// The big boxes on a section start page (Sales, Expenses). Inside each page the same
+// links show as tabs.
+export function SectionBoxes({ boxes }: { boxes: Box[] }) {
   return (
     <ul className="grid gap-4 sm:grid-cols-2">
       {boxes.map((b) => {

@@ -142,7 +142,7 @@ async function OfficeDash({ showProfit }: { showProfit: boolean }) {
         <MiniStat label="Inventory value" value={inrCompact(invValue)} hint={`${qty(invUnits)} units`} href="/reports/stock-valuation" />
         <MiniStat label="Payable to suppliers" value={inrCompact(payable)} hint={payableOverdue > 0 ? `${inr(payableOverdue, { decimals: false })} overdue` : "nothing overdue"} href="/purchases/payables" />
         <MiniStat label="Orders to receive" value={String(toReceive.count ?? 0)} href="/purchases/orders" />
-        <MiniStat label="Expenses" value={inrCompact(monthExpenses)} hint="this month" href="/expenses?tab=all" />
+        <MiniStat label="Expenses" value={inrCompact(monthExpenses)} hint="this month" href="/expenses/all" />
         <MiniStat label="Active retailers" value={String(counts.count ?? 0)} href="/retailers" />
         <MiniStat label="Active salesmen" value={String((salesmen.data ?? []).length)} href="/routes" />
       </Card>
@@ -303,7 +303,7 @@ async function SalesmanDash({ userId }: { userId: string }) {
       <div className="grid gap-3 sm:grid-cols-3">
         <Link href="/sales/new"><Card className="p-4 hover:border-slate-300"><ShoppingCart className="mb-2 size-5 text-sky-600" /><div className="font-medium">New order</div></Card></Link>
         <Link href="/sales/quotations"><Card className="p-4 hover:border-slate-300"><ClipboardList className="mb-2 size-5 text-violet-600" /><div className="font-medium">My quotations</div><div className="text-sm text-slate-500">{quotes.count ?? 0} waiting for office</div></Card></Link>
-        <Link href="/expenses"><Card className="p-4 hover:border-slate-300"><Receipt className="mb-2 size-5 text-amber-600" /><div className="font-medium">Add expense</div></Card></Link>
+        <Link href="/expenses/new"><Card className="p-4 hover:border-slate-300"><Receipt className="mb-2 size-5 text-amber-600" /><div className="font-medium">Add expense</div></Card></Link>
       </div>
     </div>
   );
